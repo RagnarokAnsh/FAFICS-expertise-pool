@@ -1,0 +1,444 @@
+// =============================================================================
+// FAFICS EXPERTISE POOL — Prisma Schema  v2.0
+// Stack: NestJS · Next.js · PostgreSQL · Prisma · BullMQ + Redis · Resend
+//
+// Changes from v1:
+//   - Removed pension_number
+//   - uid_number is system-assigned (not user-entered)
+//   - retirement_date → separation_date
+//   - Added second_nationality, associate_member_name, associate_member_country
+//   - Added president_email + president_phone (mandatory)
+//   - Added association_general_email
+//   - Removed graduation_year from education
+//   - Replaced date_from/date_to/is_current → duration_years on all 4 experience tables
+//   - Removed ApplicationDocument + DocumentSection entirely
+//   - ProficiencyLevel updated: mother_tongue | proficient | working_level | basic
+//   - ApplicationExpertise: partial unique index strategy for multiple "Other" rows
+//   - Reference number: EP-NNNN (sequential, no year prefix)
+//   - Added president_link_expired, secretary_review_pending to NotificationType
+//   - Added QueueJobType enum for BullMQ
+//   - officerNotes → secretaryNotes; added under_review status
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  member     // Applicant — no dashboard login; tracks via email + ref number
+  president  // Association President — endorses via magic link
+  secretary  // FAFICS Secretary — full review + approve/reject
+  committee  // Succession Planning Committee — view-only access
+  admin      // System admin — full access including user management
+  @@map("user_role")
+}
+
+enum ApplicationStatus {
+  draft
+  submitted           // Awaiting president endorsement
+  changes_requested   // Returned by president or secretary for revision
+  endorsed            // President endorsed; pending secretary desk review
+  under_review        // Secretary / committee actively reviewing
+  approved            // Live in Expertise Pool roster (3-year validity)
+  rejected
+  expired             // 3-year validity lapsed
+  @@map("application_status")
+}
+
+enum ExpertiseLevel {
+  average
+  advanced
+  expert
+  @@map("expertise_level")
+}
+
+// Updated to match fafics_form_v2_1.html dropdown exactly.
+enum ProficiencyLevel {
+  mother_tongue   // Mother tongue
+  proficient      // Proficient
+  working_level   // Working-level
+  basic           // Basic
+  @@map("proficiency_level")
+}
+
+enum TokenPurpose {
+  president_review    // 14-day magic link for endorsement (no login required)
+  email_verification  // 24h — officer account email verification
+  password_reset      // 1h  — admin/secretary password reset
+  @@map("token_purpose")
+}
+
+enum NotificationType {
+  submission_confirmation   // → applicant on submit
+  president_review_request  // → president with magic link
+  president_link_expired    // → president when link expired; new one sent
+  changes_requested         // → applicant when returned
+  endorsed                  // → applicant when president endorses
+  secretary_review_pending  // → secretary when application is endorsed
+  approved                  // → applicant when approved
+  rejected                  // → applicant when rejected
+  renewal_reminder_90d      // → applicant 90 days before expiry
+  renewal_reminder_30d      // → applicant 30 days before expiry
+  expired                   // → applicant when profile expires
+  @@map("notification_type")
+}
+
+// BullMQ job names — use as the `name` argument in queue.add().
+enum QueueJobType {
+  send_email               // Resend transactional email
+  send_president_link      // Generate token + dispatch endorsement email
+  expire_applications      // Daily maintenance: approved → expired
+  send_renewal_reminder    // 90d and 30d renewal reminders
+  @@map("queue_job_type")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ASSOCIATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Association {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String   @db.VarChar(255)
+  country         String   @db.VarChar(100)
+  phone           String?  @db.VarChar(50)
+  email           String?  @db.VarChar(255)
+  isActive        Boolean  @default(true)             @map("is_active")
+  presidentUserId String?  @unique @db.Uuid           @map("president_user_id")
+  createdAt       DateTime @default(now())            @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  president    User?          @relation("AssociationPresident", fields: [presidentUserId], references: [id])
+  members      User[]         @relation("UserAssociation")
+  applications Application[]
+
+  @@map("associations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER  (officers + admins only — applicants have no accounts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String    @unique @db.VarChar(255)
+  passwordHash    String?                              @map("password_hash") @db.VarChar(255)
+  role            UserRole  @default(member)
+  associationId   String?   @db.Uuid                  @map("association_id")
+  firstName       String?                              @map("first_name") @db.VarChar(100)
+  lastName        String?                              @map("last_name") @db.VarChar(100)
+  isActive        Boolean   @default(true)             @map("is_active")
+  emailVerifiedAt DateTime?                            @map("email_verified_at") @db.Timestamptz()
+  lastLoginAt     DateTime?                            @map("last_login_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now())            @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  association         Association?  @relation("UserAssociation", fields: [associationId], references: [id])
+  presidedAssociation Association?  @relation("AssociationPresident")
+  applications        Application[]
+  auditLogsActed      AuditLog[]
+  magicTokens         MagicToken[]
+
+  @@index([email])
+  @@index([role])
+  @@index([associationId])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APPLICATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Application {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // EP-NNNN — assigned by fn_generate_reference_number() at submission only.
+  // NULL while status = draft.
+  referenceNumber String?           @unique @db.VarChar(20)  @map("reference_number")
+  // System-assigned sequential integer stored as text (e.g. "0042").
+  // Assigned by fn_generate_uid() at submission alongside reference_number.
+  uidNumber       String?           @unique @db.VarChar(20)  @map("uid_number")
+
+  userId          String            @db.Uuid                 @map("user_id")
+  associationId   String            @db.Uuid                 @map("association_id")
+  status          ApplicationStatus @default(draft)
+
+  // Personal
+  firstName         String   @db.VarChar(100)  @map("first_name")
+  middleName        String?  @db.VarChar(100)  @map("middle_name")
+  lastName          String   @db.VarChar(100)  @map("last_name")
+  dateOfBirth       DateTime @db.Date          @map("date_of_birth")
+  nationality       String   @db.VarChar(100)
+  secondNationality String?  @db.VarChar(100)  @map("second_nationality")
+  gender            String   @db.VarChar(50)
+  phone             String   @db.VarChar(50)
+  whatsapp          String?  @db.VarChar(50)
+  email             String   @db.VarChar(255)
+  separationDate    DateTime @db.Date          @map("separation_date")
+
+  // Association snapshot (captured at submission)
+  associationName         String  @db.VarChar(255)  @map("association_name")
+  associationCountry      String  @db.VarChar(100)  @map("association_country")
+  associationGeneralEmail String? @db.VarChar(255)  @map("association_general_email")
+  presidentEmail          String  @db.VarChar(255)  @map("president_email")
+  presidentPhone          String  @db.VarChar(50)   @map("president_phone")
+  associateMemberName     String? @db.VarChar(255)  @map("associate_member_name")
+  associateMemberCountry  String? @db.VarChar(100)  @map("associate_member_country")
+
+  // Experience summaries
+  unExperienceSummary     String? @map("un_experience_summary")
+  nonUnExperienceSummary  String? @map("non_un_experience_summary")
+  faficsExperienceSummary String? @map("fafics_experience_summary")
+  localExperienceSummary  String? @map("local_experience_summary")
+
+  // Consent
+  consentData     Boolean   @default(false) @map("consent_data")
+  consentAccurate Boolean   @default(false) @map("consent_accurate")
+  consentedAt     DateTime?                @map("consented_at") @db.Timestamptz()
+
+  // Review notes
+  presidentNotes String? @map("president_notes")
+  secretaryNotes String? @map("secretary_notes")
+
+  // Timestamps
+  submittedAt              DateTime? @map("submitted_at")               @db.Timestamptz()
+  endorsedAt               DateTime? @map("endorsed_at")                @db.Timestamptz()
+  approvedAt               DateTime? @map("approved_at")                @db.Timestamptz()
+  rejectedAt               DateTime? @map("rejected_at")                @db.Timestamptz()
+  expiresAt                DateTime? @map("expires_at")                 @db.Date
+  renewalReminder90dSentAt DateTime? @map("renewal_reminder_90d_sent_at") @db.Timestamptz()
+  renewalReminder30dSentAt DateTime? @map("renewal_reminder_30d_sent_at") @db.Timestamptz()
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user               User                          @relation(fields: [userId], references: [id])
+  association        Association                   @relation(fields: [associationId], references: [id])
+  educations         ApplicationEducation[]
+  languages          ApplicationLanguage[]
+  unExperiences      ApplicationUnExperience[]
+  nonUnExperiences   ApplicationNonUnExperience[]
+  faficsExperiences  ApplicationFaficsExperience[]
+  localExperiences   ApplicationLocalExperience[]
+  expertise          ApplicationExpertise[]
+  auditLogs          AuditLog[]
+  magicTokens        MagicToken[]
+  notificationLogs   NotificationLog[]
+
+  @@index([userId])
+  @@index([associationId])
+  @@index([status])
+  @@index([submittedAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("applications")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EDUCATION  — graduation_year removed (client feedback)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ApplicationEducation {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String   @db.Uuid                     @map("application_id")
+  sortOrder     Int      @default(1) @db.SmallInt      @map("sort_order")
+  degreeName    String   @db.VarChar(255)              @map("degree_name")
+  institution   String   @db.VarChar(255)
+  createdAt     DateTime @default(now())               @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("application_educations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LANGUAGES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ApplicationLanguage {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String           @db.Uuid               @map("application_id")
+  sortOrder     Int              @default(1) @db.SmallInt @map("sort_order")
+  language      String           @db.VarChar(100)
+  proficiency   ProficiencyLevel
+  createdAt     DateTime         @default(now())        @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("application_languages")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPERIENCE TABLES — date_from/date_to/is_current → duration_years
+// 0.5 = 6 months, 99.0 = sentinel for "30+ years"
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ApplicationUnExperience {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId   String   @db.Uuid                     @map("application_id")
+  sortOrder       Int      @default(1) @db.SmallInt      @map("sort_order")
+  agency          String   @db.VarChar(100)
+  positionTitle   String   @db.VarChar(255)              @map("position_title")
+  grade           String?  @db.VarChar(20)
+  areaOfExpertise String?  @db.VarChar(100)              @map("area_of_expertise")
+  durationYears   Decimal? @db.Decimal(4, 1)             @map("duration_years")
+  createdAt       DateTime @default(now())               @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId])
+  @@map("application_un_experiences")
+}
+
+model ApplicationNonUnExperience {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId   String   @db.Uuid                     @map("application_id")
+  sortOrder       Int      @default(1) @db.SmallInt      @map("sort_order")
+  organization    String   @db.VarChar(255)
+  positionTitle   String   @db.VarChar(255)              @map("position_title")
+  areaOfExpertise String?  @db.VarChar(100)              @map("area_of_expertise")
+  durationYears   Decimal? @db.Decimal(4, 1)             @map("duration_years")
+  createdAt       DateTime @default(now())               @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId])
+  @@map("application_nonun_experiences")
+}
+
+model ApplicationFaficsExperience {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId      String   @db.Uuid                  @map("application_id")
+  sortOrder          Int      @default(1) @db.SmallInt  @map("sort_order")
+  positionHeld       String   @db.VarChar(255)           @map("position_held")
+  areaOfContribution String?  @db.VarChar(100)           @map("area_of_contribution")
+  durationYears      Decimal? @db.Decimal(4, 1)          @map("duration_years")
+  createdAt          DateTime @default(now())            @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId])
+  @@map("application_fafics_experiences")
+}
+
+model ApplicationLocalExperience {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId      String   @db.Uuid                  @map("application_id")
+  sortOrder          Int      @default(1) @db.SmallInt  @map("sort_order")
+  positionHeld       String   @db.VarChar(255)           @map("position_held")
+  areaOfContribution String?  @db.VarChar(100)           @map("area_of_contribution")
+  durationYears      Decimal? @db.Decimal(4, 1)          @map("duration_years")
+  createdAt          DateTime @default(now())            @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId])
+  @@map("application_local_experiences")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPERTISE SELF-ASSESSMENT
+// No @@unique on (applicationId, areaKey) — a partial unique index in SQL
+// handles the 11 fixed areas. isCustom rows are always create, never upsert.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ApplicationExpertise {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId  String          @db.Uuid                  @map("application_id")
+  sortOrder      Int             @default(1) @db.SmallInt  @map("sort_order")
+  areaKey        String          @db.VarChar(100)          @map("area_key")
+  areaLabel      String          @db.VarChar(255)          @map("area_label")
+  expertiseLevel ExpertiseLevel?                           @map("expertise_level")
+  isPreferred    Boolean         @default(false)           @map("is_preferred")
+  isCustom       Boolean         @default(false)           @map("is_custom")
+  // 1-based counter for ordering multiple custom rows per application.
+  customIndex    Int?            @db.SmallInt              @map("custom_index")
+  // Free-text area name — only set when isCustom = true.
+  otherDescription String?       @db.VarChar(255)          @map("other_description")
+  createdAt      DateTime        @default(now())           @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([areaKey])
+  @@index([applicationId])
+  @@map("application_expertise")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAGIC TOKEN
+// ─────────────────────────────────────────────────────────────────────────────
+
+model MagicToken {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token          String       @unique @db.VarChar(255)
+  tokenHash      String       @unique @db.VarChar(255)  @map("token_hash")
+  purpose        TokenPurpose
+  applicationId  String?      @db.Uuid                  @map("application_id")
+  userId         String?      @db.Uuid                  @map("user_id")
+  recipientEmail String       @db.VarChar(255)          @map("recipient_email")
+  expiresAt      DateTime                               @map("expires_at") @db.Timestamptz()
+  usedAt         DateTime?                              @map("used_at") @db.Timestamptz()
+  createdAt      DateTime     @default(now())           @map("created_at") @db.Timestamptz()
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("magic_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT LOG  — append-only, never update or delete
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String?            @db.Uuid                  @map("application_id")
+  actorId       String?            @db.Uuid                  @map("actor_id")
+  actorEmail    String             @db.VarChar(255)          @map("actor_email")
+  actorRole     UserRole                                      @map("actor_role")
+  action        String             @db.VarChar(100)
+  oldStatus     ApplicationStatus?                           @map("old_status")
+  newStatus     ApplicationStatus?                           @map("new_status")
+  metadata      Json?              @db.JsonB
+  ipAddress     String?            @map("ip_address") @db.VarChar(45)
+  userAgent     String?            @map("user_agent")
+  createdAt     DateTime           @default(now())           @map("created_at") @db.Timestamptz()
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  actor       User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId])
+  @@index([actorId])
+  @@index([createdAt(sort: Desc)])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATION LOG
+// queueJobId links back to BullMQ job for retry / correlation.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model NotificationLog {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId     String?          @db.Uuid               @map("application_id")
+  recipientEmail    String           @db.VarChar(255)       @map("recipient_email")
+  notificationType  NotificationType                        @map("notification_type")
+  providerMessageId String?          @db.VarChar(255)       @map("provider_message_id")
+  queueJobId        String?          @db.VarChar(255)       @map("queue_job_id")
+  sentAt            DateTime?                               @map("sent_at") @db.Timestamptz()
+  failedAt          DateTime?                               @map("failed_at") @db.Timestamptz()
+  errorMessage      String?                                 @map("error_message")
+  createdAt         DateTime         @default(now())        @map("created_at") @db.Timestamptz()
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId])
+  @@map("notification_logs")
+}

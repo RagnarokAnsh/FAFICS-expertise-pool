@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-off-white text-text font-sans min-h-screen;
+    scroll-behavior: smooth;
+  }
+}

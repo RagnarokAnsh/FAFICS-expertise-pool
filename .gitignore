@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Prisma
+apps/api/prisma/generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Turborepo
+.turbo/
+
+# Testing
+coverage/
+
+# Docker
+docker-compose.override.yml
+
+# Reference files (not part of the app — kept for documentation)
+fafics_form_v2?1.html
+FAFICS_Architecture.md
+FAFICS_Phase_Prompts.md
+FAFICS_Tech_Stack_Reference.md
+fafics_schema.sql

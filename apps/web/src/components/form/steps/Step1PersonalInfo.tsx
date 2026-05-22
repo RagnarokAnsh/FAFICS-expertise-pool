@@ -1,0 +1,188 @@
+import React from 'react';
+import { useFormContext } from 'react-hook-form';
+import { Card } from '../../ui/Card';
+import { Field, Input, Select } from '../../ui/Field';
+import { Button } from '../../ui/Button';
+import { ApplicationData } from '../../../lib/schemas/application.schema';
+import { COUNTRIES, NATIONALITIES } from '../../../lib/constants/countries';
+
+interface StepProps {
+  onNext: () => void;
+  onBack?: () => void;
+}
+
+export function Step1PersonalInfo({ onNext }: StepProps) {
+  const { register, formState: { errors }, trigger } = useFormContext<ApplicationData>();
+
+  const handleNext = async () => {
+    // Validate Step 1 fields before proceeding
+    const isValid = await trigger(['personal', 'association']);
+    if (isValid) {
+      onNext();
+    }
+  };
+
+  return (
+    <div className="animate-[fadeIn_0.25s_ease]">
+      <div className="mb-7">
+        <h2 className="font-serif text-[22px] font-bold text-navy mb-1">Personal Information</h2>
+        <p className="text-[13.5px] text-text-mid leading-relaxed">
+          Please enter your details exactly as they appear on your UN records. Fields marked <span className="text-gold">*</span> are mandatory.
+        </p>
+      </div>
+
+      <div className="bg-gold-light border-[1.5px] border-gold rounded-theme px-[26px] py-[22px] mb-7 mt-7">
+        <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
+          <strong>About FAFICS and this Expertise Pool</strong>
+        </p>
+        <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
+          FAFICS members can be considered for a variety of positions including as an elected Officer — President, Secretary, Treasurer, Vice-President — or Chairs of Standing Committees in the areas of:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 my-2.5">
+          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
+            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
+            <span>After Service Health & Life Insurance</span>
+          </div>
+          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
+            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
+            <span>Pension Issues</span>
+          </div>
+          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
+            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
+            <span>Communications (Social Media / Website management)</span>
+          </div>
+          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
+            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
+            <span>Membership</span>
+          </div>
+        </div>
+        <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
+          Selection of candidates for <strong>non-elected positions</strong> is through the Expertise Pool; a few positions are through election. <strong>This form is for members who are interested to include their name in the Expertise Pool</strong> of FAFICS and committed to volunteer their time and services for different positions & functions within the FAFICS.
+        </p>
+        <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
+          Please submit your application form <strong>through your Local Association President or designated delegate</strong>, providing complete details for consideration & inclusion in the Expertise Pool.
+        </p>
+        <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
+          <strong>Mandatory:</strong> Before you fill this form, please visit <a href="https://fafics.org" target="_blank" rel="noreferrer" className="text-navy-mid font-semibold">FAFICS.ORG</a> to know about FAFICS and the different areas for contribution.
+        </p>
+        <p className="text-[13.5px] text-text leading-[1.8] mb-0">
+          <strong>Note:</strong> Candidates in the Expertise Pool will be valid for a period of <strong>three (3) years</strong> and will need to reconfirm their interest for continuation in the Expertise Pool.
+        </p>
+      </div>
+
+      <Card title="Personal Information">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Field label="First Name" required error={errors.personal?.firstName?.message}>
+            <Input placeholder="e.g. John" hasError={!!errors.personal?.firstName} {...register('personal.firstName')} />
+          </Field>
+          <Field label="Middle Name" error={errors.personal?.middleName?.message}>
+            <Input placeholder="e.g. Michael" hasError={!!errors.personal?.middleName} {...register('personal.middleName')} />
+          </Field>
+          <Field label="Last Name" required error={errors.personal?.lastName?.message}>
+            <Input placeholder="e.g. Doe" hasError={!!errors.personal?.lastName} {...register('personal.lastName')} />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3.5">
+          <Field label="Date of Birth" required error={errors.personal?.dateOfBirth?.message}>
+            <Input type="date" hasError={!!errors.personal?.dateOfBirth} {...register('personal.dateOfBirth')} />
+          </Field>
+          <Field label="Nationality" required error={errors.personal?.nationality?.message}>
+            <Select hasError={!!errors.personal?.nationality} {...register('personal.nationality')}>
+              <option value="">Select nationality…</option>
+              {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
+            </Select>
+          </Field>
+          <Field label="Second Nationality" hint="(if any)" error={errors.personal?.secondNationality?.message}>
+            <Select hasError={!!errors.personal?.secondNationality} {...register('personal.secondNationality')}>
+              <option value="">None / not applicable</option>
+              {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
+            </Select>
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3.5">
+          <Field label="Gender" required error={errors.personal?.gender?.message}>
+            <Select hasError={!!errors.personal?.gender} {...register('personal.gender')}>
+              <option value="">Select…</option>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+              <option value="Non-binary / Third gender">Non-binary / Third gender</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </Select>
+          </Field>
+          <Field label="Phone Number" required hint="Include country code" error={errors.personal?.phone?.message}>
+            <Input type="tel" placeholder="+1 212 000 0000" hasError={!!errors.personal?.phone} {...register('personal.phone')} />
+          </Field>
+          <Field label="Mobile No (WhatsApp)" hint="Include country code" error={errors.personal?.whatsapp?.message}>
+            <Input type="tel" placeholder="+1 212 000 0000" hasError={!!errors.personal?.whatsapp} {...register('personal.whatsapp')} />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3.5">
+          <Field label="Email Address" required error={errors.personal?.email?.message}>
+            <Input type="email" placeholder="name@example.com" hasError={!!errors.personal?.email} {...register('personal.email')} />
+          </Field>
+          <Field label="Date of Separation from UN Service" required error={errors.personal?.separationDate?.message}>
+            <Input type="date" hasError={!!errors.personal?.separationDate} {...register('personal.separationDate')} />
+          </Field>
+        </div>
+      </Card>
+
+      <Card title="Member Association Details">
+        <p className="text-[12.5px] text-text-muted mb-3.5 leading-relaxed">
+          Your application will be routed to the President of your Local Association for endorsement. Please ensure these details are accurate — the President's email is required for notification.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Field label="Member Association" required error={errors.association?.associationName?.message}>
+            <Input placeholder="e.g. AFICS-NY, USA" hasError={!!errors.association?.associationName} {...register('association.associationName')} />
+          </Field>
+          <Field label="Country" required error={errors.association?.associationCountry?.message}>
+            <Select hasError={!!errors.association?.associationCountry} {...register('association.associationCountry')}>
+              <option value="">Select country…</option>
+              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </Field>
+          <Field label="General Email of Association" error={errors.association?.associationGeneralEmail?.message}>
+            <Input type="email" placeholder="info@association.org" hasError={!!errors.association?.associationGeneralEmail} {...register('association.associationGeneralEmail')} />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3.5">
+          <Field label="Email of Association President" required hint="Used to route your application for endorsement" error={errors.association?.presidentEmail?.message}>
+            <Input type="email" placeholder="president@association.org" hasError={!!errors.association?.presidentEmail} {...register('association.presidentEmail')} />
+          </Field>
+          <Field label="Phone of Association President" required hint="Include country code" error={errors.association?.presidentPhone?.message}>
+            <Input type="tel" placeholder="+1 212 000 0000" hasError={!!errors.association?.presidentPhone} {...register('association.presidentPhone')} />
+          </Field>
+        </div>
+
+        <div className="flex items-center gap-2.5 mt-5 mb-3">
+          <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-navy-mid whitespace-nowrap">Associate Membership (optional)</span>
+          <div className="flex-1 h-px bg-border"></div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Associate Member in other Association" error={errors.association?.associateMemberName?.message}>
+            <Input placeholder="e.g. AFICS Geneva" hasError={!!errors.association?.associateMemberName} {...register('association.associateMemberName')} />
+          </Field>
+          <Field label="Country of other Association" error={errors.association?.associateMemberCountry?.message}>
+            <Select hasError={!!errors.association?.associateMemberCountry} {...register('association.associateMemberCountry')}>
+              <option value="">Select country…</option>
+              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </Field>
+        </div>
+      </Card>
+
+      <div className="flex justify-between items-center pt-5 border-t border-border mt-2">
+        <span></span>
+        <Button variant="primary" onClick={handleNext}>
+          Next: Education & Languages
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </Button>
+      </div>
+    </div>
+  );
+}

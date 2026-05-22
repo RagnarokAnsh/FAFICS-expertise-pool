@@ -1,0 +1,61 @@
+services:
+  # ─────────────────────────────────────────────────────────────────────
+  # PostgreSQL 16 — Primary database
+  # ─────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: fafics-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fafics_db}
+      POSTGRES_USER: ${POSTGRES_USER:-fafics_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fafics_password}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-fafics_user} -d ${POSTGRES_DB:-fafics_db}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Redis 7 — BullMQ queue broker
+  # ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: fafics-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Mailhog — Local email catcher (SMTP + Web UI)
+  # ─────────────────────────────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog
+    container_name: fafics-mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025'   # SMTP — point Nodemailer here
+      - '8025:8025'   # Web UI — view caught emails
+
+  # ─────────────────────────────────────────────────────────────────────
+  # NOTE: The NestJS API runs on the HOST machine (npm run start:dev)
+  # not in Docker, because it needs the @fafics/shared workspace package.
+  # ─────────────────────────────────────────────────────────────────────
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
