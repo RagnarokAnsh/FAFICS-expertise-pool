@@ -1,6 +1,5 @@
 import {
   IsString,
-  IsNotEmpty,
   IsOptional,
   IsNumber,
   Min,
@@ -21,13 +20,13 @@ export class NonUnExperienceDto {
 
   @ApiProperty({ example: 'Red Cross' })
   @IsString()
-  @IsNotEmpty()
-  organization!: string;
+  @IsOptional()
+  organization?: string;
 
   @ApiProperty({ example: 'Regional Director' })
   @IsString()
-  @IsNotEmpty()
-  positionTitle!: string;
+  @IsOptional()
+  positionTitle?: string;
 
   @ApiPropertyOptional({ example: 'Humanitarian Affairs' })
   @IsOptional()

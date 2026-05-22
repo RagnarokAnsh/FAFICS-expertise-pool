@@ -1,6 +1,5 @@
 import {
   IsString,
-  IsNotEmpty,
   IsOptional,
   IsNumber,
   Min,
@@ -21,8 +20,8 @@ export class FaficsExperienceDto {
 
   @ApiProperty({ example: 'Council Member' })
   @IsString()
-  @IsNotEmpty()
-  positionHeld!: string;
+  @IsOptional()
+  positionHeld?: string;
 
   @ApiPropertyOptional({ example: 'Governance' })
   @IsOptional()

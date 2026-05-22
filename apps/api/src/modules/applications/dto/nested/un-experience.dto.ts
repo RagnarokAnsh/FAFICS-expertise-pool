@@ -1,6 +1,5 @@
 import {
   IsString,
-  IsNotEmpty,
   IsOptional,
   IsNumber,
   Min,
@@ -21,13 +20,13 @@ export class UnExperienceDto {
 
   @ApiProperty({ example: 'WHO' })
   @IsString()
-  @IsNotEmpty()
-  agency!: string;
+  @IsOptional()
+  agency?: string;
 
   @ApiProperty({ example: 'Senior Programme Officer' })
   @IsString()
-  @IsNotEmpty()
-  positionTitle!: string;
+  @IsOptional()
+  positionTitle?: string;
 
   @ApiPropertyOptional({ example: 'P-5' })
   @IsOptional()

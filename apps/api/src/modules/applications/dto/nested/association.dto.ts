@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -19,13 +19,13 @@ export class AssociationDto {
 
   @ApiProperty({ example: 'AFICS Geneva' })
   @IsString()
-  @IsNotEmpty()
-  associationName!: string;
+  @IsOptional()
+  associationName?: string;
 
   @ApiProperty({ example: 'Switzerland' })
   @IsString()
-  @IsNotEmpty()
-  associationCountry!: string;
+  @IsOptional()
+  associationCountry?: string;
 
   @ApiPropertyOptional({ example: 'info@afics-geneva.org' })
   @EmptyToUndefined()
@@ -35,13 +35,13 @@ export class AssociationDto {
 
   @ApiProperty({ example: 'president@afics-geneva.org' })
   @IsEmail()
-  @IsNotEmpty()
-  presidentEmail!: string;
+  @IsOptional()
+  presidentEmail?: string;
 
   @ApiProperty({ example: '+41 22 917 5678' })
   @IsString()
-  @IsNotEmpty()
-  presidentPhone!: string;
+  @IsOptional()
+  presidentPhone?: string;
 
   @ApiPropertyOptional({ example: 'John Smith' })
   @EmptyToUndefined()

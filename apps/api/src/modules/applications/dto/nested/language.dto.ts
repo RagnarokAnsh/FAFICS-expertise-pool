@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsInt, Min } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProficiencyLevel } from '@fafics/shared';
 
@@ -15,11 +15,11 @@ export class LanguageDto {
 
   @ApiProperty({ example: 'French' })
   @IsString()
-  @IsNotEmpty()
-  language!: string;
+  @IsOptional()
+  language?: string;
 
   @ApiProperty({ enum: ProficiencyLevel, example: ProficiencyLevel.PROFICIENT })
   @IsEnum(ProficiencyLevel)
-  @IsNotEmpty()
-  proficiency!: ProficiencyLevel;
+  @IsOptional()
+  proficiency?: ProficiencyLevel;
 }

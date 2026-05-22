@@ -1,6 +1,5 @@
 import {
   IsString,
-  IsNotEmpty,
   IsOptional,
   IsNumber,
   Min,
@@ -21,8 +20,8 @@ export class LocalExperienceDto {
 
   @ApiProperty({ example: 'Treasurer' })
   @IsString()
-  @IsNotEmpty()
-  positionHeld!: string;
+  @IsOptional()
+  positionHeld?: string;
 
   @ApiPropertyOptional({ example: 'Budget Management' })
   @IsOptional()

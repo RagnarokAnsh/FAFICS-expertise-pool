@@ -11,7 +11,7 @@ import { applicationsApi } from '../lib/api/applications.api';
  * - Converts NaN to undefined (from valueAsNumber on empty selects)
  * - Removes undefined values from arrays
  */
-function sanitizeForApi(data: any): any {
+export function sanitizeForApi(data: any): any {
   if (data === null || data === undefined) return undefined;
   if (typeof data === 'number') return isNaN(data) ? undefined : data;
   if (typeof data === 'string') return data.trim() === '' ? undefined : data;

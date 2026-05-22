@@ -1,6 +1,5 @@
 import {
   IsString,
-  IsNotEmpty,
   IsOptional,
   IsEnum,
   IsBoolean,
@@ -24,13 +23,13 @@ export class ExpertiseDto {
 
   @ApiProperty({ example: 'governance' })
   @IsString()
-  @IsNotEmpty()
-  areaKey!: string;
+  @IsOptional()
+  areaKey?: string;
 
   @ApiProperty({ example: 'Governance & Institutional Management' })
   @IsString()
-  @IsNotEmpty()
-  areaLabel!: string;
+  @IsOptional()
+  areaLabel?: string;
 
   @ApiPropertyOptional({ enum: ExpertiseLevel, example: ExpertiseLevel.ADVANCED })
   @IsOptional()
@@ -39,7 +38,7 @@ export class ExpertiseDto {
 
   @ApiProperty({ example: false })
   @IsBoolean()
-  isPreferred!: boolean;
+  isPreferred?: boolean;
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()

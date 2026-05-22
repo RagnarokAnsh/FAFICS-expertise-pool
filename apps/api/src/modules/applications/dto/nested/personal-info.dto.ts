@@ -2,7 +2,6 @@ import {
   IsString,
   IsEmail,
   IsDateString,
-  IsNotEmpty,
   IsOptional,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
@@ -14,13 +13,13 @@ const EmptyToUndefined = () =>
 
 /**
  * Personal information fields for the application form (Step 1).
- * All required fields have @IsNotEmpty(). Optional fields have @IsOptional().
+ * All required fields have @IsOptional(). Optional fields have @IsOptional().
  */
 export class PersonalInfoDto {
   @ApiProperty({ example: 'Jean' })
   @IsString()
-  @IsNotEmpty()
-  firstName!: string;
+  @IsOptional()
+  firstName?: string;
 
   @ApiPropertyOptional({ example: 'Pierre' })
   @EmptyToUndefined()
@@ -30,18 +29,18 @@ export class PersonalInfoDto {
 
   @ApiProperty({ example: 'Dupont' })
   @IsString()
-  @IsNotEmpty()
-  lastName!: string;
+  @IsOptional()
+  lastName?: string;
 
   @ApiProperty({ example: '1960-03-15' })
   @IsDateString()
-  @IsNotEmpty()
-  dateOfBirth!: string;
+  @IsOptional()
+  dateOfBirth?: string;
 
   @ApiProperty({ example: 'French' })
   @IsString()
-  @IsNotEmpty()
-  nationality!: string;
+  @IsOptional()
+  nationality?: string;
 
   @ApiPropertyOptional({ example: 'Swiss' })
   @EmptyToUndefined()
@@ -51,13 +50,13 @@ export class PersonalInfoDto {
 
   @ApiProperty({ example: 'Male' })
   @IsString()
-  @IsNotEmpty()
-  gender!: string;
+  @IsOptional()
+  gender?: string;
 
   @ApiProperty({ example: '+41 22 917 1234' })
   @IsString()
-  @IsNotEmpty()
-  phone!: string;
+  @IsOptional()
+  phone?: string;
 
   @ApiPropertyOptional({ example: '+41 79 123 4567' })
   @EmptyToUndefined()
@@ -67,11 +66,11 @@ export class PersonalInfoDto {
 
   @ApiProperty({ example: 'jean.dupont@example.com' })
   @IsEmail()
-  @IsNotEmpty()
-  email!: string;
+  @IsOptional()
+  email?: string;
 
   @ApiProperty({ example: '2020-06-30' })
   @IsDateString()
-  @IsNotEmpty()
-  separationDate!: string;
+  @IsOptional()
+  separationDate?: string;
 }

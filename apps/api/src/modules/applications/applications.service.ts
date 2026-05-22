@@ -43,13 +43,13 @@ export class ApplicationsService {
       // Create or find user for this applicant (applicants don't have accounts,
       // but we need a user row for the FK constraint)
       const user = await tx.user.upsert({
-        where: { email: dto.personal.email },
+        where: { email: dto.personal.email ?? '' },
         update: {},
         create: {
-          email: dto.personal.email,
+          email: dto.personal.email ?? '',
           role: 'member',
-          firstName: dto.personal.firstName,
-          lastName: dto.personal.lastName,
+          firstName: dto.personal.firstName ?? '',
+          lastName: dto.personal.lastName ?? '',
         },
       });
 
@@ -68,7 +68,7 @@ export class ApplicationsService {
       // Find by name or create new association
       if (!assocId) {
         const existingAssoc = await tx.association.findFirst({
-          where: { name: { equals: dto.association.associationName, mode: 'insensitive' } },
+          where: { name: { equals: dto.association.associationName ?? '', mode: 'insensitive' } },
         });
         if (existingAssoc) {
           assocId = existingAssoc.id;
@@ -76,8 +76,8 @@ export class ApplicationsService {
         } else {
           const newAssoc = await tx.association.create({
             data: {
-              name: dto.association.associationName,
-              country: dto.association.associationCountry,
+              name: dto.association.associationName ?? '',
+              country: dto.association.associationCountry ?? '',
               email: dto.association.associationGeneralEmail || null,
             },
           });
@@ -94,24 +94,24 @@ export class ApplicationsService {
           status: 'draft',
 
           // Personal fields
-          firstName: dto.personal.firstName,
+          firstName: dto.personal.firstName ?? '',
           middleName: dto.personal.middleName,
-          lastName: dto.personal.lastName,
-          dateOfBirth: new Date(dto.personal.dateOfBirth),
-          nationality: dto.personal.nationality,
+          lastName: dto.personal.lastName ?? '',
+          dateOfBirth: dto.personal.dateOfBirth ? new Date(dto.personal.dateOfBirth) : new Date(),
+          nationality: dto.personal.nationality ?? '',
           secondNationality: dto.personal.secondNationality,
-          gender: dto.personal.gender,
-          phone: dto.personal.phone,
+          gender: dto.personal.gender ?? '',
+          phone: dto.personal.phone ?? '',
           whatsapp: dto.personal.whatsapp,
-          email: dto.personal.email,
-          separationDate: new Date(dto.personal.separationDate),
+          email: dto.personal.email ?? '',
+          separationDate: dto.personal.separationDate ? new Date(dto.personal.separationDate) : new Date(),
 
           // Association snapshot
-          associationName: dto.association.associationName,
-          associationCountry: dto.association.associationCountry,
+          associationName: dto.association.associationName ?? '',
+          associationCountry: dto.association.associationCountry ?? '',
           associationGeneralEmail: dto.association.associationGeneralEmail,
-          presidentEmail: dto.association.presidentEmail,
-          presidentPhone: dto.association.presidentPhone,
+          presidentEmail: dto.association.presidentEmail ?? '',
+          presidentPhone: dto.association.presidentPhone ?? '',
           associateMemberName: dto.association.associateMemberName,
           associateMemberCountry: dto.association.associateMemberCountry,
 
@@ -122,7 +122,7 @@ export class ApplicationsService {
       // Write audit log for draft creation
       await this.auditService.log({
         applicationId: application.id,
-        actorEmail: dto.personal.email,
+        actorEmail: dto.personal.email ?? '',
         actorRole: 'member',
         action: 'application.draft_saved',
         newStatus: 'draft',
@@ -206,8 +206,8 @@ export class ApplicationsService {
         await tx.applicationEducation.createMany({
           data: dto.educations.map((e, i) => ({
             applicationId: id,
-            degreeName: e.degreeName,
-            institution: e.institution,
+            degreeName: e.degreeName ?? '',
+            institution: e.institution ?? '',
             sortOrder: e.sortOrder ?? i + 1,
           })),
         });
@@ -218,8 +218,8 @@ export class ApplicationsService {
         await tx.applicationLanguage.createMany({
           data: dto.languages.map((l, i) => ({
             applicationId: id,
-            language: l.language,
-            proficiency: l.proficiency,
+            language: l.language ?? '',
+            proficiency: l.proficiency ?? ('basic' as any), // Fallback proficiency
             sortOrder: l.sortOrder ?? i + 1,
           })),
         });
@@ -230,10 +230,10 @@ export class ApplicationsService {
         await tx.applicationUnExperience.createMany({
           data: dto.unExperiences.map((u, i) => ({
             applicationId: id,
-            agency: u.agency,
-            positionTitle: u.positionTitle,
-            grade: u.grade,
-            areaOfExpertise: u.areaOfExpertise,
+            agency: u.agency ?? '',
+            positionTitle: u.positionTitle ?? '',
+            grade: u.grade ?? '',
+            areaOfExpertise: u.areaOfExpertise ?? '',
             durationYears: u.durationYears != null ? new Prisma.Decimal(u.durationYears) : null,
             sortOrder: u.sortOrder ?? i + 1,
           })),
@@ -245,9 +245,9 @@ export class ApplicationsService {
         await tx.applicationNonUnExperience.createMany({
           data: dto.nonUnExperiences.map((n, i) => ({
             applicationId: id,
-            organization: n.organization,
-            positionTitle: n.positionTitle,
-            areaOfExpertise: n.areaOfExpertise,
+            organization: n.organization ?? '',
+            positionTitle: n.positionTitle ?? '',
+            areaOfExpertise: n.areaOfExpertise ?? '',
             durationYears: n.durationYears != null ? new Prisma.Decimal(n.durationYears) : null,
             sortOrder: n.sortOrder ?? i + 1,
           })),
@@ -259,8 +259,8 @@ export class ApplicationsService {
         await tx.applicationFaficsExperience.createMany({
           data: dto.faficsExperiences.map((f, i) => ({
             applicationId: id,
-            positionHeld: f.positionHeld,
-            areaOfContribution: f.areaOfContribution,
+            positionHeld: f.positionHeld ?? '',
+            areaOfContribution: f.areaOfContribution ?? '',
             durationYears: f.durationYears != null ? new Prisma.Decimal(f.durationYears) : null,
             sortOrder: f.sortOrder ?? i + 1,
           })),
@@ -272,8 +272,8 @@ export class ApplicationsService {
         await tx.applicationLocalExperience.createMany({
           data: dto.localExperiences.map((l, i) => ({
             applicationId: id,
-            positionHeld: l.positionHeld,
-            areaOfContribution: l.areaOfContribution,
+            positionHeld: l.positionHeld ?? '',
+            areaOfContribution: l.areaOfContribution ?? '',
             durationYears: l.durationYears != null ? new Prisma.Decimal(l.durationYears) : null,
             sortOrder: l.sortOrder ?? i + 1,
           })),
@@ -285,10 +285,10 @@ export class ApplicationsService {
         await tx.applicationExpertise.createMany({
           data: dto.expertise.map((e, i) => ({
             applicationId: id,
-            areaKey: e.areaKey,
-            areaLabel: e.areaLabel,
-            expertiseLevel: e.expertiseLevel,
-            isPreferred: e.isPreferred,
+            areaKey: e.areaKey ?? '',
+            areaLabel: e.areaLabel ?? '',
+            expertiseLevel: e.expertiseLevel ?? undefined,
+            isPreferred: e.isPreferred ?? false,
             isCustom: e.isCustom ?? false,
             customIndex: e.customIndex,
             otherDescription: e.otherDescription,

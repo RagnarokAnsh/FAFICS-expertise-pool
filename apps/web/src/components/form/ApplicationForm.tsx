@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FormProvider, SubmitHandler } from 'react-hook-form';
-import { useApplicationForm } from '../../hooks/useApplicationForm';
+import { useApplicationForm, sanitizeForApi } from '../../hooks/useApplicationForm';
 import { applicationsApi } from '../../lib/api/applications.api';
 import { ApplicationData } from '../../lib/schemas/application.schema';
 import { FormProgress } from './FormProgress';
@@ -27,13 +27,13 @@ export function ApplicationForm({ initialData, initialDraftId }: ApplicationForm
       const consent = { consentData: true, consentAccurate: true };
       if (draftId) {
         // Final save before submission
-        await applicationsApi.updateDraft(draftId, data);
+        await applicationsApi.updateDraft(draftId, sanitizeForApi(data));
         const submitResponse = await applicationsApi.submitApplication(draftId, consent);
         setReferenceNumber(submitResponse.referenceNumber);
         setSubmitSuccess(true);
         localStorage.removeItem('fafics_draft_id');
       } else {
-        const createResponse = await applicationsApi.createDraft(data);
+        const createResponse = await applicationsApi.createDraft(sanitizeForApi(data));
         const submitResponse = await applicationsApi.submitApplication(createResponse.id, consent);
         setReferenceNumber(submitResponse.referenceNumber);
         setSubmitSuccess(true);
