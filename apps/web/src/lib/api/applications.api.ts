@@ -42,4 +42,22 @@ export const applicationsApi = {
     });
     return unwrap(response);
   },
+
+  requestEditLink: async (email: string, referenceNumber: string): Promise<{ message: string }> => {
+    const response = await apiClient.post('/applications/request-edit-link', {
+      email,
+      referenceNumber,
+    });
+    return unwrap(response);
+  },
+
+  getResumeData: async (token: string): Promise<any> => {
+    const response = await apiClient.get(`/applications/resume/${token}`);
+    return unwrap(response);
+  },
+
+  requestDraftLink: async (email: string): Promise<{ message: string }> => {
+    const response = await apiClient.post('/applications/request-draft-link', { email });
+    return unwrap(response);
+  },
 };

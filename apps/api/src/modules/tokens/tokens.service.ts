@@ -34,7 +34,7 @@ export class TokensService {
     return { rawToken, tokenHash };
   }
 
-  async validate(rawToken: string): Promise<MagicToken> {
+  async validate(rawToken: string, markUsed: boolean = true): Promise<MagicToken> {
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
     
     const magicToken = await this.prisma.magicToken.findUnique({
@@ -45,7 +45,7 @@ export class TokensService {
       throw new NotFoundException('Invalid or expired link');
     }
 
-    if (magicToken.usedAt !== null) {
+    if (markUsed && magicToken.usedAt !== null) {
       throw new GoneException('This link has already been used');
     }
 
@@ -53,12 +53,15 @@ export class TokensService {
       throw new GoneException('This link has expired');
     }
 
-    const updatedToken = await this.prisma.magicToken.update({
-      where: { id: magicToken.id },
-      data: { usedAt: new Date() },
-    });
+    if (markUsed) {
+      const updatedToken = await this.prisma.magicToken.update({
+        where: { id: magicToken.id },
+        data: { usedAt: new Date() },
+      });
+      return updatedToken;
+    }
 
-    return updatedToken;
+    return magicToken;
   }
 
   async invalidateForApplication(applicationId: string, purpose: TokenPurpose): Promise<void> {

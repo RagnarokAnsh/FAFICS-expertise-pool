@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
-
+import ReactQueryProvider from "@/components/providers/ReactQueryProvider";
 const playfairDisplay = Playfair_Display({ 
   subsets: ["latin"],
   variable: "--font-playfair-display",
@@ -51,7 +51,9 @@ export default function RootLayout({
           </div>
         </header>
 
-        {children}
+        <ReactQueryProvider>
+          {children}
+        </ReactQueryProvider>
 
         <footer className="bg-navy px-8 py-[18px] text-center mt-10">
           <p className="text-[12px] text-white/40">© {new Date().getFullYear()} FAFICS. All rights reserved.</p>

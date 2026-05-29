@@ -8,12 +8,29 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 /**
  * Bootstrap the NestJS application.
  * Configures: Helmet, CORS, global pipes/filters/interceptors, Swagger, port.
  */
 async function bootstrap(): Promise<void> {
+  // ── Sentry must init BEFORE NestFactory.create() ──────────────────
+  // @sentry/node v8+ hooks into Node.js module loading to instrument
+  // modules. Calling init after app creation misses early errors.
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN_API,
+    integrations: [
+      nodeProfilingIntegration(),
+    ],
+    tracesSampleRate: 1.0,
+    profilesSampleRate: 1.0,
+    // Enable debug in development to confirm Sentry connects
+    debug: process.env.NODE_ENV === 'development',
+  });
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
@@ -48,6 +65,7 @@ async function bootstrap(): Promise<void> {
 
   // ── Global interceptors ────────────────────────────────────────────
   app.useGlobalInterceptors(
+    new SentryInterceptor(),
     new LoggingInterceptor(),
     new TransformInterceptor(),
   );

@@ -64,7 +64,7 @@ export const adminApi = {
   },
 
   addNotes: async (id: string, notes: string) => {
-    const response = await adminApiClient.patch(`/admin/applications/${id}/notes`, { internalNotes: notes });
+    const response = await adminApiClient.patch(`/admin/applications/${id}/notes`, { secretaryNotes: notes });
     return unwrap(response);
   },
 
@@ -95,7 +95,7 @@ export const adminApi = {
     return unwrap(response);
   },
 
-  createUser: async (dto: any) => {
+  createUser: async (dto: { email: string; password?: string; role: string; firstName: string; lastName: string }) => {
     const response = await adminApiClient.post('/admin/users', dto);
     return unwrap(response);
   },

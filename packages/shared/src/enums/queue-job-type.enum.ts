@@ -7,4 +7,5 @@ export enum QueueJobType {
   SEND_PRESIDENT_LINK = 'send_president_link',
   EXPIRE_APPLICATIONS = 'expire_applications',
   SEND_RENEWAL_REMINDER = 'send_renewal_reminder',
+  SEND_DRAFT_RESUME_LINK = 'send_draft_resume_link',
 }

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  GoneException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -11,7 +12,12 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { SubmitApplicationDto } from './dto/submit-application.dto';
 import { ApplicationStatusQueryDto } from './dto/application-status-query.dto';
+import { RequestEditLinkDto } from './dto/request-edit-link.dto';
 import { Prisma } from '@prisma/client';
+import { TokensService } from '../tokens/tokens.service';
+import { MailService } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
+import { TokenPurpose } from '@fafics/shared';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QueueJobType, NotificationType } from '@fafics/shared';
@@ -28,6 +34,9 @@ export class ApplicationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly tokensService: TokensService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService,
     @InjectQueue('email') private readonly emailQueue: Queue,
   ) {}
 
@@ -132,6 +141,24 @@ export class ApplicationsService {
     });
 
     this.logger.log(`Draft created: ${result.id}`);
+
+    // Queue draft resume email (non-blocking)
+    if (this.emailQueue) {
+      try {
+        await this.emailQueue.add(QueueJobType.SEND_DRAFT_RESUME_LINK, {
+          applicationId: result.id,
+        });
+        this.logger.log(
+          `Draft resume link queued for ${dto.personal.email} (app: ${result.id})`,
+        );
+      } catch (err) {
+        // Do not fail the request if queueing fails — draft was still created
+        this.logger.warn(
+          `Could not queue draft resume link for ${result.id}: ${(err as Error).message}`,
+        );
+      }
+    }
+
     return { id: result.id };
   }
 
@@ -474,5 +501,189 @@ export class ApplicationsService {
       endorsedAt: application.endorsedAt,
       approvedAt: application.approvedAt,
     };
+  }
+
+  /**
+   * Generates a new edit token and emails the applicant with a resume link.
+   */
+  async requestEditLink(dto: RequestEditLinkDto): Promise<{ message: string }> {
+    const application = await this.prisma.application.findFirst({
+      where: {
+        email: dto.email,
+        referenceNumber: dto.referenceNumber,
+      },
+    });
+
+    if (!application) {
+      throw new NotFoundException('No application found.');
+    }
+
+    if (application.status !== 'draft' && application.status !== 'changes_requested') {
+      throw new BadRequestException(`This application cannot be edited. Status: ${application.status}`);
+    }
+
+    const { rawToken } = await this.tokensService.reissue({
+      purpose: TokenPurpose.APPLICANT_EDIT,
+      applicationId: application.id,
+      recipientEmail: application.email,
+      ttlMs: 3 * 60 * 60 * 1000, // 3 hours
+    });
+
+    const webBaseUrl = this.configService.get<string>('app.webBaseUrl') || this.configService.get<string>('WEB_BASE_URL') || 'http://localhost:3000';
+    const resumeUrl = `${webBaseUrl}/apply/resume/${rawToken}`;
+
+    await this.mailService.sendApplicantEditLink(application.id, resumeUrl);
+
+    await this.prisma.notificationLog.create({
+      data: {
+        notificationType: NotificationType.APPLICANT_EDIT_LINK,
+        recipientEmail: application.email,
+        applicationId: application.id,
+        sentAt: new Date(),
+      },
+    });
+
+    await this.auditService.log({
+      applicationId: application.id,
+      actorEmail: application.email,
+      actorRole: 'member',
+      action: 'application.edit_link_sent',
+    });
+
+    return { message: 'Edit link sent to your email address.' };
+  }
+
+  /**
+   * Validates an edit token and retrieves the full application data.
+   */
+  async resumeFromToken(rawToken: string): Promise<any> {
+    const magicToken = await this.tokensService.validate(rawToken, false);
+
+    const application = await this.prisma.application.findUnique({
+      where: { id: magicToken.applicationId! },
+      include: {
+        educations: { orderBy: { sortOrder: 'asc' } },
+        languages: { orderBy: { sortOrder: 'asc' } },
+        unExperiences: { orderBy: { sortOrder: 'asc' } },
+        nonUnExperiences: { orderBy: { sortOrder: 'asc' } },
+        faficsExperiences: { orderBy: { sortOrder: 'asc' } },
+        localExperiences: { orderBy: { sortOrder: 'asc' } },
+        expertise: { orderBy: { sortOrder: 'asc' } },
+      },
+    });
+
+    if (!application) {
+      throw new NotFoundException('Application not found.');
+    }
+
+    if (application.status !== 'draft' && application.status !== 'changes_requested') {
+      throw new BadRequestException('This application is no longer editable.');
+    }
+
+    await this.auditService.log({
+      applicationId: application.id,
+      actorEmail: application.email,
+      actorRole: 'member',
+      action: 'application.resume_link_used',
+    });
+
+    // Map flat Prisma fields back to the nested DTO structure expected by the frontend
+    const {
+      firstName,
+      middleName,
+      lastName,
+      dateOfBirth,
+      nationality,
+      secondNationality,
+      gender,
+      phone,
+      whatsapp,
+      email,
+      separationDate,
+      associationId,
+      associationName,
+      associationCountry,
+      associationGeneralEmail,
+      presidentEmail,
+      presidentPhone,
+      associateMemberName,
+      associateMemberCountry,
+      ...rest
+    } = application;
+
+    return {
+      id: application.id,
+      status: application.status,
+      presidentNotes: application.presidentNotes,
+      personal: {
+        firstName,
+        middleName,
+        lastName,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString().split('T')[0] : undefined,
+        nationality,
+        secondNationality,
+        gender,
+        phone,
+        whatsapp,
+        email,
+        separationDate: separationDate ? new Date(separationDate).toISOString().split('T')[0] : undefined,
+      },
+      association: {
+        associationId,
+        associationName,
+        associationCountry,
+        associationGeneralEmail,
+        presidentEmail,
+        presidentPhone,
+        associateMemberName,
+        associateMemberCountry,
+      },
+      educations: rest.educations,
+      languages: rest.languages,
+      unExperiences: rest.unExperiences,
+      nonUnExperiences: rest.nonUnExperiences,
+      faficsExperiences: rest.faficsExperiences,
+      localExperiences: rest.localExperiences,
+      expertise: rest.expertise,
+      unExperienceSummary: rest.unExperienceSummary,
+      nonUnExperienceSummary: rest.nonUnExperienceSummary,
+      faficsExperienceSummary: rest.faficsExperienceSummary,
+      localExperienceSummary: rest.localExperienceSummary,
+    };
+  }
+
+  /**
+   * Finds the most recent draft for the given email and sends a resume link.
+   * Returns void silently if no draft exists (prevents email enumeration).
+   */
+  async requestDraftLink(email: string): Promise<void> {
+    const application = await this.prisma.application.findFirst({
+      where: { email, status: 'draft' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!application) {
+      // Do not throw — silently return to prevent email enumeration
+      return;
+    }
+
+    const { rawToken } = await this.tokensService.reissue({
+      purpose: TokenPurpose.APPLICANT_EDIT,
+      applicationId: application.id,
+      recipientEmail: email,
+      ttlMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    const webBaseUrl = this.configService.get<string>('app.webBaseUrl') || this.configService.get<string>('WEB_BASE_URL') || 'http://localhost:3000';
+    const resumeUrl = `${webBaseUrl}/apply/resume/${rawToken}`;
+
+    await this.mailService.sendDraftSavedEmail(application.id, resumeUrl);
+
+    await this.auditService.log({
+      applicationId: application.id,
+      actorEmail: email,
+      actorRole: 'member',
+      action: 'application.draft_link_requested',
+    });
   }
 }

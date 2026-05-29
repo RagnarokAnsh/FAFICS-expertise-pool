@@ -2,6 +2,7 @@ import React from 'react';
 
 interface FormProgressProps {
   currentStep: number;
+  highestStep: number;
   goToStep: (step: number) => void;
 }
 
@@ -13,13 +14,13 @@ const STEPS = [
   { id: 5, label: 'Consent &\nSubmit' },
 ];
 
-export function FormProgress({ currentStep, goToStep }: FormProgressProps) {
+export function FormProgress({ currentStep, highestStep, goToStep }: FormProgressProps) {
   return (
     <div className="bg-white border-b border-border px-4 md:px-8 sticky top-[78px] z-50 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
       <div className="max-w-[1020px] mx-auto flex items-stretch overflow-x-auto whitespace-nowrap pb-1 md:pb-0 justify-start md:justify-center">
         {STEPS.map((step, index) => {
           const isActive = currentStep === step.id;
-          const isDone = step.id < currentStep;
+          const isDone = step.id <= highestStep && step.id !== currentStep;
           
           let itemClass = "flex-1 min-w-[140px] md:min-w-0 flex items-center gap-2.5 p-[14px_12px] cursor-pointer border-b-[3px] border-transparent transition-all duration-200 relative";
           if (isActive) itemClass += " !border-navy";

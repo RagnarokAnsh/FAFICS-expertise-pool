@@ -9,8 +9,10 @@ export default function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('officer');
+  const [role, setRole] = useState('secretary');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +26,14 @@ export default function AdminUsersPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await adminApi.createUser({ email, password, role });
+      await adminApi.createUser({ email, password, role, firstName, lastName });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       setIsModalOpen(false);
       setEmail('');
+      setFirstName('');
+      setLastName('');
       setPassword('');
-      setRole('officer');
+      setRole('secretary');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create user.');
     } finally {
@@ -81,7 +85,8 @@ export default function AdminUsersPage() {
                       onChange={(e) => handleRoleChange(user.id, e.target.value)}
                       className="border border-border rounded px-2 py-1 text-sm bg-white"
                     >
-                      <option value="officer">Officer</option>
+                      <option value="secretary">Secretary</option>
+                      <option value="committee">Committee</option>
                       <option value="admin">Admin</option>
                     </select>
                   </td>
@@ -111,6 +116,29 @@ export default function AdminUsersPage() {
                 />
               </div>
 
+              <div className="flex gap-4 mb-4">
+                <div className="flex-1">
+                  <label className="block text-[11px] text-text-light font-medium uppercase mb-1">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full border border-border rounded p-2 text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full border border-border rounded p-2 text-sm"
+                  />
+                </div>
+              </div>
+
               <div className="mb-4">
                 <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Password</label>
                 <input
@@ -129,7 +157,8 @@ export default function AdminUsersPage() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full border border-border rounded p-2 text-sm bg-white"
                 >
-                  <option value="officer">Officer (Read/Write Applications)</option>
+                  <option value="secretary">Secretary (Read/Write Applications)</option>
+                  <option value="committee">Committee (Read Only)</option>
                   <option value="admin">Admin (Full Access)</option>
                 </select>
               </div>

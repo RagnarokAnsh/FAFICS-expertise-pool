@@ -13,6 +13,8 @@ import { approvedTemplate } from './templates/approved.template';
 import { rejectedTemplate } from './templates/rejected.template';
 import { renewalReminderTemplate } from './templates/renewal-reminder.template';
 import { expiredTemplate } from './templates/expired.template';
+import { applicantEditLinkTemplate } from './templates/applicant-edit-link.template';
+import { draftSavedTemplate } from './templates/draft-saved.template';
 
 @Injectable()
 export class MailService {
@@ -195,6 +197,26 @@ export class MailService {
     const { subject, html } = expiredTemplate({
       applicantName: `${app.firstName} ${app.lastName}`,
       webBaseUrl: this.getWebBaseUrl(),
+    });
+    return this.sendEmail(app.email, subject, html);
+  }
+
+  async sendApplicantEditLink(applicationId: string, resumeUrl: string): Promise<{ messageId: string }> {
+    const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
+    const { subject, html } = applicantEditLinkTemplate({
+      applicantName: `${app.firstName} ${app.lastName}`,
+      resumeUrl,
+      referenceNumber: app.referenceNumber || 'Draft',
+      status: app.status,
+    });
+    return this.sendEmail(app.email, subject, html);
+  }
+
+  async sendDraftSavedEmail(applicationId: string, resumeUrl: string): Promise<{ messageId: string }> {
+    const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
+    const { subject, html } = draftSavedTemplate({
+      applicantName: `${app.firstName} ${app.lastName}`,
+      resumeUrl,
     });
     return this.sendEmail(app.email, subject, html);
   }

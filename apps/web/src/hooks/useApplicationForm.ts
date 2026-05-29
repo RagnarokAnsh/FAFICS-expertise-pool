@@ -23,8 +23,8 @@ export function sanitizeForApi(data: any): any {
   if (typeof data === 'object') {
     const result: Record<string, any> = {};
     for (const [key, value] of Object.entries(data)) {
-      // Don't send consent fields during draft updates
-      if (key === 'consentData' || key === 'consentAccurate') continue;
+      // Don't send metadata or consent fields during draft updates
+      if (['consentData', 'consentAccurate', 'id', 'status', 'presidentNotes'].includes(key)) continue;
       
       const sanitized = sanitizeForApi(value);
       if (sanitized !== undefined) {
@@ -47,9 +47,31 @@ function extractStep1Data(data: any): { personal: any; association: any } {
   };
 }
 
-export function useApplicationForm(initialData?: Partial<ApplicationData>, initialDraftId?: string) {
-  const [currentStep, setCurrentStep] = useState(1);
+function computeInitialStep(data?: Partial<ApplicationData>): number {
+  if (!data) return 1;
+  
+  let step = 1;
+  if (data.personal?.firstName && data.association?.associationName) {
+    step = 2;
+  }
+  if (step === 2 && data.educations && data.educations.length > 0 && data.languages && data.languages.length > 0) {
+    step = 3;
+  }
+  if (step === 3 && data.unExperiences && data.unExperiences.length > 0) {
+    step = 4;
+  }
+  if (step === 4 && data.expertise && data.expertise.length > 0) {
+    step = 5;
+  }
+  
+  return step;
+}
+
+export function useApplicationForm(initialData?: Partial<ApplicationData>, initialDraftId?: string, isResume?: boolean) {
+  const [currentStep, setCurrentStep] = useState(computeInitialStep(initialData));
+  const [highestStep, setHighestStep] = useState(currentStep);
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
+  const [draftCreatedEmail, setDraftCreatedEmail] = useState<string | null>(null);
 
   const form = useForm<ApplicationData>({
     resolver: zodResolver(applicationSchema as any) as any,
@@ -57,11 +79,23 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
     mode: 'onChange',
   });
 
-  const { saveStatus, triggerSave, setSaveStatus, cancelSave } = useAutoSave(draftId);
+  useEffect(() => {
+    if (initialData) {
+      form.reset(initialData as DefaultValues<ApplicationData>);
+    }
+  }, [initialData, form]);
+
+  useEffect(() => {
+    if (currentStep > highestStep) {
+      setHighestStep(currentStep);
+    }
+  }, [currentStep, highestStep]);
+
+  const { saveStatus, triggerSave, setSaveStatus, cancelSave, lastSavedAt, setLastSavedAt } = useAutoSave(draftId);
 
   // Load from local storage if no initial draft ID was provided
   useEffect(() => {
-    if (!initialDraftId && typeof window !== 'undefined') {
+    if (!initialDraftId && !isResume && typeof window !== 'undefined') {
       const savedDraftId = localStorage.getItem('fafics_draft_id');
       if (savedDraftId) {
         setDraftId(savedDraftId);
@@ -71,7 +105,7 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
 
   // Handle draft ID updates
   useEffect(() => {
-    if (draftId && typeof window !== 'undefined') {
+    if (draftId && !isResume && typeof window !== 'undefined') {
       localStorage.setItem('fafics_draft_id', draftId);
     }
   }, [draftId]);
@@ -99,7 +133,9 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
         const step1Data = extractStep1Data(updatedData);
         const res = await applicationsApi.createDraft(step1Data);
         setDraftId(res.id);
+        setDraftCreatedEmail(step1Data.personal?.email || null);
         setSaveStatus('saved');
+        setLastSavedAt(new Date());
         setTimeout(() => setSaveStatus('idle'), 3000);
       } catch (error) {
         console.error('Failed to create draft:', error);
@@ -114,6 +150,7 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
       try {
         await applicationsApi.updateDraft(draftId, sanitizeForApi(updatedData));
         setSaveStatus('saved');
+        setLastSavedAt(new Date());
         setTimeout(() => setSaveStatus('idle'), 3000);
       } catch (error) {
         console.error('Failed to save draft:', error);
@@ -125,7 +162,7 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
       setCurrentStep((prev) => prev + 1);
       window.scrollTo(0, 0);
     }
-  }, [currentStep, draftId, form, setSaveStatus]);
+  }, [currentStep, draftId, form, setSaveStatus, cancelSave, triggerSave]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
@@ -135,17 +172,20 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
   }, [currentStep]);
 
   const goToStep = useCallback((step: number) => {
-    if (step < currentStep) {
+    if (step <= highestStep && step !== currentStep) {
       setCurrentStep(step);
       window.scrollTo(0, 0);
     }
-  }, [currentStep]);
+  }, [currentStep, highestStep]);
 
   return {
     form,
     currentStep,
+    highestStep,
     draftId,
     saveStatus,
+    lastSavedAt,
+    draftCreatedEmail,
     handleNext,
     handleBack,
     goToStep,

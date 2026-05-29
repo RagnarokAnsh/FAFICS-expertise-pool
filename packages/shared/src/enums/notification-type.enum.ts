@@ -14,4 +14,6 @@ export enum NotificationType {
   RENEWAL_REMINDER_90D = 'renewal_reminder_90d',
   RENEWAL_REMINDER_30D = 'renewal_reminder_30d',
   EXPIRED = 'expired',
+  APPLICANT_EDIT_LINK = 'applicant_edit_link',
+  DRAFT_SAVED_LINK = 'draft_saved_link',
 }

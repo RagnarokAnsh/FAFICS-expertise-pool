@@ -75,6 +75,7 @@ enum TokenPurpose {
   president_review    // 14-day magic link for endorsement (no login required)
   email_verification  // 24h — officer account email verification
   password_reset      // 1h  — admin/secretary password reset
+  applicant_edit      // 3h  — applicant edit link
   @@map("token_purpose")
 }
 
@@ -90,6 +91,8 @@ enum NotificationType {
   renewal_reminder_90d      // → applicant 90 days before expiry
   renewal_reminder_30d      // → applicant 30 days before expiry
   expired                   // → applicant when profile expires
+  applicant_edit_link       // → applicant request for edit link
+  draft_saved_link          // → applicant when draft is first saved
   @@map("notification_type")
 }
 
@@ -99,6 +102,7 @@ enum QueueJobType {
   send_president_link      // Generate token + dispatch endorsement email
   expire_applications      // Daily maintenance: approved → expired
   send_renewal_reminder    // 90d and 30d renewal reminders
+  send_draft_resume_link   // Generate token + send draft resume email
   @@map("queue_job_type")
 }
 

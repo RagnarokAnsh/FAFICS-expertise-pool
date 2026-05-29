@@ -12,8 +12,8 @@ export function DynamicRowList<T>({ items, renderRow, onAdd, addLabel }: Dynamic
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-col gap-2.5">
-        {items.map((item, index) => (
-          <div key={index} className="flex items-start gap-2 bg-off-white border border-border rounded-lg p-3 relative overflow-x-auto">
+        {items.map((item: any, index) => (
+          <div key={item.id || index} className="flex items-start gap-2 bg-off-white border border-border rounded-lg p-3 relative overflow-x-auto">
             <div className="text-[12px] font-bold text-text-muted w-5 pt-[13px] shrink-0 text-center">
               {index + 1}
             </div>

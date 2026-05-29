@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Button } from '../ui/Button';
+import { endorsementApi } from '../../lib/api/endorsement.api';
 
 interface EndorseActionsProps {
   token: string;
@@ -15,13 +15,11 @@ export function EndorseActions({ token }: EndorseActionsProps) {
   const [successType, setSuccessType] = useState<'endorse' | 'return' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-
   const handleEndorse = async () => {
     setIsSubmitting(true);
     setError(null);
     try {
-      await axios.post(`${API_URL}/endorse/${token}/endorse`, { presidentNotes: notes || undefined });
+      await endorsementApi.endorse(token, notes || undefined);
       setSuccessType('endorse');
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred while endorsing.');
@@ -38,7 +36,7 @@ export function EndorseActions({ token }: EndorseActionsProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      await axios.post(`${API_URL}/endorse/${token}/return`, { presidentNotes: notes });
+      await endorsementApi.return(token, notes);
       setSuccessType('return');
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred while returning.');

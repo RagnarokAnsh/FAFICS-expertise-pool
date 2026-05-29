@@ -25,6 +25,8 @@ export class EmailProcessor extends WorkerHost {
         return this.handleSendPresidentLink(job as Job<{ applicationId: string }>);
       case QueueJobType.SEND_EMAIL:
         return this.handleSendEmail(job as Job<{ notificationType: NotificationType; applicationId: string; daysLeft?: 90 | 30 }>);
+      case QueueJobType.SEND_DRAFT_RESUME_LINK:
+        return this.handleSendDraftResumeLink(job as Job<{ applicationId: string }>);
       default:
         console.warn(`Unknown job name: ${job.name}`);
     }
@@ -69,6 +71,48 @@ export class EmailProcessor extends WorkerHost {
       actorEmail: 'system',
       actorRole: 'admin', // System actor
       action: 'president.link_sent',
+    });
+  }
+
+  private async handleSendDraftResumeLink(job: Job<{ applicationId: string }>): Promise<void> {
+    const { applicationId } = job.data;
+
+    const application = await this.prisma.application.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!application) {
+      throw new Error(`Application ${applicationId} not found`);
+    }
+
+    // 30-day TTL for draft resume links
+    const { rawToken } = await this.tokensService.generate({
+      purpose: TokenPurpose.APPLICANT_EDIT,
+      applicationId,
+      recipientEmail: application.email,
+      ttlMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    const webBaseUrl = this.configService.get<string>('WEB_BASE_URL') || this.configService.get<string>('app.webBaseUrl');
+    const resumeUrl = `${webBaseUrl}/apply/resume/${rawToken}`;
+
+    await this.mailService.sendDraftSavedEmail(applicationId, resumeUrl);
+
+    await this.prisma.notificationLog.create({
+      data: {
+        applicationId,
+        recipientEmail: application.email,
+        notificationType: NotificationType.DRAFT_SAVED_LINK as any,
+        queueJobId: job.id,
+        sentAt: new Date(),
+      },
+    });
+
+    await this.auditService.log({
+      applicationId,
+      actorEmail: application.email,
+      actorRole: 'member',
+      action: 'application.draft_link_sent',
     });
   }
 

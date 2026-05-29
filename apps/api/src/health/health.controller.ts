@@ -69,4 +69,14 @@ export class HealthController {
       },
     };
   }
+
+  /**
+   * GET /api/health/debug-sentry
+   * Throws an intentional error to verify Sentry is capturing exceptions.
+   */
+  @Get('debug-sentry')
+  @ApiOperation({ summary: 'Intentional error for Sentry testing' })
+  debugSentry(): never {
+    throw new Error('Sentry Integration Test Error from NestJS!');
+  }
 }

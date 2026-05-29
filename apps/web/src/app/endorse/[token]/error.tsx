@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-export default function TokenError() {
+export default function TokenError({ error, reset }: { error?: Error & { digest?: string }, reset?: () => void }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-off-white px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8 text-center border border-gray-100">

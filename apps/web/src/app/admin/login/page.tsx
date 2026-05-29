@@ -19,9 +19,9 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      const response = await adminApi.login(email, password);
-      Cookies.set('fafics_token', response.data.accessToken, { expires: 1 });
-      Cookies.set('fafics_role', response.data.role, { expires: 1 });
+      const result = await adminApi.login(email, password);
+      Cookies.set('fafics_token', result.accessToken, { expires: 1 });
+      Cookies.set('fafics_role', result.role, { expires: 1 });
       router.push('/admin/dashboard');
     } catch (err: any) {
       setError('Invalid email or password');

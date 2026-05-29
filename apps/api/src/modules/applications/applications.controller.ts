@@ -24,6 +24,8 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { SubmitApplicationDto } from './dto/submit-application.dto';
 import { ApplicationStatusQueryDto } from './dto/application-status-query.dto';
+import { RequestEditLinkDto } from './dto/request-edit-link.dto';
+import { RequestDraftLinkDto } from './dto/request-draft-link.dto';
 
 /**
  * ApplicationsController handles the public-facing application endpoints.
@@ -37,6 +39,68 @@ export class ApplicationsController {
   private readonly logger = new Logger(ApplicationsController.name);
 
   constructor(private readonly applicationsService: ApplicationsService) {}
+
+  /**
+   * GET /api/applications/status?email=...&referenceNumber=...
+   * Applicants check their application status using email + reference number.
+   * Returns only status fields — no personal data.
+   */
+  @Get('status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check application status (email + reference number)' })
+  @ApiOkResponse({ description: 'Status retrieved' })
+  @ApiNotFoundResponse({ description: 'Application not found' })
+  async getStatus(
+    @Query() query: ApplicationStatusQueryDto,
+  ): Promise<{
+    status: string;
+    referenceNumber: string;
+    submittedAt: Date | null;
+    endorsedAt: Date | null;
+    approvedAt: Date | null;
+  }> {
+    return this.applicationsService.getStatus(query);
+  }
+
+  /**
+   * POST /api/applications/request-edit-link
+   * Requests an editing link for an application in draft or changes_requested status.
+   */
+  @Post('request-edit-link')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request an editing link for an application' })
+  @ApiOkResponse({ description: 'Edit link sent' })
+  @ApiNotFoundResponse({ description: 'Application not found' })
+  async requestEditLink(@Body() dto: RequestEditLinkDto): Promise<{ message: string }> {
+    return this.applicationsService.requestEditLink(dto);
+  }
+
+  /**
+   * POST /api/applications/request-draft-link
+   * Requests a resume link for a draft application (email only, no reference number).
+   * Always returns 200 regardless of whether a draft exists (prevents email enumeration).
+   */
+  @Post('request-draft-link')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request a draft resume link (email only)' })
+  @ApiOkResponse({ description: 'If a draft exists, a link has been sent' })
+  async requestDraftLink(@Body() dto: RequestDraftLinkDto): Promise<{ message: string }> {
+    await this.applicationsService.requestDraftLink(dto.email);
+    return { message: 'If a draft application exists for this email, a resume link has been sent.' };
+  }
+
+  /**
+   * GET /api/applications/resume/:token
+   * Resumes an application from a magic link token.
+   */
+  @Get('resume/:token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resume application from edit token' })
+  @ApiOkResponse({ description: 'Application data retrieved' })
+  @ApiNotFoundResponse({ description: 'Link invalid or expired' })
+  async resumeFromToken(@Param('token') token: string): Promise<any> {
+    return this.applicationsService.resumeFromToken(token);
+  }
 
   /**
    * POST /api/applications
@@ -94,27 +158,5 @@ export class ApplicationsController {
   ): Promise<{ referenceNumber: string }> {
     this.logger.log(`Submitting application ${id}`);
     return this.applicationsService.submitApplication(id, dto);
-  }
-
-  /**
-   * GET /api/applications/status?email=...&referenceNumber=...
-   * Applicants check their application status using email + reference number.
-   * Returns only status fields — no personal data.
-   */
-  @Get('status')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Check application status (email + reference number)' })
-  @ApiOkResponse({ description: 'Status retrieved' })
-  @ApiNotFoundResponse({ description: 'Application not found' })
-  async getStatus(
-    @Query() query: ApplicationStatusQueryDto,
-  ): Promise<{
-    status: string;
-    referenceNumber: string;
-    submittedAt: Date | null;
-    endorsedAt: Date | null;
-    approvedAt: Date | null;
-  }> {
-    return this.applicationsService.getStatus(query);
   }
 }

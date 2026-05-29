@@ -3,6 +3,7 @@ import { applicationsApi } from '../lib/api/applications.api';
 
 export function useAutoSave(draftId: string | null) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
 
   const triggerSave = useCallback((data: any) => {
@@ -17,6 +18,7 @@ export function useAutoSave(draftId: string | null) {
       try {
         await applicationsApi.updateDraft(draftId, data);
         setSaveStatus('saved');
+        setLastSavedAt(new Date());
         setTimeout(() => setSaveStatus('idle'), 3000);
       } catch (error) {
         console.error('Failed to auto-save:', error);
@@ -35,7 +37,7 @@ export function useAutoSave(draftId: string | null) {
     return () => {
       cancelSave();
     };
-  }, []);
+  }, [cancelSave]);
 
-  return { saveStatus, triggerSave, setSaveStatus, cancelSave };
+  return { saveStatus, triggerSave, setSaveStatus, cancelSave, lastSavedAt, setLastSavedAt };
 }
