@@ -104,4 +104,9 @@ export const adminApi = {
     const response = await adminApiClient.patch(`/admin/users/${userId}/role`, { role });
     return unwrap(response);
   },
+
+  getAnalytics: async () => {
+    const response = await adminApiClient.get('/admin/analytics');
+    return unwrap(response);
+  },
 };

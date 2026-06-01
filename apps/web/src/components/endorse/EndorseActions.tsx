@@ -48,15 +48,19 @@ export function EndorseActions({ token }: EndorseActionsProps) {
   if (successType) {
     return (
       <div className="bg-white border border-gray-100 rounded-lg p-8 text-center shadow-sm">
-        <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <div className="w-16 h-16 bg-navy rounded-full border-[3px] border-gold flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
         <h2 className="text-2xl font-serif font-bold text-navy mb-2">
-          {successType === 'endorse' ? 'Thank you — application endorsed' : 'Application returned'}
+          {successType === 'endorse' ? 'Profile Added to Expertise Pool' : 'Application Returned'}
         </h2>
-        <p className="text-text-mid">The applicant has been notified by email.</p>
+        <p className="text-text-mid">
+          {successType === 'endorse'
+            ? 'The applicant has been notified. Their profile is now active in the FAFICS Expertise Pool with three-year validity.'
+            : 'The applicant has been notified with your comments and can revise their application.'}
+        </p>
       </div>
     );
   }
@@ -86,8 +90,8 @@ export function EndorseActions({ token }: EndorseActionsProps) {
             </h3>
             
             <p className="text-sm text-text-mid mb-4">
-              {modalState === 'endorse' 
-                ? 'Are you sure you want to endorse this application? You may optionally leave a note for the FAFICS Secretary.'
+              {modalState === 'endorse'
+                ? 'By endorsing this application, the applicant\'s profile will be immediately added to the FAFICS Expertise Pool with three-year validity. You may optionally leave a note.'
                 : 'Please provide comments explaining why the application is being returned. These comments will be shared with the applicant.'}
             </p>
 

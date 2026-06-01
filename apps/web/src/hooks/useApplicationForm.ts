@@ -24,7 +24,7 @@ export function sanitizeForApi(data: any): any {
     const result: Record<string, any> = {};
     for (const [key, value] of Object.entries(data)) {
       // Don't send metadata or consent fields during draft updates
-      if (['consentData', 'consentAccurate', 'id', 'status', 'presidentNotes'].includes(key)) continue;
+      if (['consentData', 'consentAccurate', 'id', 'status', 'presidentNotes', 'applicationId', 'createdAt', 'updatedAt', 'userId'].includes(key)) continue;
       
       const sanitized = sanitizeForApi(value);
       if (sanitized !== undefined) {

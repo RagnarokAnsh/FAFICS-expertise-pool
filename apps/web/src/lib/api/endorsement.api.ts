@@ -4,7 +4,7 @@ import type { EndorsementView } from '@fafics/shared';
 export const endorsementApi = {
   getApplication: async (token: string): Promise<EndorsementView> => {
     const { data } = await apiClient.get(`/endorse/${token}`);
-    return data;
+    return data.data ?? data;
   },
 
   endorse: async (token: string, presidentNotes?: string): Promise<{ message: string }> => {

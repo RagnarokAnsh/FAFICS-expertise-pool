@@ -1,0 +1,2662 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>FAFICS — Expertise Pool Application</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --navy: #0D2240;
+      --navy-mid: #1a3a6b;
+      --navy-light: #e8edf5;
+      --gold: #C8973A;
+      --gold-light: #f5edd8;
+      --white: #ffffff;
+      --off-white: #f7f8fa;
+      --border: #dde3ef;
+      --text: #1a2540;
+      --text-mid: #4a5578;
+      --text-muted: #8892aa;
+      --success: #1a7a4a;
+      --danger: #c0392b;
+      --radius: 10px;
+      --shadow: 0 2px 16px rgba(13, 34, 64, .09)
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--off-white);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
+
+    /* HEADER */
+    .site-header {
+      background: var(--navy);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 20px rgba(0, 0, 0, .25)
+    }
+
+    .header-inner {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .logo-block {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .logo-emblem {
+      width: 46px;
+      height: 46px;
+      border: 2px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .logo-emblem svg {
+      width: 24px;
+      height: 24px
+    }
+
+    .logo-text .org {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: .02em
+    }
+
+    .logo-text .sub {
+      font-size: 11px;
+      color: rgba(255, 255, 255, .55);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      margin-top: 1px
+    }
+
+    .header-tag {
+      font-size: 12px;
+      color: var(--gold);
+      font-weight: 500;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      border: 1px solid rgba(200, 151, 58, .35);
+      padding: 4px 12px;
+      border-radius: 20px
+    }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      padding: 48px 32px 40px;
+      text-align: center;
+      border-bottom: 3px solid var(--gold)
+    }
+
+    .hero-eyebrow {
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+      margin-bottom: 12px
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.25;
+      margin-bottom: 14px
+    }
+
+    .hero-desc {
+      font-size: 14px;
+      color: rgba(255, 255, 255, .68);
+      max-width: 620px;
+      margin: 0 auto;
+      line-height: 1.7
+    }
+
+    /* INTRO NOTICE BOX */
+    .intro-notice {
+      background: var(--gold-light);
+      border: 1.5px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 22px 26px;
+      margin: 28px 0 0
+    }
+
+    .intro-notice p {
+      font-size: 13.5px;
+      color: var(--text);
+      line-height: 1.8;
+      margin-bottom: 10px
+    }
+
+    .intro-notice p:last-child {
+      margin-bottom: 0
+    }
+
+    .intro-notice strong {
+      color: var(--navy)
+    }
+
+    .intro-pillars {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 10px 0
+    }
+
+    .pillar-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--text-mid);
+      line-height: 1.5
+    }
+
+    .pillar-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+      margin-top: 5px
+    }
+
+    /* PROGRESS */
+    .progress-wrap {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      position: sticky;
+      top: 78px;
+      z-index: 90;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .05)
+    }
+
+    .progress-inner {
+      max-width: 1020px;
+      margin: 0 auto;
+      display: flex;
+      align-items: stretch
+    }
+
+    .step-item {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 12px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all .2s;
+      position: relative
+    }
+
+    .step-item::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1px;
+      height: 28px;
+      background: var(--border)
+    }
+
+    .step-item:last-child::after {
+      display: none
+    }
+
+    .step-item.active {
+      border-bottom-color: var(--navy)
+    }
+
+    .step-item.done {
+      border-bottom-color: var(--gold)
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: all .2s
+    }
+
+    .step-item.active .step-num {
+      border-color: var(--navy);
+      background: var(--navy);
+      color: var(--white)
+    }
+
+    .step-item.done .step-num {
+      border-color: var(--gold);
+      background: var(--gold);
+      color: var(--white)
+    }
+
+    .step-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      line-height: 1.3;
+      transition: color .2s
+    }
+
+    .step-item.active .step-label {
+      color: var(--navy)
+    }
+
+    .step-item.done .step-label {
+      color: var(--gold)
+    }
+
+    /* MAIN */
+    .main {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 36px 32px 80px;
+      width: 100%;
+      flex: 1
+    }
+
+    .form-section {
+      display: none;
+      animation: fadeIn .25s ease
+    }
+
+    .form-section.active {
+      display: block
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    /* SECTION HEADER */
+    .section-header {
+      margin-bottom: 28px
+    }
+
+    .section-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 5px
+    }
+
+    .section-header p {
+      font-size: 13.5px;
+      color: var(--text-mid);
+      line-height: 1.6
+    }
+
+    /* CARD */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow: hidden
+    }
+
+    .card-head {
+      background: var(--navy);
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .card-head h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: .03em;
+      text-transform: uppercase
+    }
+
+    .card-head .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0
+    }
+
+    .card-body {
+      padding: 22px;
+      overflow: hidden
+    }
+
+    /* FORM ELEMENTS */
+    .form-grid {
+      display: grid;
+      gap: 16px
+    }
+
+    .col-3 {
+      grid-template-columns: 1fr 1fr 1fr
+    }
+
+    .col-2 {
+      grid-template-columns: 1fr 1fr
+    }
+
+    .col-1 {
+      grid-template-columns: 1fr
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: .02em;
+      text-transform: uppercase
+    }
+
+    .req {
+      color: var(--gold);
+      margin-left: 2px
+    }
+
+    .field input,
+    .field select {
+      height: 40px;
+      padding: 0 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--off-white);
+      transition: border-color .15s, background .15s;
+      outline: none
+    }
+
+    .field textarea {
+      width: 100%;
+      max-width: 100%;
+      min-height: 110px;
+      padding: 10px 12px;
+      resize: vertical;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--off-white);
+      transition: border-color .15s, background .15s;
+      outline: none;
+      box-sizing: border-box
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--navy-mid);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(13, 34, 64, .07)
+    }
+
+    .error,
+    .field input.error,
+    .field select.error,
+    .field textarea.error {
+      border-color: var(--danger) !important;
+      background-color: #fff5f5 !important
+    }
+
+    .field select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238892aa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px
+    }
+
+    .field input::placeholder {
+      color: var(--text-muted)
+    }
+
+    .field-hint {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: -2px
+    }
+
+    /* DYNAMIC LIST ROWS */
+    .dynamic-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .dynamic-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      position: relative;
+      overflow-x: auto
+    }
+
+    .dynamic-row .row-index {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      width: 20px;
+      padding-top: 13px;
+      flex-shrink: 0;
+      text-align: center
+    }
+
+    .dynamic-row .row-fields {
+      flex: 1;
+      display: grid;
+      gap: 10px;
+      min-width: 0
+    }
+
+    .dynamic-row .row-fields input,
+    .dynamic-row .row-fields select {
+      height: 38px;
+      padding: 0 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px;
+      color: var(--text);
+      background: var(--white);
+      outline: none;
+      transition: border-color .15s;
+      min-width: 0
+    }
+
+    .dynamic-row .row-fields input:focus,
+    .dynamic-row .row-fields select:focus {
+      border-color: var(--navy-mid);
+      box-shadow: 0 0 0 3px rgba(13, 34, 64, .07)
+    }
+
+    .dynamic-row .row-fields select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238892aa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 32px
+    }
+
+    .dynamic-row .row-fields input.error,
+    .dynamic-row .row-fields select.error {
+      border-color: var(--danger) !important;
+      background-color: #fff5f5 !important
+    }
+
+    .btn-remove {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid #ffd0cc;
+      background: #fff5f5;
+      color: #c0392b;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 7px;
+      transition: all .15s;
+      line-height: 1
+    }
+
+    .btn-remove:hover {
+      background: #ffe0de;
+      border-color: #c0392b
+    }
+
+    .btn-add {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: 1.5px dashed var(--navy-mid);
+      border-radius: 8px;
+      background: var(--navy-light);
+      color: var(--navy-mid);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      margin-top: 4px
+    }
+
+    .btn-add:hover {
+      background: var(--navy);
+      color: var(--white);
+      border-style: solid
+    }
+
+    .btn-add svg {
+      width: 14px;
+      height: 14px
+    }
+
+    .col-labels {
+      display: grid;
+      gap: 10px;
+      padding: 0 50px 4px 46px
+    }
+
+    .col-labels span {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--text-muted)
+    }
+
+    /* SUB HEAD */
+    .sub-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0 12px
+    }
+
+    .sub-head span {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--navy-mid);
+      white-space: nowrap
+    }
+
+    .sub-head::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border)
+    }
+
+    /* EXPERIENCE SUMMARY */
+    .exp-summary-block {
+      margin-top: 16px
+    }
+
+    .exp-summary-block textarea {
+      width: 100%;
+      min-height: 110px;
+      padding: 10px 12px;
+      resize: vertical;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--off-white);
+      outline: none;
+      transition: border-color .15s;
+      box-sizing: border-box
+    }
+
+    .exp-summary-block textarea:focus {
+      border-color: var(--navy-mid);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(13, 34, 64, .07)
+    }
+
+    /* EXPERTISE TABLE */
+    .exp-table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    .exp-table th {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--text-muted);
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border);
+      text-align: left;
+      background: var(--off-white)
+    }
+
+    .exp-table th.center {
+      text-align: center
+    }
+
+    .exp-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      font-size: 13.5px
+    }
+
+    .exp-table tr:hover td {
+      background: var(--navy-light)
+    }
+
+    .exp-table tr:last-child td {
+      border-bottom: none
+    }
+
+    .exp-name {
+      font-weight: 500;
+      color: var(--text)
+    }
+
+    .exp-name small {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 400
+    }
+
+    .radio-cell,
+    .pref-cell {
+      text-align: center
+    }
+
+    .radio-cell input[type="radio"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--navy);
+      cursor: pointer
+    }
+
+    .pref-cell input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--gold);
+      cursor: pointer
+    }
+
+    .level-head {
+      background: var(--navy-light) !important
+    }
+
+    /* CONSENT */
+    .consent-box {
+      background: var(--gold-light);
+      border: 1.5px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin-bottom: 20px
+    }
+
+    .consent-box p {
+      font-size: 13.5px;
+      color: var(--text);
+      line-height: 1.75;
+      margin-bottom: 14px
+    }
+
+    .consent-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px
+    }
+
+    .consent-check input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      accent-color: var(--navy);
+      cursor: pointer
+    }
+
+    .consent-check label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--navy);
+      cursor: pointer;
+      line-height: 1.5
+    }
+
+    /* REVIEW SUMMARY */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .summary-block {
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px
+    }
+
+    .summary-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--navy-mid);
+      margin-bottom: 10px
+    }
+
+    .summary-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 5px
+    }
+
+    .summary-row {
+      display: flex;
+      gap: 8px;
+      align-items: baseline
+    }
+
+    .sk {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      min-width: 90px;
+      flex-shrink: 0
+    }
+
+    .sv {
+      font-size: 12.5px;
+      color: var(--text);
+      font-weight: 500;
+      line-height: 1.4
+    }
+
+    .edit-link {
+      margin-top: 12px;
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: var(--navy-mid);
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px
+    }
+
+    .edit-link:hover {
+      color: var(--gold)
+    }
+
+    /* FLOW STEPS */
+    .flow-steps {
+      display: flex;
+      flex-direction: column
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 4px
+    }
+
+    .flow-connector {
+      width: 2px;
+      height: 18px;
+      background: var(--border);
+      margin-left: 19px
+    }
+
+    .flow-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .flow-blue {
+      background: #dceeff;
+      color: #185FA5;
+      border: 1.5px solid #b5d4f4
+    }
+
+    .flow-amber {
+      background: var(--gold-light);
+      color: #85500b;
+      border: 1.5px solid #fac775
+    }
+
+    .flow-purple {
+      background: #EEEDFE;
+      color: #534AB7;
+      border: 1.5px solid #AFA9EC
+    }
+
+    .flow-green {
+      background: #EAF3DE;
+      color: #3B6D11;
+      border: 1.5px solid #C0DD97
+    }
+
+    .flow-body {
+      flex: 1
+    }
+
+    .flow-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+      line-height: 1.3
+    }
+
+    .flow-desc {
+      font-size: 12.5px;
+      color: var(--text-mid);
+      line-height: 1.6
+    }
+
+    .flow-auto span,
+    .flow-manual span {
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 3px 10px;
+      white-space: nowrap
+    }
+
+    .flow-auto span {
+      background: #EAF3DE;
+      color: #3B6D11;
+      border: 1px solid #C0DD97
+    }
+
+    .flow-manual span {
+      background: #EEEDFE;
+      color: #534AB7;
+      border: 1px solid #AFA9EC
+    }
+
+    /* AUDIT NOTICE */
+    .audit-notice {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: var(--navy-light);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--navy);
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin-bottom: 20px
+    }
+
+    .audit-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--navy);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--white)
+    }
+
+    .audit-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 4px
+    }
+
+    .audit-desc {
+      font-size: 12.5px;
+      color: var(--text-mid);
+      line-height: 1.65
+    }
+
+    /* NAV BUTTONS */
+    .nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0 0;
+      border-top: 1px solid var(--border);
+      margin-top: 8px
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 24px;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .15s
+    }
+
+    .btn-primary {
+      background: var(--navy);
+      color: var(--white)
+    }
+
+    .btn-primary:hover {
+      background: var(--navy-mid);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(13, 34, 64, .25)
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-mid);
+      border: 1.5px solid var(--border)
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--navy);
+      color: var(--navy);
+      background: var(--navy-light)
+    }
+
+    .btn-submit {
+      background: var(--gold);
+      color: var(--white)
+    }
+
+    .btn-submit:hover {
+      background: #b5842e;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(200, 151, 58, .35)
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px
+    }
+
+    /* TOAST */
+    #toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none
+    }
+
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--white);
+      border-radius: 10px;
+      padding: 14px 18px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
+      border-left: 4px solid var(--danger);
+      min-width: 280px;
+      max-width: 380px;
+      pointer-events: all;
+      animation: slideIn .25s ease;
+      font-size: 13.5px;
+      color: var(--text)
+    }
+
+    .toast.success {
+      border-left-color: var(--success)
+    }
+
+    .toast svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      color: var(--danger)
+    }
+
+    .toast.success svg {
+      color: var(--success)
+    }
+
+    .toast-body {
+      flex: 1
+    }
+
+    .toast-title {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 2px;
+      color: var(--navy)
+    }
+
+    .toast-msg {
+      font-size: 12.5px;
+      color: var(--text-mid);
+      line-height: 1.5
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0)
+      }
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateX(20px)
+      }
+    }
+
+    /* SUCCESS */
+    .success-screen {
+      display: none;
+      text-align: center;
+      padding: 60px 32px
+    }
+
+    .success-screen.active {
+      display: block;
+      animation: fadeIn .4s ease
+    }
+
+    .success-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--navy);
+      border: 3px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px
+    }
+
+    .success-screen h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: var(--navy);
+      margin-bottom: 10px
+    }
+
+    .success-screen p {
+      font-size: 15px;
+      color: var(--text-mid);
+      max-width: 480px;
+      margin: 0 auto 6px;
+      line-height: 1.7
+    }
+
+    .ref-box {
+      display: inline-block;
+      background: var(--gold-light);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px 28px;
+      margin: 20px auto;
+      font-size: 13px;
+      color: var(--text-mid)
+    }
+
+    .ref-box strong {
+      font-size: 18px;
+      color: var(--navy);
+      display: block;
+      letter-spacing: .05em
+    }
+
+    /* FOOTER */
+    .site-footer {
+      background: var(--navy);
+      padding: 18px 32px;
+      text-align: center;
+      margin-top: 40px
+    }
+
+    .site-footer p {
+      font-size: 12px;
+      color: rgba(255, 255, 255, .4)
+    }
+
+    /* HELPERS */
+    .divider-sm {
+      height: 1px;
+      background: var(--border);
+      margin: 14px 0
+    }
+
+    /* RESPONSIVE */
+    @media(max-width:1024px) {
+      .main {
+        max-width: 100%
+      }
+
+      .col-labels {
+        display: none
+      }
+    }
+
+    @media(max-width:768px) {
+
+      .col-3,
+      .col-2 {
+        grid-template-columns: 1fr
+      }
+
+      .col-labels {
+        display: none
+      }
+
+      .dynamic-row .row-fields {
+        grid-template-columns: 1fr !important
+      }
+
+      .dynamic-row {
+        flex-wrap: wrap
+      }
+
+      .progress-inner {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 5px;
+        justify-content: flex-start
+      }
+
+      .step-item {
+        flex: 0 0 auto;
+        min-width: 140px
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr
+      }
+
+      .hero h1 {
+        font-size: 26px
+      }
+
+      .main {
+        padding: 24px 16px 80px
+      }
+
+      .header-inner {
+        padding: 12px 16px
+      }
+
+      .logo-text .sub {
+        display: none
+      }
+
+      .intro-pillars {
+        grid-template-columns: 1fr
+      }
+
+    }
+
+    @media(max-width:1024px) {
+      .main {
+        max-width: 100%
+      }
+
+      #un-list .dynamic-row .row-fields {
+        grid-template-columns: 1fr 1fr 80px !important
+      }
+
+      #nonun-list .dynamic-row .row-fields {
+        grid-template-columns: 1fr 1fr !important
+      }
+
+      .col-labels {
+        display: none
+      }
+
+      .dynamic-row .row-fields input,
+      .dynamic-row .row-fields select {
+        min-width: 100px
+      }
+    }
+
+    @media(max-width:480px) {
+      .nav-bar {
+        flex-direction: column;
+        gap: 10px
+      }
+
+      .nav-bar .btn {
+        width: 100%;
+        justify-content: center
+      }
+
+      .hero {
+        padding: 32px 16px 28px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="toast-container"></div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-block">
+        <div class="logo-emblem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#C8973A" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            <path d="M2 12h20" />
+          </svg>
+        </div>
+        <div class="logo-text">
+          <div class="org">FAFICS</div>
+          <div class="sub">Federation of Associations of Former International Civil Servants</div>
+        </div>
+      </div>
+      <div class="header-tag">Expertise Pool</div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-eyebrow">Volunteer Application</div>
+    <h1>Federation's Expertise Pool<br />Application Form</h1>
+    <p class="hero-desc">For all former International Civil Servants wishing to volunteer their time and expertise for
+      positions and functions within the Federation.</p>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-inner">
+      <div class="step-item active" id="step-tab-1" onclick="goTo(1)">
+        <div class="step-num" id="step-num-1">1</div>
+        <div class="step-label">Personal<br />Information</div>
+      </div>
+      <div class="step-item" id="step-tab-2" onclick="goTo(2)">
+        <div class="step-num" id="step-num-2">2</div>
+        <div class="step-label">Education &amp;<br />Languages</div>
+      </div>
+      <div class="step-item" id="step-tab-3" onclick="goTo(3)">
+        <div class="step-num" id="step-num-3">3</div>
+        <div class="step-label">Work<br />Experience</div>
+      </div>
+      <div class="step-item" id="step-tab-4" onclick="goTo(4)">
+        <div class="step-num" id="step-num-4">4</div>
+        <div class="step-label">Self<br />Assessment</div>
+      </div>
+      <div class="step-item" id="step-tab-5" onclick="goTo(5)">
+        <div class="step-num" id="step-num-5">5</div>
+        <div class="step-label">Consent &amp;<br />Submit</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ═══════════════════════════════════════════════
+       STEP 1 — PERSONAL INFORMATION
+  ════════════════════════════════════════════════ -->
+    <div class="form-section active" id="section-1">
+      <div class="section-header">
+        <h2>Personal Information</h2>
+        <p>Fields marked <span style="color:var(--gold)">*</span> are mandatory.</p>
+      </div>
+
+      <!-- Intro notice -->
+      <div class="intro-notice">
+        <p><strong>FAFICS and the Expertise Pool</strong></p>
+        <p>Members of FAFICS Associations can participate in the work of FAFICS through service in:</p>
+        <div class="intro-pillars" style="grid-template-columns:1fr">
+          <div class="pillar-item">
+            <div class="pillar-dot"></div><span>The <strong>elected positions</strong> of President, Vice-President,
+              Secretary and Treasurer.</span>
+          </div>
+          <div class="pillar-item">
+            <div class="pillar-dot"></div><span><strong>FAFICS Standing Committees</strong> in the areas of Pensions,
+              After Service Health and Life Insurance, Communications and Membership, including serving as
+              Chairs/Co-Chairs of these Committees, who are nominated by the President and appointed by the Council; on
+              the <strong>United Nations Pension Board</strong> as part of the FAFICS delegation or on one of the
+              Pension Board's subsidiary bodies/working groups.</span>
+          </div>
+        </div>
+        <p>The FAFICS Rules of Procedure adopted by the FAFICS Council established an <strong>Expertise Pool</strong> to
+          serve as a repository of Association members interested in serving in these positions.</p>
+        <p>Selection for <strong>non-elected positions</strong> is managed through the Expertise Pool. If you would wish
+          to serve in a non-elected position, please complete and submit the Expertise Pool Form through your Local
+          Association President or designated official within your Association, for inclusion in the Expertise Pool.</p>
+        <p>Individuals may remain in the Expertise Pool for a period of <strong>three (3) years</strong>, after which
+          they will be contacted to ascertain their continued interest and availability to serve in FAFICS.</p>
+        <p><strong>Mandatory:</strong> Before you complete the Expertise Pool Form, please visit <a
+            href="https://fafics.org" target="_blank" style="color:var(--navy-mid);font-weight:600">FAFICS.ORG</a> to
+          fully acquaint yourself with FAFICS.</p>
+      </div>
+
+      <div style="margin-top:24px"></div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>Personal Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-grid col-3">
+            <div class="field"><label>First Name <span class="req">*</span></label><input id="p_firstname" type="text"
+                placeholder="e.g. John" /></div>
+            <div class="field"><label>Middle Name</label><input id="p_middlename" type="text"
+                placeholder="e.g. Michael" /></div>
+            <div class="field"><label>Last Name <span class="req">*</span></label><input id="p_lastname" type="text"
+                placeholder="e.g. Doe" /></div>
+          </div>
+          <div class="form-grid col-3" style="margin-top:14px">
+            <div class="field"><label>Date of Birth <span class="req">*</span></label><input id="p_dob" type="date" />
+            </div>
+            <div class="field">
+              <label>Nationality <span class="req">*</span></label>
+              <select id="p_nationality">
+                <option value="">Select nationality…</option>
+                <option>Afghan</option>
+                <option>Albanian</option>
+                <option>Algerian</option>
+                <option>American</option>
+                <option>Argentine</option>
+                <option>Australian</option>
+                <option>Austrian</option>
+                <option>Bangladeshi</option>
+                <option>Belgian</option>
+                <option>Brazilian</option>
+                <option>British</option>
+                <option>Bulgarian</option>
+                <option>Cameroonian</option>
+                <option>Canadian</option>
+                <option>Chilean</option>
+                <option>Chinese</option>
+                <option>Colombian</option>
+                <option>Congolese</option>
+                <option>Croatian</option>
+                <option>Cuban</option>
+                <option>Czech</option>
+                <option>Danish</option>
+                <option>Dutch</option>
+                <option>Egyptian</option>
+                <option>Ethiopian</option>
+                <option>Finnish</option>
+                <option>French</option>
+                <option>German</option>
+                <option>Ghanaian</option>
+                <option>Greek</option>
+                <option>Hungarian</option>
+                <option>Indian</option>
+                <option>Indonesian</option>
+                <option>Iranian</option>
+                <option>Iraqi</option>
+                <option>Irish</option>
+                <option>Israeli</option>
+                <option>Italian</option>
+                <option>Ivorian</option>
+                <option>Japanese</option>
+                <option>Jordanian</option>
+                <option>Kenyan</option>
+                <option>Lebanese</option>
+                <option>Malian</option>
+                <option>Mexican</option>
+                <option>Moroccan</option>
+                <option>Mozambican</option>
+                <option>Nigerian</option>
+                <option>Norwegian</option>
+                <option>Pakistani</option>
+                <option>Peruvian</option>
+                <option>Philippine</option>
+                <option>Polish</option>
+                <option>Portuguese</option>
+                <option>Romanian</option>
+                <option>Russian</option>
+                <option>Saudi</option>
+                <option>Senegalese</option>
+                <option>Serbian</option>
+                <option>Slovak</option>
+                <option>South African</option>
+                <option>South Korean</option>
+                <option>Spanish</option>
+                <option>Sri Lankan</option>
+                <option>Sudanese</option>
+                <option>Swedish</option>
+                <option>Swiss</option>
+                <option>Syrian</option>
+                <option>Tanzanian</option>
+                <option>Thai</option>
+                <option>Togolese</option>
+                <option>Tunisian</option>
+                <option>Turkish</option>
+                <option>Ugandan</option>
+                <option>Ukrainian</option>
+                <option>Venezuelan</option>
+                <option>Vietnamese</option>
+                <option>Yemeni</option>
+                <option>Zambian</option>
+                <option>Zimbabwean</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Second Nationality <span
+                  style="color:var(--text-muted);font-weight:400;text-transform:none;font-size:11px">(if
+                  any)</span></label>
+              <select id="p_nationality2">
+                <option value="">None / not applicable</option>
+                <option>Afghan</option>
+                <option>Albanian</option>
+                <option>Algerian</option>
+                <option>American</option>
+                <option>Argentine</option>
+                <option>Australian</option>
+                <option>Austrian</option>
+                <option>Bangladeshi</option>
+                <option>Belgian</option>
+                <option>Brazilian</option>
+                <option>British</option>
+                <option>Bulgarian</option>
+                <option>Cameroonian</option>
+                <option>Canadian</option>
+                <option>Chilean</option>
+                <option>Chinese</option>
+                <option>Colombian</option>
+                <option>Congolese</option>
+                <option>Croatian</option>
+                <option>Cuban</option>
+                <option>Czech</option>
+                <option>Danish</option>
+                <option>Dutch</option>
+                <option>Egyptian</option>
+                <option>Ethiopian</option>
+                <option>Finnish</option>
+                <option>French</option>
+                <option>German</option>
+                <option>Ghanaian</option>
+                <option>Greek</option>
+                <option>Hungarian</option>
+                <option>Indian</option>
+                <option>Indonesian</option>
+                <option>Iranian</option>
+                <option>Iraqi</option>
+                <option>Irish</option>
+                <option>Israeli</option>
+                <option>Italian</option>
+                <option>Ivorian</option>
+                <option>Japanese</option>
+                <option>Jordanian</option>
+                <option>Kenyan</option>
+                <option>Lebanese</option>
+                <option>Malian</option>
+                <option>Mexican</option>
+                <option>Moroccan</option>
+                <option>Mozambican</option>
+                <option>Nigerian</option>
+                <option>Norwegian</option>
+                <option>Pakistani</option>
+                <option>Peruvian</option>
+                <option>Philippine</option>
+                <option>Polish</option>
+                <option>Portuguese</option>
+                <option>Romanian</option>
+                <option>Russian</option>
+                <option>Saudi</option>
+                <option>Senegalese</option>
+                <option>Serbian</option>
+                <option>Slovak</option>
+                <option>South African</option>
+                <option>South Korean</option>
+                <option>Spanish</option>
+                <option>Sri Lankan</option>
+                <option>Sudanese</option>
+                <option>Swedish</option>
+                <option>Swiss</option>
+                <option>Syrian</option>
+                <option>Tanzanian</option>
+                <option>Thai</option>
+                <option>Togolese</option>
+                <option>Tunisian</option>
+                <option>Turkish</option>
+                <option>Ugandan</option>
+                <option>Ukrainian</option>
+                <option>Venezuelan</option>
+                <option>Vietnamese</option>
+                <option>Yemeni</option>
+                <option>Zambian</option>
+                <option>Zimbabwean</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid col-3" style="margin-top:14px">
+            <div class="field">
+              <label>Gender <span class="req">*</span></label>
+              <select id="p_gender">
+                <option value="">Select…</option>
+                <option>Female</option>
+                <option>Male</option>
+                <option>Non-binary / Third gender</option>
+                <option>Prefer not to say</option>
+              </select>
+            </div>
+            <div class="field"><label>Phone Number <span class="req">*</span></label><input id="p_phone" type="tel"
+                placeholder="+1 212 000 0000" /><span class="field-hint">Include country code</span></div>
+            <div class="field"><label>Mobile No (WhatsApp)</label><input id="p_whatsapp" type="tel"
+                placeholder="+1 212 000 0000" /><span class="field-hint">Include country code</span></div>
+          </div>
+          <div class="form-grid col-2" style="margin-top:14px">
+            <div class="field"><label>Email Address <span class="req">*</span></label><input id="p_email" type="email"
+                placeholder="name@example.com" /></div>
+            <div class="field"><label>Date of Separation from UN Service <span class="req">*</span></label><input
+                id="p_separation" type="date" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>Member Association Details</h3>
+        </div>
+        <div class="card-body">
+          <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">Your application will
+            be routed to the President of your Local Association for endorsement. Please ensure these details are
+            accurate — the President's email is required for notification.</p>
+          <div class="form-grid col-3">
+            <div class="field"><label>Member Association <span class="req">*</span></label><input id="p_association"
+                type="text" placeholder="e.g. AFICS-NY, USA" /></div>
+            <div class="field">
+              <label>Country <span class="req">*</span></label>
+              <select id="p_country">
+                <option value="">Select country…</option>
+                <option>Afghanistan</option>
+                <option>Albania</option>
+                <option>Algeria</option>
+                <option>Argentina</option>
+                <option>Australia</option>
+                <option>Austria</option>
+                <option>Bangladesh</option>
+                <option>Belgium</option>
+                <option>Brazil</option>
+                <option>Cameroon</option>
+                <option>Canada</option>
+                <option>Chile</option>
+                <option>China</option>
+                <option>Colombia</option>
+                <option>Congo</option>
+                <option>Croatia</option>
+                <option>Cuba</option>
+                <option>Czech Republic</option>
+                <option>Denmark</option>
+                <option>Egypt</option>
+                <option>Ethiopia</option>
+                <option>Finland</option>
+                <option>France</option>
+                <option>Germany</option>
+                <option>Ghana</option>
+                <option>Greece</option>
+                <option>Hungary</option>
+                <option>India</option>
+                <option>Indonesia</option>
+                <option>Iran</option>
+                <option>Iraq</option>
+                <option>Ireland</option>
+                <option>Israel</option>
+                <option>Italy</option>
+                <option>Ivory Coast</option>
+                <option>Japan</option>
+                <option>Jordan</option>
+                <option>Kenya</option>
+                <option>Lebanon</option>
+                <option>Mali</option>
+                <option>Mexico</option>
+                <option>Morocco</option>
+                <option>Mozambique</option>
+                <option>Netherlands</option>
+                <option>Nigeria</option>
+                <option>Norway</option>
+                <option>Pakistan</option>
+                <option>Peru</option>
+                <option>Philippines</option>
+                <option>Poland</option>
+                <option>Portugal</option>
+                <option>Romania</option>
+                <option>Russia</option>
+                <option>Saudi Arabia</option>
+                <option>Senegal</option>
+                <option>Serbia</option>
+                <option>South Africa</option>
+                <option>South Korea</option>
+                <option>Spain</option>
+                <option>Sri Lanka</option>
+                <option>Sudan</option>
+                <option>Sweden</option>
+                <option>Switzerland</option>
+                <option>Syria</option>
+                <option>Tanzania</option>
+                <option>Thailand</option>
+                <option>Togo</option>
+                <option>Tunisia</option>
+                <option>Turkey</option>
+                <option>Uganda</option>
+                <option>Ukraine</option>
+                <option>United Kingdom</option>
+                <option>United States</option>
+                <option>Venezuela</option>
+                <option>Vietnam</option>
+                <option>Yemen</option>
+                <option>Zambia</option>
+                <option>Zimbabwe</option>
+              </select>
+            </div>
+            <div class="field"><label>General Email of Association</label><input id="p_assoc_email" type="email"
+                placeholder="info@association.org" /></div>
+          </div>
+          <div class="form-grid col-2" style="margin-top:14px">
+            <div class="field"><label>Email of Association President <span class="req">*</span></label><input
+                id="p_president_email" type="email" placeholder="president@association.org" /><span
+                class="field-hint">Used to route your application for endorsement</span></div>
+            <div class="field"><label>Phone of Association President <span class="req">*</span></label><input
+                id="p_president_phone" type="tel" placeholder="+1 212 000 0000" /><span class="field-hint">Include
+                country code</span></div>
+          </div>
+          <div class="sub-head" style="margin-top:20px"><span>Other Association Membership (optional)</span></div>
+          <div class="form-grid col-2">
+            <div class="field"><label>Associate Member in other Association</label><input id="p_assoc2_name" type="text"
+                placeholder="e.g. AFICS Geneva" /></div>
+            <div class="field">
+              <label>Country of other Association</label>
+              <select id="p_assoc2_country">
+                <option value="">Select country…</option>
+                <option>Afghanistan</option>
+                <option>Albania</option>
+                <option>Algeria</option>
+                <option>Argentina</option>
+                <option>Australia</option>
+                <option>Austria</option>
+                <option>Bangladesh</option>
+                <option>Belgium</option>
+                <option>Brazil</option>
+                <option>Cameroon</option>
+                <option>Canada</option>
+                <option>Chile</option>
+                <option>China</option>
+                <option>Colombia</option>
+                <option>Congo</option>
+                <option>Croatia</option>
+                <option>Cuba</option>
+                <option>Czech Republic</option>
+                <option>Denmark</option>
+                <option>Egypt</option>
+                <option>Ethiopia</option>
+                <option>Finland</option>
+                <option>France</option>
+                <option>Germany</option>
+                <option>Ghana</option>
+                <option>Greece</option>
+                <option>Hungary</option>
+                <option>India</option>
+                <option>Indonesia</option>
+                <option>Iran</option>
+                <option>Iraq</option>
+                <option>Ireland</option>
+                <option>Israel</option>
+                <option>Italy</option>
+                <option>Ivory Coast</option>
+                <option>Japan</option>
+                <option>Jordan</option>
+                <option>Kenya</option>
+                <option>Lebanon</option>
+                <option>Mali</option>
+                <option>Mexico</option>
+                <option>Morocco</option>
+                <option>Mozambique</option>
+                <option>Netherlands</option>
+                <option>Nigeria</option>
+                <option>Norway</option>
+                <option>Pakistan</option>
+                <option>Peru</option>
+                <option>Philippines</option>
+                <option>Poland</option>
+                <option>Portugal</option>
+                <option>Romania</option>
+                <option>Russia</option>
+                <option>Saudi Arabia</option>
+                <option>Senegal</option>
+                <option>Serbia</option>
+                <option>South Africa</option>
+                <option>South Korea</option>
+                <option>Spain</option>
+                <option>Sri Lanka</option>
+                <option>Sudan</option>
+                <option>Sweden</option>
+                <option>Switzerland</option>
+                <option>Syria</option>
+                <option>Tanzania</option>
+                <option>Thailand</option>
+                <option>Togo</option>
+                <option>Tunisia</option>
+                <option>Turkey</option>
+                <option>Uganda</option>
+                <option>Ukraine</option>
+                <option>United Kingdom</option>
+                <option>United States</option>
+                <option>Venezuela</option>
+                <option>Vietnam</option>
+                <option>Yemen</option>
+                <option>Zambia</option>
+                <option>Zimbabwe</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <span></span>
+        <button class="btn btn-primary" onclick="nextStep(1,2)">Next: Education &amp; Languages<svg viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg></button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+       STEP 2 — EDUCATION & LANGUAGES
+  ════════════════════════════════════════════════ -->
+    <div class="form-section" id="section-2">
+      <div class="section-header">
+        <h2>Education &amp; Languages</h2>
+        <p>List your highest academic qualifications and working languages. To add a qualification, press the <strong>+
+            Add Qualification</strong> button.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>Educational Qualifications (Highest Degree)</h3>
+        </div>
+        <div class="card-body">
+          <div class="col-labels" style="grid-template-columns:1fr 1fr"><span>Degree /
+              Qualification</span><span>Institution</span></div>
+          <div class="dynamic-list" id="edu-list"></div>
+          <button class="btn-add" onclick="addEduRow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>Add Qualification</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>UN Working Languages</h3>
+        </div>
+        <div class="card-body">
+          <div class="col-labels" style="grid-template-columns:1fr 1fr"><span>Language</span><span>Level of
+              Proficiency</span></div>
+          <div class="dynamic-list" id="lang-list"></div>
+          <button class="btn-add" onclick="addLangRow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>Add Language</button>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="btn btn-ghost" onclick="goTo(1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>Back</button>
+        <button class="btn btn-primary" onclick="nextStep(2,3)">Next: Work Experience<svg viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg></button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+       STEP 3 — WORK EXPERIENCE
+  ════════════════════════════════════════════════ -->
+    <div class="form-section" id="section-3">
+      <div class="section-header">
+        <h2>Work Experience</h2>
+        <p>List your last 2–3 positions for each category. Use <strong>+ Add</strong> to add rows.</p>
+      </div>
+
+      <!-- A: UN -->
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>A — United Nations Experience</h3>
+        </div>
+        <div class="card-body">
+          <div class="col-labels" style="grid-template-columns:1.2fr 1.4fr 80px 1fr 100px">
+            <span>Agency</span><span>Position Held</span><span>Grade</span><span>Area of
+              Expertise</span><span>Years</span></div>
+          <div class="dynamic-list" id="un-list"></div>
+          <button class="btn-add" onclick="addUnRow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>Add Position</button>
+          <div class="exp-summary-block">
+            <div class="sub-head"><span>Summary of proven UN experience &amp; achievements</span></div>
+            <textarea id="un-summary"
+              placeholder="Briefly describe your key achievements and contributions in UN organizations (bullet points preferred)…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- B: Non-UN -->
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>B — Non-UN Experience</h3>
+        </div>
+        <div class="card-body">
+          <div class="col-labels" style="grid-template-columns:1.2fr 1.4fr 1fr 100px">
+            <span>Organization</span><span>Position Held</span><span>Area of Expertise</span><span>Years</span></div>
+          <div class="dynamic-list" id="nonun-list"></div>
+          <button class="btn-add" onclick="addNonUnRow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>Add Position</button>
+          <div class="exp-summary-block">
+            <div class="sub-head"><span>Summary of non-UN experience &amp; achievements</span></div>
+            <textarea id="nonun-summary"
+              placeholder="Briefly describe your key contributions outside the UN system…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- C: FAFICS -->
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>C — FAFICS Experience</h3>
+        </div>
+        <div class="card-body">
+          <div class="col-labels" style="grid-template-columns:1.5fr 1fr 120px"><span>Position Held</span><span>Area of
+              Contribution</span><span>Duration (years)</span></div>
+          <div class="dynamic-list" id="fafics-list"></div>
+          <button class="btn-add" onclick="addFaficsRow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>Add Position</button>
+          <div class="exp-summary-block">
+            <div class="sub-head"><span>Summary of FAFICS contributions &amp; achievements</span></div>
+            <textarea id="fafics-summary" placeholder="Describe your key contributions to FAFICS…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- D: Local -->
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>D — Local Association Experience</h3>
+        </div>
+        <div class="card-body">
+          <div class="col-labels" style="grid-template-columns:1.5fr 1fr 120px"><span>Position Held</span><span>Area of
+              Contribution</span><span>Duration (years)</span></div>
+          <div class="dynamic-list" id="local-list"></div>
+          <button class="btn-add" onclick="addLocalRow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>Add Position</button>
+          <div class="exp-summary-block">
+            <div class="sub-head"><span>Summary of local association contributions</span></div>
+            <textarea id="local-summary"
+              placeholder="Describe your key contributions to your local association…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="btn btn-ghost" onclick="goTo(2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>Back</button>
+        <button class="btn btn-primary" onclick="nextStep(3,4)">Next: Self Assessment<svg viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg></button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+       STEP 4 — SELF ASSESSMENT
+  ════════════════════════════════════════════════ -->
+    <div class="form-section" id="section-4">
+      <div class="section-header">
+        <h2>Self-Assessment on Expertise</h2>
+        <p>Rate your level in each area and tick your <strong>top 3 preferred areas</strong> where you wish to support
+          FAFICS. If your area of expertise is not listed below, use the <strong>"+ Add Other Area"</strong> button at
+          the bottom of the table to add it.</p>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>Expertise Level &amp; Preference</h3>
+        </div>
+        <div class="card-body" style="overflow-x:auto">
+          <table class="exp-table">
+            <thead>
+              <tr>
+                <th style="width:42%">Area of Expertise / Knowledge</th>
+                <th class="center level-head" colspan="3">Level of Expertise</th>
+                <th class="center" style="width:100px">Preferred<br /><small
+                    style="font-weight:400;text-transform:none;letter-spacing:0">(Top 3 ✓)</small></th>
+              </tr>
+              <tr>
+                <th></th>
+                <th class="center" style="width:90px">Average</th>
+                <th class="center" style="width:90px">Advanced</th>
+                <th class="center" style="width:90px">Expert</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="exp-name">Governance / Leadership / Management</td>
+                <td class="radio-cell"><input type="radio" name="exp1" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp1" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp1" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Pension Fund Matters / Policy</td>
+                <td class="radio-cell"><input type="radio" name="exp2" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp2" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp2" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Actuarial / Financial Analysis</td>
+                <td class="radio-cell"><input type="radio" name="exp3" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp3" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp3" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Audit</td>
+                <td class="radio-cell"><input type="radio" name="exp4" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp4" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp4" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Budget</td>
+                <td class="radio-cell"><input type="radio" name="exp5" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp5" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp5" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Treasury</td>
+                <td class="radio-cell"><input type="radio" name="exp6" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp6" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp6" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Health &amp; Life Insurance Matters / Policy</td>
+                <td class="radio-cell"><input type="radio" name="exp7" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp7" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp7" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Communications — Social Media<small>Content creation, platforms management</small>
+                </td>
+                <td class="radio-cell"><input type="radio" name="exp8" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp8" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp8" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Communications — Website Management<small>Content editing, publishing</small></td>
+                <td class="radio-cell"><input type="radio" name="exp9" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp9" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp9" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Information Technology (IT)<small>Website development &amp; system
+                    automation</small></td>
+                <td class="radio-cell"><input type="radio" name="exp10" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp10" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp10" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+              <tr>
+                <td class="exp-name">Membership Advocacy</td>
+                <td class="radio-cell"><input type="radio" name="exp11" value="avg" /></td>
+                <td class="radio-cell"><input type="radio" name="exp11" value="adv" /></td>
+                <td class="radio-cell"><input type="radio" name="exp11" value="exp" /></td>
+                <td class="pref-cell"><input type="checkbox" class="pref-check" /></td>
+              </tr>
+            </tbody>
+            <tbody id="other-exp-rows"></tbody>
+          </table>
+          <button class="btn-add" onclick="addOtherExpertise()" style="margin-top:10px"><svg viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" />
+            </svg>Add Other Area</button>
+          <p id="pref-warning" style="display:none;color:var(--danger);font-size:12px;margin-top:8px;font-weight:600">⚠
+            Please select a maximum of 3 preferred areas.</p>
+        </div>
+      </div>
+      <div class="nav-bar">
+        <button class="btn btn-ghost" onclick="goTo(3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>Back</button>
+        <button class="btn btn-primary" onclick="nextStep(4,5)">Next: Consent &amp; Submit<svg viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg></button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+       STEP 5 — CONSENT & SUBMIT
+  ════════════════════════════════════════════════ -->
+    <div class="form-section" id="section-5">
+      <div class="section-header">
+        <h2>Review, Consent &amp; Submit</h2>
+        <p>Review your application summary, accept the consent statement, then submit.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>Application Summary</h3>
+        </div>
+        <div class="card-body">
+          <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">Verify the details below. To make
+            changes, go back to the relevant section.</p>
+          <div class="summary-grid">
+            <div class="summary-block">
+              <div class="summary-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>Personal</div>
+              <div class="summary-rows" id="review-personal"></div>
+              <button class="edit-link" onclick="goTo(1)">Edit ↗</button>
+            </div>
+            <div class="summary-block">
+              <div class="summary-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                  <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                </svg>Education &amp; Languages</div>
+              <div class="summary-rows" id="review-edu"></div>
+              <button class="edit-link" onclick="goTo(2)">Edit ↗</button>
+            </div>
+            <div class="summary-block">
+              <div class="summary-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5">
+                  <rect x="2" y="7" width="20" height="14" rx="2" />
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                </svg>Work Experience</div>
+              <div class="summary-rows" id="review-exp"></div>
+              <button class="edit-link" onclick="goTo(3)">Edit ↗</button>
+            </div>
+            <div class="summary-block">
+              <div class="summary-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5">
+                  <polyline points="9 11 12 14 22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>Expertise &amp; Preferences</div>
+              <div class="summary-rows" id="review-expertise"></div>
+              <button class="edit-link" onclick="goTo(4)">Edit ↗</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="consent-box">
+        <p>FAFICS will store and keep your personal information <strong>confidential</strong>.</p>
+        <p>It will be used solely to assess your potential selection to serve in FAFICS or as a FAFICS representative.
+        </p>
+        <p>The individual and/or the Local Association may be contacted to obtain any further information.</p>
+        <p>Your data will be held for a <strong>three year period</strong> and securely deleted or archived thereafter
+          unless renewed.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+          <div class="consent-check"><input type="checkbox" id="consent-data" /><label for="consent-data">I
+              <strong>consent</strong> to FAFICS storing and using my personal information as described above for
+              Expertise Pool purposes.</label></div>
+          <div class="consent-check"><input type="checkbox" id="consent-accurate" /><label for="consent-accurate">I
+              <strong>declare</strong> that all information provided in this application is accurate, complete, and up
+              to date to the best of my knowledge.</label></div>
+        </div>
+      </div>
+
+
+      <div class="card">
+        <div class="card-head">
+          <div class="dot"></div>
+          <h3>What Happens After You Submit</h3>
+        </div>
+        <div class="card-body">
+          <div class="flow-steps">
+            <div class="flow-step">
+              <div class="flow-icon flow-blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5">
+                  <path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z" />
+                </svg></div>
+              <div class="flow-body">
+                <div class="flow-title">Application submitted &amp; reference number assigned</div>
+                <div class="flow-desc">System records your submission with a unique Application Reference Number (e.g.
+                  EP-0042). A confirmation is sent to your email.</div>
+              </div>
+              <div class="flow-auto"><span>Automatic</span></div>
+            </div>
+            <div class="flow-connector"></div>
+            <div class="flow-step">
+              <div class="flow-icon flow-amber"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg></div>
+              <div class="flow-body">
+                <div class="flow-title">Local Association President notified for endorsement</div>
+                <div class="flow-desc">A secure endorsement link is sent to your Local Association President or
+                  designated official. They review your application with view-only access and endorse it.</div>
+              </div>
+              <div class="flow-auto"><span>Automatic</span></div>
+            </div>
+            <div class="flow-connector"></div>
+            <div class="flow-step">
+              <div class="flow-icon flow-green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg></div>
+              <div class="flow-body">
+                <div class="flow-title">Profile added to the Expertise Pool</div>
+                <div class="flow-desc">Once endorsed, your profile is added to the FAFICS Expertise Pool with three-year
+                  validity.</div>
+              </div>
+              <div class="flow-auto"><span>Automatic</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="audit-notice">
+        <div class="audit-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg></div>
+        <div>
+          <div class="audit-title">Audit trail &amp; data security</div>
+          <div class="audit-desc">Every action — submission, Local Association President endorsement, and future edits —
+            is automatically recorded with timestamps and user identity. These records are immutable and available to
+            FAFICS administrators.</div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="btn btn-ghost" onclick="goTo(4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>Back</button>
+        <button class="btn btn-submit" onclick="submitForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" width="18" height="18">
+            <path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z" />
+          </svg>Submit Application</button>
+      </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="success-screen" id="success">
+      <div class="success-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C8973A"
+          stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12" />
+        </svg></div>
+      <h2>Application Submitted</h2>
+      <p>Thank you for submitting your Expertise Pool application. A confirmation has been sent to your email address.
+      </p>
+      <p>Your application is now <span style="color:var(--navy);font-weight:600">pending endorsement</span> from your
+        Local Association President before it is included in the FAFICS Expertise Pool.</p>
+      <div class="ref-box">Application Reference Number<strong id="ref-num">EP-0001</strong></div>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-muted)">Please keep this reference number for your
+        records.<br />Your profile will be valid for 3 years from the date of approval.</p>
+    </div>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>© 2026 FAFICS — Federation of Associations of Former International Civil Servants &nbsp;·&nbsp; fafics.org
+      &nbsp;·&nbsp; secretary@fafics.org</p>
+  </footer>
+
+  <script>
+    // ── ERROR CLEARING ──────────────────────────────────
+    document.addEventListener('input', e => { if (e.target.classList?.contains('error') && e.target.value.trim() !== '') e.target.classList.remove('error') });
+    document.addEventListener('change', e => { if (e.target.classList?.contains('error') && e.target.value.trim() !== '') e.target.classList.remove('error') });
+
+    // ── STATE ───────────────────────────────────────────
+    let current = 1; const total = 5;
+
+    // ── NAVIGATION ──────────────────────────────────────
+    function goTo(n) {
+      document.getElementById('section-' + current)?.classList.remove('active');
+      for (let i = 1; i <= total; i++) {
+        const tab = document.getElementById('step-tab-' + i);
+        const num = document.getElementById('step-num-' + i);
+        tab.classList.remove('active', 'done');
+        if (i < n) { tab.classList.add('done'); num.textContent = '✓'; }
+        else { num.textContent = i; }
+      }
+      current = n;
+      document.getElementById('section-' + current).classList.add('active');
+      document.getElementById('step-tab-' + current).classList.add('active');
+      if (n === 5) buildReview();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function nextStep(from, to) { if (!validateStep(from)) return; goTo(to); }
+
+    // ── VALIDATION ──────────────────────────────────────
+    function validateStep(step) {
+      let errors = [];
+      if (step === 1) {
+        const required = [
+          { id: 'p_firstname', label: 'First Name' }, { id: 'p_lastname', label: 'Last Name' },
+          { id: 'p_dob', label: 'Date of Birth' }, { id: 'p_nationality', label: 'Nationality' },
+          { id: 'p_gender', label: 'Gender' }, { id: 'p_phone', label: 'Phone Number' },
+          { id: 'p_email', label: 'Email Address' }, { id: 'p_separation', label: 'Date of Separation from UN Service' },
+          { id: 'p_association', label: 'Member Association' }, { id: 'p_country', label: 'Country' },
+          { id: 'p_president_email', label: 'President Email' }, { id: 'p_president_phone', label: 'President Phone' },
+        ];
+        required.forEach(f => {
+          const el = document.getElementById(f.id);
+          if (!el || !el.value.trim()) { errors.push(f.label); el && el.classList.add('error'); }
+          else el.classList.remove('error');
+        });
+        const email = document.getElementById('p_email');
+        if (email && email.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) { errors.push('Valid Email Address'); email.classList.add('error'); }
+        const pemail = document.getElementById('p_president_email');
+        if (pemail && pemail.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pemail.value)) { errors.push('Valid President Email'); pemail.classList.add('error'); }
+      }
+      if (step === 2) {
+        const eduRows = document.querySelectorAll('#edu-list .dynamic-row');
+        if (eduRows.length === 0) errors.push('At least one educational qualification');
+        eduRows.forEach(row => {
+          const inp = row.querySelectorAll('input');
+          if (!inp[0]?.value.trim()) { errors.push('Degree name in Education'); inp[0].classList.add('error'); }
+          else inp[0].classList.remove('error');
+        });
+        const langRows = document.querySelectorAll('#lang-list .dynamic-row');
+        if (langRows.length === 0) errors.push('At least one language');
+        langRows.forEach(row => {
+          const sels = row.querySelectorAll('select');
+          if (!sels[0]?.value) { errors.push('Language selection'); sels[0].classList.add('error'); } else sels[0].classList.remove('error');
+          if (!sels[1]?.value) { errors.push('Language proficiency level'); sels[1].classList.add('error'); } else sels[1].classList.remove('error');
+        });
+      }
+      if (step === 3) {
+        const unRows = document.querySelectorAll('#un-list .dynamic-row');
+        if (unRows.length === 0) errors.push('At least one UN experience entry');
+      }
+      if (step === 4) {
+        const checked = document.querySelectorAll('.pref-check:checked');
+        if (checked.length > 3) { errors.push('Select no more than 3 preferred areas'); document.getElementById('pref-warning').style.display = 'block'; }
+        else document.getElementById('pref-warning').style.display = 'none';
+      }
+      if (step === 5) {
+        if (!document.getElementById('consent-data').checked) errors.push('Data consent agreement');
+        if (!document.getElementById('consent-accurate').checked) errors.push('Declaration of accuracy');
+      }
+      if (errors.length > 0) { showToast('Please complete required fields', errors.slice(0, 3).join(', ') + (errors.length > 3 ? ` and ${errors.length - 3} more…` : '')); return false; }
+      return true;
+    }
+
+    // ── TOAST ───────────────────────────────────────────
+    function showToast(title, msg, type = 'error') {
+      const tc = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = 'toast' + (type === 'success' ? ' success' : '');
+      t.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">${type === 'success' ? '<polyline points="20 6 9 17 4 12"/>' : `<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`}</svg><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>`;
+      tc.appendChild(t);
+      setTimeout(() => { t.style.animation = 'fadeOut .3s ease forwards'; setTimeout(() => t.remove(), 300); }, 4000);
+    }
+
+    // ── PREFERENCE LIMITER ──────────────────────────────
+    document.addEventListener('change', e => {
+      if (e.target.classList.contains('pref-check')) {
+        const checked = document.querySelectorAll('.pref-check:checked');
+        if (checked.length > 3) { e.target.checked = false; document.getElementById('pref-warning').style.display = 'block'; showToast('Preference limit reached', 'You can select a maximum of 3 preferred areas.'); }
+        else document.getElementById('pref-warning').style.display = 'none';
+      }
+    });
+
+    // ── DYNAMIC ROWS ────────────────────────────────────
+    let rowCounters = { edu: 0, lang: 0, un: 0, nonun: 0, fafics: 0, local: 0 };
+    function addRow(listId, html) {
+      const list = document.getElementById(listId);
+      const div = document.createElement('div');
+      div.className = 'dynamic-row'; div.innerHTML = html; list.appendChild(div); reindex(listId);
+    }
+    function removeRow(btn) { const row = btn.closest('.dynamic-row'); const list = row.parentElement; row.remove(); reindex(list.id); }
+    function reindex(listId) { const rows = document.querySelectorAll('#' + listId + ' .dynamic-row'); rows.forEach((r, i) => { const idx = r.querySelector('.row-index'); if (idx) idx.textContent = (i + 1) + '.' }); }
+    const removeBtn = `<button type="button" class="btn-remove" onclick="removeRow(this)" title="Remove">×</button>`;
+
+    const DURATION_OPTS = (function () {
+      const vals = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '20', '25', '30', '30+'];
+      let s = '<option value="">Select years…</option>';
+      vals.forEach(v => s += `<option value="${v}">${v} ${v === '30+' ? 'years or more' : 'year' + (parseFloat(v) !== 1 ? 's' : '')}</option>`);
+      return s;
+    })();
+
+    // Education — no year column
+    function addEduRow() {
+      rowCounters.edu++;
+      addRow('edu-list', `
+    <span class="row-index">${rowCounters.edu}.</span>
+    <div class="row-fields" style="grid-template-columns:1fr 1fr">
+      <input type="text" placeholder="e.g. Master of Public Administration"/>
+      <input type="text" placeholder="e.g. Harvard Kennedy School"/>
+    </div>
+    ${removeBtn}`);
+    }
+
+    // Languages — 6 official UN languages only, simplified proficiency
+    function addLangRow() {
+      rowCounters.lang++;
+      addRow('lang-list', `
+    <span class="row-index">${rowCounters.lang}.</span>
+    <div class="row-fields" style="grid-template-columns:1fr 1fr">
+      <select>
+        <option value="">Select language…</option>
+        <option>Arabic</option><option>Chinese</option><option>English</option>
+        <option>French</option><option>Russian</option><option>Spanish</option>
+      </select>
+      <select>
+        <option value="">Select level…</option>
+        <option>Mother tongue</option>
+        <option>Proficient</option>
+        <option>Working-level</option>
+        <option>Basic</option>
+      </select>
+    </div>
+    ${removeBtn}`);
+    }
+
+    const UN_AGENCIES = `<option value="">Select agency…</option>
+<option>FAO</option><option>IAEA</option><option>ICAO</option><option>IFAD</option>
+<option>ILO</option><option>IMO</option><option>IOM</option><option>ITU</option>
+<option>OCHA</option><option>OHCHR</option><option>UNAIDS</option><option>UNDP</option>
+<option>UNEP</option><option>UNESCO</option><option>UNFPA</option><option>UNHCR</option>
+<option>UNICEF</option><option>UNIDO</option><option>UNODC</option><option>UNOPS</option>
+<option>UNRWA</option><option>UN Secretariat</option><option>UNU</option><option>UNV</option>
+<option>UN Women</option><option>WFP</option><option>WHO</option><option>WIPO</option>
+<option>WMO</option><option>World Bank</option><option>Other</option>`;
+
+    const GRADES = `<option value="">Grade</option>
+<option>G-1</option><option>G-2</option><option>G-3</option><option>G-4</option><option>G-5</option><option>G-6</option><option>G-7</option>
+<option>NO-A</option><option>NO-B</option><option>NO-C</option><option>NO-D</option>
+<option>P-1</option><option>P-2</option><option>P-3</option><option>P-4</option><option>P-5</option>
+<option>D-1</option><option>D-2</option><option>ASG</option><option>USG</option>
+<option>SB-1</option><option>SB-2</option><option>SB-3</option><option>SB-4</option><option>SB-5</option>
+<option>Other</option>`;
+
+    const EXPERTISE_AREAS = `<option value="">Select area…</option>
+<option>Administration</option><option>Audit</option><option>Budget &amp; Finance</option>
+<option>Communications</option><option>Data Management</option><option>Environmental Affairs</option>
+<option>External Relations</option><option>Food &amp; Agriculture</option><option>Gender Affairs</option>
+<option>Health</option><option>Human Resources</option><option>Humanitarian Affairs</option>
+<option>Information Technology</option><option>Internal Oversight</option><option>International Law</option>
+<option>Legal Affairs</option><option>Logistics</option><option>Management &amp; Leadership</option>
+<option>Migration</option><option>Peacekeeping</option><option>Pension &amp; Social Protection</option>
+<option>Policy &amp; Planning</option><option>Procurement</option><option>Programme Management</option>
+<option>Public Information</option><option>Research &amp; Analysis</option><option>Rule of Law</option>
+<option>Safety &amp; Security</option><option>Social Affairs</option><option>Treasury</option><option>Other</option>`;
+
+    const FAFICS_AREAS = `<option value="">Select area…</option>
+<option>Governance &amp; Leadership</option><option>Pension Policy</option>
+<option>Health Insurance Policy</option><option>Communications &amp; Social Media</option>
+<option>Website Management</option><option>IT &amp; Automation</option>
+<option>Membership Advocacy</option><option>Finance &amp; Audit</option>
+<option>Administration</option><option>Other</option>`;
+
+    // UN rows — Duration replaces From/To
+    function addUnRow() {
+      rowCounters.un++;
+      addRow('un-list', `
+    <span class="row-index">${rowCounters.un}.</span>
+    <div class="row-fields" style="grid-template-columns:1.2fr 1.4fr 80px 1fr 100px">
+      <select>${UN_AGENCIES}</select>
+      <input type="text" placeholder="Position title"/>
+      <select>${GRADES}</select>
+      <select>${EXPERTISE_AREAS}</select>
+      <select>${DURATION_OPTS}</select>
+    </div>
+    ${removeBtn}`);
+    }
+
+    // Non-UN rows
+    function addNonUnRow() {
+      rowCounters.nonun++;
+      addRow('nonun-list', `
+    <span class="row-index">${rowCounters.nonun}.</span>
+    <div class="row-fields" style="grid-template-columns:1.2fr 1.4fr 1fr 100px">
+      <input type="text" placeholder="e.g. World Bank Group"/>
+      <input type="text" placeholder="Position title"/>
+      <select>${EXPERTISE_AREAS}</select>
+      <select>${DURATION_OPTS}</select>
+    </div>
+    ${removeBtn}`);
+    }
+
+    const FAFICS_ROLES = `<option value="">Select position…</option>
+<option>President</option><option>Vice-President</option><option>Secretary</option>
+<option>Treasurer</option><option>Board Member</option>
+<option>Representative – Pension Board</option>
+<option>Member – Standing Committee on Pensions</option>
+<option>Member – Standing Committee on Health Insurance</option>
+<option>Member – Standing Committee on Communications</option>
+<option>Member – Working Group</option><option>Other</option>`;
+
+    // FAFICS rows
+    function addFaficsRow() {
+      rowCounters.fafics++;
+      addRow('fafics-list', `
+    <span class="row-index">${rowCounters.fafics}.</span>
+    <div class="row-fields" style="grid-template-columns:1.5fr 1fr 120px">
+      <select>${FAFICS_ROLES}</select>
+      <select>${FAFICS_AREAS}</select>
+      <select>${DURATION_OPTS}</select>
+    </div>
+    ${removeBtn}`);
+    }
+
+    // Local rows
+    function addLocalRow() {
+      rowCounters.local++;
+      addRow('local-list', `
+    <span class="row-index">${rowCounters.local}.</span>
+    <div class="row-fields" style="grid-template-columns:1.5fr 1fr 120px">
+      <input type="text" placeholder="e.g. Vice-President"/>
+      <select>${FAFICS_AREAS}</select>
+      <select>${DURATION_OPTS}</select>
+    </div>
+    ${removeBtn}`);
+    }
+
+    // Init default rows
+    window.addEventListener('DOMContentLoaded', () => {
+      addEduRow(); addLangRow();
+      addUnRow(); addNonUnRow(); addFaficsRow(); addLocalRow();
+    });
+
+    // ── BUILD REVIEW ────────────────────────────────────
+    function buildReview() {
+      const rp = document.getElementById('review-personal');
+      rp.innerHTML = [
+        ['Name', [v('p_firstname'), v('p_middlename'), v('p_lastname')].filter(Boolean).join(' ')],
+        ['Gender', v('p_gender')], ['Nationality', v('p_nationality')],
+        ['2nd Nationality', v('p_nationality2') === 'None / not applicable' ? '' : v('p_nationality2')],
+        ['Date of Birth', v('p_dob')], ['Phone', v('p_phone')], ['Email', v('p_email')],
+        ['Association', v('p_association')], ['Country', v('p_country')],
+        ['Separated', v('p_separation')],
+        ['President Email', v('p_president_email')],
+      ].map(([k, val]) => val ? `<div class="summary-row"><span class="sk">${k}</span><span class="sv">${val}</span></div>` : '').join('');
+
+      const eduRows = document.querySelectorAll('#edu-list .dynamic-row');
+      const langRows = document.querySelectorAll('#lang-list .dynamic-row');
+      let eduHtml = '';
+      eduRows.forEach((r, i) => {
+        const ins = r.querySelectorAll('input');
+        const deg = ins[0]?.value;
+        if (deg) eduHtml += `<div class="summary-row"><span class="sk">Degree ${i + 1}</span><span class="sv">${deg}</span></div>`;
+      });
+      let langHtml = '';
+      langRows.forEach(r => {
+        const sels = r.querySelectorAll('select');
+        if (sels[0]?.value) langHtml += (langHtml ? ', ' : '') + sels[0].value + (sels[1]?.value ? ' (' + sels[1].value + ')' : '');
+      });
+      document.getElementById('review-edu').innerHTML = eduHtml + (langHtml ? `<div class="summary-row"><span class="sk">Languages</span><span class="sv">${langHtml}</span></div>` : '');
+
+      const unCnt = document.querySelectorAll('#un-list .dynamic-row').length;
+      const nuCnt = document.querySelectorAll('#nonun-list .dynamic-row').length;
+      const faCnt = document.querySelectorAll('#fafics-list .dynamic-row').length;
+      const loCnt = document.querySelectorAll('#local-list .dynamic-row').length;
+      document.getElementById('review-exp').innerHTML = [['UN', unCnt], ['Non-UN', nuCnt], ['FAFICS', faCnt], ['Local Assoc.', loCnt]]
+        .map(([k, c]) => `<div class="summary-row"><span class="sk">${k}</span><span class="sv">${c} position${c !== 1 ? 's' : ''} entered</span></div>`).join('');
+
+      const expNames = ['Governance/Leadership', 'Pension Fund Matters', 'Actuarial/Financial', 'Audit', 'Budget', 'Treasury', 'Health & Life Insurance', 'Comms — Social Media', 'Comms — Website', 'IT', 'Membership Advocacy'];
+      let prefs = [], expertL = [], advL = [];
+      document.querySelectorAll('.pref-check:checked').forEach(cb => {
+        const row = cb.closest('tr'); const name = row.querySelector('.exp-name')?.textContent.replace(/\s+/g, ' ').trim();
+        if (name) prefs.push(name);
+        else {
+          const inp = row.querySelector('input[type="text"]'); if (inp?.value) prefs.push(inp.value);
+        }
+      });
+      for (let i = 1; i <= 11; i++) {
+        const r = document.querySelector(`input[name="exp${i}"]:checked`);
+        if (r?.value === 'exp' && expNames[i - 1]) expertL.push(expNames[i - 1]);
+        if (r?.value === 'adv' && expNames[i - 1]) advL.push(expNames[i - 1]);
+      }
+      // Also scan dynamic "other" rows
+      document.querySelectorAll('#other-exp-rows tr').forEach(row => {
+        const inp = row.querySelector('input[type="text"]');
+        const name = inp?.value?.trim();
+        if (!name) return;
+        const radio = row.querySelector('input[type="radio"]:checked');
+        if (radio?.value === 'exp') expertL.push(name);
+        if (radio?.value === 'adv') advL.push(name);
+      });
+      document.getElementById('review-expertise').innerHTML = [
+        ['Top areas', prefs.join(', ')], ['Expert level', expertL.join(', ')], ['Advanced', advL.join(', ')],
+      ].map(([k, val]) => val ? `<div class="summary-row"><span class="sk">${k}</span><span class="sv">${val}</span></div>` : '').join('') || '<div class="summary-row"><span class="sv" style="color:var(--text-muted)">No selections yet</span></div>';
+    }
+    function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+    // ── SUBMIT ──────────────────────────────────────────
+    function submitForm() {
+      if (!validateStep(5)) return;
+      for (let i = 1; i <= total; i++) {
+        document.getElementById('section-' + i)?.classList.remove('active');
+        document.getElementById('step-tab-' + i)?.classList.add('done');
+        document.getElementById('step-num-' + i).textContent = '✓';
+      }
+      const num = String(Math.floor(1 + Math.random() * 9999)).padStart(4, '0');
+      const ref = 'EP-' + num;
+      document.getElementById('ref-num').textContent = ref;
+      document.getElementById('success').classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast('Application submitted!', 'Reference: ' + ref + '. A confirmation email has been sent.', 'success');
+    }
+
+    // ── OTHER EXPERTISE ROWS ────────────────────────────
+    let otherExpCount = 0;
+    function addOtherExpertise() {
+      otherExpCount++;
+      const n = 11 + otherExpCount;
+      const tbody = document.getElementById('other-exp-rows');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><div class="field" style="gap:4px"><div style="display:flex;align-items:center;justify-content:space-between"><label style="font-size:11.5px;margin:0">Other ${otherExpCount} (specify)</label><button class="rm-file" onclick="this.closest('tr').remove()" title="Remove row" style="font-size:16px;line-height:1">×</button></div><input type="text" placeholder="Specify additional area…" style="height:36px"/></div></td><td class="radio-cell"><input type="radio" name="exp${n}" value="avg"/></td><td class="radio-cell"><input type="radio" name="exp${n}" value="adv"/></td><td class="radio-cell"><input type="radio" name="exp${n}" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pref-check"/></td>`;
+      tbody.appendChild(tr);
+    }
+  </script>
+</body>
+
+</html>

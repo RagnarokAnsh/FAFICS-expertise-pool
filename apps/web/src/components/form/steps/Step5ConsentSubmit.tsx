@@ -115,20 +115,23 @@ export function Step5ConsentSubmit({ onNext, onBack, goToStep, isSubmitting }: S
       </Card>
 
       <div className="bg-gold-light border-[1.5px] border-gold rounded-theme px-[22px] py-5 mb-5">
-        <p className="text-[13.5px] text-text leading-[1.75] mb-3.5">
-          By submitting this application, you confirm that you are a member in good standing of the Association listed in Step 1. Your data will be stored securely and will only be accessible to FAFICS Officers and your Association President for the purposes of the Expertise Pool. FAFICS will not share your data with third parties.
-        </p>
-        <div className="flex items-start gap-3 mb-2.5">
-          <input type="checkbox" id="consent_data" className="w-5 h-5 shrink-0 mt-[2px] accent-navy cursor-pointer" {...register('consentData')} />
-          <label htmlFor="consent_data" className="text-[14px] font-medium text-navy cursor-pointer leading-[1.5]">
-            I consent to FAFICS storing and processing my personal data.
-          </label>
-        </div>
-        <div className="flex items-start gap-3">
-          <input type="checkbox" id="consent_accurate" className="w-5 h-5 shrink-0 mt-[2px] accent-navy cursor-pointer" {...register('consentAccurate')} />
-          <label htmlFor="consent_accurate" className="text-[14px] font-medium text-navy cursor-pointer leading-[1.5]">
-            I confirm that the information provided is accurate and complete.
-          </label>
+        <p className="text-[13.5px] text-text leading-[1.75] mb-3">FAFICS will store and keep your personal information <strong>confidential</strong>.</p>
+        <p className="text-[13.5px] text-text leading-[1.75] mb-3">It will be used solely to assess your potential selection to serve in FAFICS or as a FAFICS representative.</p>
+        <p className="text-[13.5px] text-text leading-[1.75] mb-3">The individual and/or the Local Association may be contacted to obtain any further information.</p>
+        <p className="text-[13.5px] text-text leading-[1.75] mb-4">Your data will be held for a <strong>three year period</strong> and securely deleted or archived thereafter unless renewed.</p>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-start gap-3">
+            <input type="checkbox" id="consent_data" className="w-5 h-5 shrink-0 mt-[2px] accent-navy cursor-pointer" {...register('consentData')} />
+            <label htmlFor="consent_data" className="text-[14px] font-medium text-navy cursor-pointer leading-[1.5]">
+              I <strong>consent</strong> to FAFICS storing and using my personal information as described above for Expertise Pool purposes.
+            </label>
+          </div>
+          <div className="flex items-start gap-3">
+            <input type="checkbox" id="consent_accurate" className="w-5 h-5 shrink-0 mt-[2px] accent-navy cursor-pointer" {...register('consentAccurate')} />
+            <label htmlFor="consent_accurate" className="text-[14px] font-medium text-navy cursor-pointer leading-[1.5]">
+              I <strong>declare</strong> that all information provided in this application is accurate, complete, and up to date to the best of my knowledge.
+            </label>
+          </div>
         </div>
         {submitError && (
           <p className="text-danger text-sm mt-3">{submitError}</p>
@@ -140,45 +143,37 @@ export function Step5ConsentSubmit({ onNext, onBack, goToStep, isSubmitting }: S
         <div className="flex flex-col">
           <div className="flex items-start gap-3.5 py-3 px-1">
             <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center shrink-0 bg-[#dceeff] text-[#185FA5] border-[1.5px] border-[#b5d4f4]">
-              1
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z"/></svg>
             </div>
             <div className="flex-1">
-              <div className="text-[13.5px] font-semibold text-text mb-[3px] leading-[1.3]">Application Submitted</div>
-              <div className="text-[12.5px] text-text-mid leading-[1.6]">You will receive an email confirmation with a tracking reference number.</div>
+              <div className="text-[13.5px] font-semibold text-text mb-[3px] leading-[1.3]">Application submitted &amp; reference number assigned</div>
+              <div className="text-[12.5px] text-text-mid leading-[1.6]">System records your submission with a unique Application Reference Number (e.g. EP-0042). A confirmation is sent to your email.</div>
             </div>
-          </div>
-          <div className="w-[2px] h-[18px] bg-border ml-[19px]"></div>
-          
-          <div className="flex items-start gap-3.5 py-3 px-1">
-            <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center shrink-0 bg-gold-light text-[#85500b] border-[1.5px] border-[#fac775]">
-              2
-            </div>
-            <div className="flex-1">
-              <div className="text-[13.5px] font-semibold text-text mb-[3px] leading-[1.3]">President Endorsement</div>
-              <div className="text-[12.5px] text-text-mid leading-[1.6]">Your Local Association President will receive a secure link to endorse your application.</div>
-            </div>
+            <span className="text-[11px] font-semibold bg-[#EAF3DE] text-[#3B6D11] border border-[#C0DD97] rounded-[20px] px-2.5 py-[3px] shrink-0 ml-2 whitespace-nowrap">Automatic</span>
           </div>
           <div className="w-[2px] h-[18px] bg-border ml-[19px]"></div>
 
           <div className="flex items-start gap-3.5 py-3 px-1">
-            <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center shrink-0 bg-[#EEEDFE] text-[#534AB7] border-[1.5px] border-[#AFA9EC]">
-              3
+            <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center shrink-0 bg-gold-light text-[#85500b] border-[1.5px] border-[#fac775]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             </div>
             <div className="flex-1">
-              <div className="text-[13.5px] font-semibold text-text mb-[3px] leading-[1.3]">FAFICS Review</div>
-              <div className="text-[12.5px] text-text-mid leading-[1.6]">The FAFICS Secretariat and Succession Planning Committee will review your profile.</div>
+              <div className="text-[13.5px] font-semibold text-text mb-[3px] leading-[1.3]">Local Association President notified for endorsement</div>
+              <div className="text-[12.5px] text-text-mid leading-[1.6]">A secure endorsement link is sent to your Local Association President or designated official. They review your application with view-only access and endorse it.</div>
             </div>
+            <span className="text-[11px] font-semibold bg-[#EAF3DE] text-[#3B6D11] border border-[#C0DD97] rounded-[20px] px-2.5 py-[3px] shrink-0 ml-2 whitespace-nowrap">Automatic</span>
           </div>
           <div className="w-[2px] h-[18px] bg-border ml-[19px]"></div>
 
           <div className="flex items-start gap-3.5 py-3 px-1">
             <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center shrink-0 bg-[#EAF3DE] text-[#3B6D11] border-[1.5px] border-[#C0DD97]">
-              4
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div className="flex-1">
-              <div className="text-[13.5px] font-semibold text-text mb-[3px] leading-[1.3]">Approval & Inclusion</div>
-              <div className="text-[12.5px] text-text-mid leading-[1.6]">Upon approval, your profile is added to the Expertise Pool for 3 years.</div>
+              <div className="text-[13.5px] font-semibold text-text mb-[3px] leading-[1.3]">Profile added to the Expertise Pool</div>
+              <div className="text-[12.5px] text-text-mid leading-[1.6]">Once endorsed, your profile is added to the FAFICS Expertise Pool with three-year validity.</div>
             </div>
+            <span className="text-[11px] font-semibold bg-[#EAF3DE] text-[#3B6D11] border border-[#C0DD97] rounded-[20px] px-2.5 py-[3px] shrink-0 ml-2 whitespace-nowrap">Automatic</span>
           </div>
         </div>
       </div>

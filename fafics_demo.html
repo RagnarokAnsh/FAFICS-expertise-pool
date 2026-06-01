@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FAFICS — Expertise Pool System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0D2240;--navy-mid:#1a3a6b;--navy-light:#e8edf5;--gold:#C8973A;--gold-light:#f5edd8;--white:#fff;--off-white:#f7f8fa;--border:#dde3ef;--text:#1a2540;--text-mid:#4a5578;--text-muted:#8892aa;--success:#1a7a4a;--success-light:#eaf3de;--danger:#c0392b;--pending-col:#c07a00;--pending-light:#fff8e6;--radius:10px;--shadow:0 2px 16px rgba(13,34,64,.09)}
+html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+.screen{display:none}.screen.active{display:block}
+/* LANDING */
+.landing{min-height:100vh;display:flex;flex-direction:column}
+.land-hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);padding:64px 32px 100px;text-align:center;border-bottom:3px solid var(--gold);position:relative;overflow:hidden}
+.land-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(200,151,58,.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(200,151,58,.05) 0%,transparent 50%);pointer-events:none}
+.land-emblem{width:76px;height:76px;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 22px}
+.land-emblem svg{width:38px;height:38px}
+.land-hero h1{font-family:'Playfair Display',serif;font-size:clamp(28px,4vw,46px);font-weight:700;color:var(--white);margin-bottom:10px;line-height:1.2}
+.land-hero p{font-size:15px;color:rgba(255,255,255,.62);max-width:540px;margin:0 auto;line-height:1.75}
+.land-cards{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:840px;margin:-54px auto 0;padding:0 32px 64px;position:relative;z-index:10}
+.land-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:38px 30px;text-align:center;cursor:pointer;box-shadow:0 8px 32px rgba(13,34,64,.12);transition:all .22s;position:relative;overflow:hidden}
+.land-card:hover{transform:translateY(-5px);box-shadow:0 20px 56px rgba(13,34,64,.18);border-color:var(--gold)}
+.land-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--gold)}
+.card-ico{width:58px;height:58px;border-radius:50%;background:var(--navy-light);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;transition:background .2s}
+.land-card:hover .card-ico{background:var(--navy)}
+.card-ico svg{width:27px;height:27px;stroke:var(--navy);fill:none;stroke-width:1.8;transition:stroke .2s}
+.land-card:hover .card-ico svg{stroke:var(--white)}
+.land-card h2{font-family:'Playfair Display',serif;font-size:21px;color:var(--navy);margin-bottom:9px}
+.land-card p{font-size:13px;color:var(--text-muted);line-height:1.65;margin-bottom:22px}
+.land-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 26px;border-radius:8px;background:var(--navy);color:var(--white);font-size:13.5px;font-weight:600;border:none;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.land-card:hover .land-btn{background:var(--gold)}
+.land-footer{background:var(--navy);padding:18px 32px;text-align:center;margin-top:auto}
+.land-footer p{font-size:12px;color:rgba(255,255,255,.35)}
+/* FORM TOP BAR */
+.form-topbar{background:var(--white);border-bottom:1px solid var(--border);padding:11px 32px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:200}
+.back-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;background:var(--navy-light);border:1px solid var(--border);border-radius:7px;color:var(--navy-mid);font-size:12.5px;font-weight:500;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.back-btn:hover{background:var(--navy);color:var(--white)}
+.form-topbar span{font-size:13px;color:var(--text-muted)}
+/* FORM HEADER */
+.site-header{background:var(--navy);position:sticky;top:46px;z-index:90;box-shadow:0 2px 20px rgba(0,0,0,.25)}
+.header-inner{max-width:1020px;margin:0 auto;padding:13px 32px;display:flex;align-items:center;justify-content:space-between}
+.logo-block{display:flex;align-items:center;gap:14px}
+.logo-emblem{width:44px;height:44px;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-emblem svg{width:22px;height:22px}
+.logo-text .org{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--white)}
+.logo-text .sub{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.04em;text-transform:uppercase;margin-top:1px}
+.header-tag{font-size:12px;color:var(--gold);font-weight:500;border:1px solid rgba(200,151,58,.35);padding:4px 12px;border-radius:20px}
+.hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);padding:32px 32px 28px;text-align:center;border-bottom:3px solid var(--gold)}
+.hero-eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:10px}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);line-height:1.25;margin-bottom:12px}
+.hero-desc{font-size:14px;color:rgba(255,255,255,.64);max-width:600px;margin:0 auto;line-height:1.7}
+/* PROGRESS */
+.progress-wrap{background:var(--white);border-bottom:1px solid var(--border);padding:0 32px;position:sticky;top:calc(46px + 70px);z-index:80;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.progress-inner{max-width:1020px;margin:0 auto;display:flex;align-items:stretch}
+.step-item{flex:1;display:flex;align-items:center;gap:9px;padding:11px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;position:relative}
+.step-item::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);width:1px;height:22px;background:var(--border)}
+.step-item:last-child::after{display:none}
+.step-item.active{border-bottom-color:var(--navy)}.step-item.done{border-bottom-color:var(--gold)}
+.step-num{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text-muted);flex-shrink:0;transition:all .2s}
+.step-item.active .step-num{border-color:var(--navy);background:var(--navy);color:var(--white)}
+.step-item.done .step-num{border-color:var(--gold);background:var(--gold);color:var(--white)}
+.step-label{font-size:11px;font-weight:500;color:var(--text-muted);line-height:1.3}
+.step-item.active .step-label{color:var(--navy)}.step-item.done .step-label{color:var(--gold)}
+/* FORM MAIN */
+.main{max-width:1020px;margin:0 auto;padding:26px 32px 80px}
+.form-section{display:none;animation:fadeIn .25s ease}.form-section.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.section-header{margin-bottom:22px}
+.section-header h2{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.section-header p{font-size:13px;color:var(--text-mid);line-height:1.6}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
+.card-head{background:var(--navy);padding:11px 20px;display:flex;align-items:center;gap:10px}
+.card-head h3{font-size:12px;font-weight:600;color:var(--white);letter-spacing:.03em;text-transform:uppercase}
+.card-head .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0}
+.card-body{padding:20px}
+.form-grid{display:grid;gap:14px}.col-3{grid-template-columns:1fr 1fr 1fr}.col-2{grid-template-columns:1fr 1fr}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.03em;text-transform:uppercase}
+.req{color:var(--gold);margin-left:2px}
+.field input,.field select{height:38px;padding:0 11px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--text);background:var(--off-white);outline:none;transition:border-color .15s,background .15s}
+.field input:focus,.field select:focus{border-color:var(--navy-mid);background:var(--white)}
+.field input.err,.field select.err{border-color:var(--danger)!important;background:#fff5f5!important}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238892aa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:32px}
+.field-hint{font-size:11px;color:var(--text-muted);margin-top:-2px}
+.sub-head{display:flex;align-items:center;gap:10px;margin:16px 0 10px}
+.sub-head span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--navy-mid);white-space:nowrap}
+.sub-head::after{content:'';flex:1;height:1px;background:var(--border)}
+.dynamic-list{display:flex;flex-direction:column;gap:8px}
+.dynamic-row{display:flex;align-items:flex-start;gap:8px;background:var(--off-white);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.dynamic-row .row-index{font-size:11px;font-weight:700;color:var(--text-muted);width:16px;padding-top:11px;flex-shrink:0;text-align:center}
+.dynamic-row .row-fields{flex:1;display:grid;gap:8px;min-width:0}
+.dynamic-row .row-fields input,.dynamic-row .row-fields select{height:36px;padding:0 9px;border:1.5px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--white);outline:none;transition:border-color .15s;min-width:0;width:100%}
+.dynamic-row .row-fields input:focus,.dynamic-row .row-fields select:focus{border-color:var(--navy-mid)}
+.dynamic-row .row-fields select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238892aa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+.btn-remove{width:26px;height:26px;border-radius:50%;border:1.5px solid #ffd0cc;background:#fff5f5;color:var(--danger);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px;transition:all .15s}
+.btn-remove:hover{background:var(--danger);color:var(--white);border-color:var(--danger)}
+.btn-add{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px dashed var(--navy-mid);border-radius:8px;background:var(--navy-light);color:var(--navy-mid);font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:4px}
+.btn-add:hover{background:var(--navy);color:var(--white);border-style:solid}
+.btn-add svg{width:13px;height:13px}
+.exp-table{width:100%;border-collapse:collapse}
+.exp-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);padding:8px 11px;border-bottom:2px solid var(--border);text-align:left;background:var(--off-white)}
+.exp-table th.center{text-align:center}
+.exp-table td{padding:9px 11px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px}
+.exp-table tr:hover td{background:var(--navy-light)}
+.exp-table tr:last-child td{border-bottom:none}
+.exp-name{font-weight:500;color:var(--text)}
+.exp-name small{display:block;font-size:11px;color:var(--text-muted);font-weight:400}
+.radio-cell,.pref-cell{text-align:center}
+.radio-cell input[type="radio"]{width:16px;height:16px;accent-color:var(--navy);cursor:pointer}
+.pref-cell input[type="checkbox"]{width:16px;height:16px;accent-color:var(--gold);cursor:pointer}
+.level-head{background:var(--navy-light)!important}
+.intro-notice{background:var(--gold-light);border:1.5px solid var(--gold);border-radius:var(--radius);padding:20px 24px;margin:20px 0 0}
+.intro-notice p{font-size:13px;color:var(--text);line-height:1.8;margin-bottom:8px}
+.intro-notice p:last-child{margin-bottom:0}.intro-notice strong{color:var(--navy)}
+.pillar-item{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text-mid);line-height:1.5;margin-bottom:6px}
+.pillar-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:5px}
+.consent-box{background:var(--gold-light);border:1.5px solid var(--gold);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px}
+.consent-box p{font-size:13px;color:var(--text);line-height:1.75;margin-bottom:8px}
+.consent-check{display:flex;align-items:flex-start;gap:10px}
+.consent-check input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:var(--navy);cursor:pointer}
+.consent-check label{font-size:13px;font-weight:500;color:var(--navy);cursor:pointer;line-height:1.5}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.summary-block{background:var(--off-white);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.summary-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--navy-mid);margin-bottom:8px}
+.summary-row{display:flex;gap:7px;align-items:baseline;margin-bottom:3px}
+.sk{font-size:11px;color:var(--text-muted);min-width:70px;flex-shrink:0}
+.sv{font-size:12px;color:var(--text);font-weight:500;line-height:1.4}
+.edit-link{margin-top:8px;background:none;border:none;font-size:11.5px;color:var(--navy-mid);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;padding:0;text-decoration:underline}
+.flow-steps{display:flex;flex-direction:column}
+.flow-step{display:flex;align-items:flex-start;gap:12px;padding:9px 4px}
+.flow-connector{width:2px;height:14px;background:var(--border);margin-left:17px}
+.flow-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.flow-blue{background:#dceeff;color:#185FA5;border:1.5px solid #b5d4f4}
+.flow-amber{background:var(--gold-light);color:#85500b;border:1.5px solid #fac775}
+.flow-green{background:var(--success-light);color:#3B6D11;border:1.5px solid #C0DD97}
+.flow-body{flex:1}.flow-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.flow-desc{font-size:12px;color:var(--text-mid);line-height:1.6}
+.flow-auto span{font-size:10px;font-weight:600;border-radius:20px;padding:3px 9px;white-space:nowrap;background:var(--success-light);color:#3B6D11;border:1px solid #C0DD97}
+.audit-notice{display:flex;gap:12px;align-items:flex-start;background:var(--navy-light);border:1px solid var(--border);border-left:3px solid var(--navy);border-radius:8px;padding:14px 16px;margin-bottom:16px}
+.audit-icon{width:30px;height:30px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--white)}
+.audit-title{font-size:12.5px;font-weight:600;color:var(--navy);margin-bottom:3px}
+.audit-desc{font-size:12px;color:var(--text-mid);line-height:1.6}
+.nav-bar{display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border);margin-top:8px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--navy);color:var(--white)}.btn-primary:hover{background:var(--navy-mid)}
+.btn-ghost{background:transparent;color:var(--text-mid);border:1.5px solid var(--border)}.btn-ghost:hover{border-color:var(--navy);color:var(--navy);background:var(--navy-light)}
+.btn-submit{background:var(--gold);color:var(--white)}.btn-submit:hover{background:#b5842e}
+.btn svg{width:14px;height:14px}
+.success-screen{display:none;text-align:center;padding:60px 32px}
+.success-screen.show{display:block;animation:fadeIn .4s ease}
+.success-icon{width:68px;height:68px;border-radius:50%;background:var(--navy);border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.success-screen h2{font-family:'Playfair Display',serif;font-size:26px;color:var(--navy);margin-bottom:8px}
+.success-screen p{font-size:14px;color:var(--text-mid);max-width:460px;margin:0 auto 6px;line-height:1.7}
+.ref-box{display:inline-block;background:var(--gold-light);border:1px solid var(--gold);border-radius:8px;padding:10px 28px;margin:18px auto}
+.ref-box strong{font-size:18px;color:var(--navy);display:block;letter-spacing:.05em}
+.site-footer{background:var(--navy);padding:16px 32px;text-align:center;margin-top:32px}
+.site-footer p{font-size:11px;color:rgba(255,255,255,.32)}
+/* ADMIN LOGIN */
+.login-overlay{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);padding:24px}
+.login-card{background:var(--white);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.login-logo .emb{width:42px;height:42px;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.login-logo .emb svg{width:21px;height:21px}
+.login-logo span{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--navy)}
+.login-card h2{font-family:'Playfair Display',serif;font-size:22px;color:var(--navy);margin-bottom:6px}
+.login-card > p{font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.55}
+.login-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.login-field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text)}
+.login-field input{height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--off-white);outline:none}
+.login-field input:focus{border-color:var(--navy-mid);background:var(--white)}
+.login-btn{width:100%;height:44px;background:var(--navy);color:var(--white);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:6px}
+.login-btn:hover{background:var(--navy-mid)}
+.login-err{font-size:12px;color:var(--danger);margin-top:8px;display:none}
+.login-hint{margin-top:16px;padding:10px 14px;background:var(--gold-light);border:1px solid var(--gold);border-radius:8px;font-size:12px;color:var(--text-mid);line-height:1.6}
+.login-back{display:block;text-align:center;margin-top:14px;font-size:12px;color:var(--text-muted);cursor:pointer}
+.login-back:hover{color:var(--navy)}
+/* ADMIN LAYOUT */
+.admin-layout{display:flex;min-height:100vh}
+.admin-sidebar{width:236px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-logo{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo .org{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--white)}
+.sidebar-logo .role{font-size:10px;color:rgba(255,255,255,.38);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.sidebar-nav{padding:16px 12px;flex:1}
+.nav-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.28);padding:0 8px;margin:14px 0 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.56);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,.08);color:var(--white)}
+.nav-item.active{background:rgba(200,151,58,.18);color:var(--gold)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.nav-item .badge{margin-left:auto;background:var(--gold);color:var(--white);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
+.sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.1)}
+.sidebar-footer .user{font-size:11.5px;color:rgba(255,255,255,.42);margin-bottom:8px}
+.sidebar-footer .logout{font-size:12px;color:rgba(255,255,255,.36);cursor:pointer;display:flex;align-items:center;gap:6px;transition:color .15s}
+.sidebar-footer .logout:hover{color:var(--gold)}
+.admin-main{flex:1;min-width:0;background:var(--off-white)}
+.admin-topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 26px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--navy)}
+.topbar-date{font-size:12px;color:var(--text-muted)}
+.admin-content{padding:26px}
+.tab-page{display:none}.tab-page.active{display:block;animation:fadeIn .2s ease}
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.stat-card.s-navy::before{background:var(--navy)}.stat-card.s-gold::before{background:var(--gold)}
+.stat-card.s-success::before{background:var(--success)}.stat-card.s-pending::before{background:var(--pending-col)}
+.stat-value{font-family:'Playfair Display',serif;font-size:38px;font-weight:700;color:var(--navy);line-height:1;margin-bottom:4px}
+.stat-label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.stat-sub{font-size:11px;color:var(--text-muted);margin-top:8px}
+.stat-icon{position:absolute;top:14px;right:14px;opacity:.07}
+.stat-icon svg{width:42px;height:42px;stroke:var(--navy)}
+/* SECTION HEAD */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-head h3{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--navy)}
+.sec-head p{font-size:12px;color:var(--text-muted);margin-top:2px}
+.dash-btn{padding:8px 16px;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
+.dash-btn-navy{background:var(--navy);color:var(--white)}.dash-btn-navy:hover{background:var(--navy-mid)}
+.dash-btn-gold{background:var(--gold);color:var(--white)}.dash-btn-gold:hover{background:#b5842e}
+.dash-btn-outline{background:transparent;color:var(--text-muted);border:1.5px solid var(--border)}.dash-btn-outline:hover{border-color:var(--navy);color:var(--navy)}
+/* REPORT CARDS */
+.report-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.report-card h4{font-size:11px;font-weight:700;color:var(--navy);margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.reports-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+/* CHARTS */
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{font-size:11px;color:var(--text);width:148px;flex-shrink:0;line-height:1.3}
+.bar-track{flex:1;background:var(--off-white);border-radius:4px;height:18px;overflow:hidden;border:1px solid var(--border)}
+.bar-fill{height:100%;border-radius:4px;transition:width .7s ease}
+.bf-navy{background:var(--navy)}.bf-gold{background:var(--gold)}.bf-success{background:var(--success)}.bf-teal{background:#1a7a6a}
+.bar-count{font-size:11px;font-weight:700;color:var(--text-mid);min-width:20px;text-align:right}
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut-legend{flex:1}
+.legend-item{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-label{font-size:12px;color:var(--text);flex:1}
+.legend-val{font-size:12px;font-weight:600;color:var(--navy)}
+/* ROSTER */
+.roster-controls{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.search-wrap{position:relative;flex:1;min-width:180px}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--text-muted);pointer-events:none}
+.search-wrap input{width:100%;height:38px;padding:0 11px 0 34px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--off-white);outline:none;transition:all .15s}
+.search-wrap input:focus{border-color:var(--navy-mid);background:var(--white)}
+.f-select{height:38px;padding:0 30px 0 11px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--text);background:var(--off-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238892aa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 9px center;appearance:none;outline:none;cursor:pointer;transition:border-color .15s}
+.f-select:focus{border-color:var(--navy-mid)}
+.filter-count{font-size:12px;color:var(--text-muted);white-space:nowrap;margin-left:auto}
+.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:15px}
+.profile-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.profile-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(13,34,64,.14);border-color:var(--gold)}
+.pc-head{background:var(--navy);padding:13px 16px;display:flex;align-items:center;gap:11px}
+.pc-avatar{width:38px;height:38px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--white);flex-shrink:0}
+.pc-head .pc-name{font-size:13.5px;font-weight:600;color:var(--white)}.pc-head .pc-meta{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px}
+.pc-head .pc-ref{margin-left:auto;font-size:10px;color:rgba(255,255,255,.28);font-family:'DM Sans',sans-serif;white-space:nowrap}
+.pc-body{padding:13px 16px}
+.pc-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.tag{font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;border:1px solid var(--border);color:var(--text-mid);background:var(--off-white)}
+.tag.tp{background:var(--gold-light);border-color:var(--gold);color:#7a5010}
+.pc-langs{font-size:11.5px;color:var(--text-muted)}
+.pc-foot{padding:9px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sbadge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em}
+.sbadge.approved{background:var(--success-light);color:var(--success)}.sbadge.pending{background:var(--pending-light);color:var(--pending-col)}
+.exp-text{font-size:10.5px;color:var(--text-muted)}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(13,34,64,.6);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.3)}
+.modal-head{background:var(--navy);padding:22px 26px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.modal-avatar{width:50px;height:50px;border-radius:50%;background:var(--gold);border:3px solid rgba(200,151,58,.3);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--white);flex-shrink:0}
+.modal-head-info .mname{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--white)}
+.modal-head-info .msub{font-size:11.5px;color:rgba(255,255,255,.5);margin-top:3px}
+.modal-close{margin-left:auto;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.modal-close:hover{background:rgba(255,255,255,.2)}
+.modal-body{padding:22px 26px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px}
+.modal-block{background:var(--off-white);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.mbt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--navy-mid);margin-bottom:10px}
+.mrow{display:flex;gap:8px;margin-bottom:5px;align-items:baseline}
+.mkey{font-size:11px;color:var(--text-muted);min-width:78px;flex-shrink:0}
+.mval{font-size:12.5px;color:var(--text);font-weight:500;line-height:1.4}
+.m-list{list-style:none}
+.m-list li{font-size:12.5px;color:var(--text);padding:5px 0;border-bottom:1px solid var(--border);line-height:1.4}
+.m-list li:last-child{border-bottom:none;padding-bottom:0}
+.exp-grid{display:flex;flex-direction:column;gap:7px}
+.exp-item-row{display:flex;align-items:center;gap:8px}
+.exp-item-name{font-size:12px;color:var(--text);flex:1}
+.level-pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px}
+.level-pill.expert{background:#eeedfe;color:#534ab7}
+.level-pill.advanced{background:var(--navy-light);color:var(--navy-mid)}
+.level-pill.average{background:var(--off-white);color:var(--text-muted);border:1px solid var(--border)}
+.pref-star{color:var(--gold);font-size:13px}
+/* PENDING TABLE */
+.ptable{width:100%;border-collapse:collapse}
+.ptable th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:10px 14px;border-bottom:2px solid var(--border);text-align:left;background:var(--off-white)}
+.ptable td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.ptable tr:hover td{background:var(--navy-light)}.ptable tr:last-child td{border-bottom:none}
+.approve-btn{padding:5px 12px;background:var(--success-light);color:var(--success);border:1px solid #c0dd97;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.approve-btn:hover{background:var(--success);color:var(--white)}
+/* ACTIVITY */
+.activity-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.activity-row:last-child{border-bottom:none}
+/* TOAST */
+#toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;gap:10px;align-items:flex-start;background:var(--white);border-radius:10px;padding:12px 16px;box-shadow:0 4px 24px rgba(0,0,0,.16);border-left:4px solid var(--success);min-width:260px;max-width:360px;pointer-events:all;animation:toastIn .25s ease;font-size:13px;color:var(--text);line-height:1.45}
+.toast.terror{border-left-color:var(--danger)}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+/* EMPTY */
+.empty-state{text-align:center;padding:56px 20px;color:var(--text-muted);grid-column:1/-1}
+.empty-state svg{width:44px;height:44px;stroke:var(--border);margin-bottom:12px;display:block;margin-left:auto;margin-right:auto}
+.empty-state h4{font-size:14px;color:var(--text-mid);margin-bottom:5px}
+.empty-state p{font-size:12.5px;line-height:1.6}
+@media(max-width:900px){.stats-grid{grid-template-columns:1fr 1fr}.reports-grid{grid-template-columns:1fr}.modal-grid{grid-template-columns:1fr}.land-cards{grid-template-columns:1fr}}
+@media(max-width:768px){.admin-sidebar{display:none}.col-3,.col-2{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}.progress-inner{overflow-x:auto}.main{padding:18px 16px 60px}}
+@media(max-width:480px){.nav-bar{flex-direction:column;gap:8px}.nav-bar .btn{width:100%;justify-content:center}.land-cards{padding:0 16px 40px}}
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- ══ LANDING ══ -->
+<div id="screen-landing" class="screen active">
+  <div class="landing">
+    <div class="land-hero">
+      <div class="land-emblem"><svg viewBox="0 0 24 24" fill="none" stroke="#C8973A" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></div>
+      <h1>FAFICS Expertise Pool</h1>
+      <p>For all former International Civil Servants wishing to volunteer their time and expertise for positions and functions within the Federation.</p>
+    </div>
+    <div class="land-cards">
+      <div class="land-card" onclick="window.location.href='fafics_form_v3.html'">
+        <div class="card-ico"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+        <h2>Apply to Expertise Pool</h2>
+        <p>For FAFICS Association members wishing to volunteer their time and expertise for positions and functions within the Federation.</p>
+        <button class="land-btn">Complete Application →</button>
+      </div>
+      <div class="land-card" onclick="gotoAdminLogin()">
+        <div class="card-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg></div>
+        <h2>Officer Dashboard</h2>
+        <p>For FAFICS Officers to search the Expertise Pool, review pending endorsements, and generate analytical reports for Council.</p>
+        <button class="land-btn">Access Dashboard →</button>
+      </div>
+    </div>
+    <div class="land-footer"><p>© 2026 FAFICS — Federation of Associations of Former International Civil Servants &nbsp;·&nbsp; fafics.org &nbsp;·&nbsp; secretary@fafics.org</p></div>
+  </div>
+</div>
+
+<!-- ══ FORM ══ -->
+<div id="screen-form" class="screen">
+  <div class="form-topbar"><button class="back-btn" onclick="gotoLanding()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back to Home</button><span>FAFICS — Expertise Pool Application Form</span></div>
+  <header class="site-header"><div class="header-inner"><div class="logo-block"><div class="logo-emblem"><svg viewBox="0 0 24 24" fill="none" stroke="#C8973A" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></div><div class="logo-text"><div class="org">FAFICS</div><div class="sub">Federation of Associations of Former International Civil Servants</div></div></div><div class="header-tag">Expertise Pool</div></div></header>
+  <div class="hero"><div class="hero-eyebrow">Volunteer Application</div><h1>Federation's Expertise Pool<br/>Application Form</h1><p class="hero-desc">For all former International Civil Servants wishing to volunteer their time and expertise for positions and functions within the Federation.</p></div>
+  <div class="progress-wrap"><div class="progress-inner">
+    <div class="step-item active" id="st1" onclick="fGoTo(1)"><div class="step-num" id="sn1">1</div><div class="step-label">Personal<br/>Information</div></div>
+    <div class="step-item" id="st2" onclick="fGoTo(2)"><div class="step-num" id="sn2">2</div><div class="step-label">Education &amp;<br/>Languages</div></div>
+    <div class="step-item" id="st3" onclick="fGoTo(3)"><div class="step-num" id="sn3">3</div><div class="step-label">Work<br/>Experience</div></div>
+    <div class="step-item" id="st4" onclick="fGoTo(4)"><div class="step-num" id="sn4">4</div><div class="step-label">Self<br/>Assessment</div></div>
+    <div class="step-item" id="st5" onclick="fGoTo(5)"><div class="step-num" id="sn5">5</div><div class="step-label">Consent &amp;<br/>Submit</div></div>
+  </div></div>
+  <div class="main">
+    <!-- STEP 1 -->
+    <div class="form-section active" id="fs1">
+      <div class="section-header"><h2>Personal Information</h2><p>Fields marked <span style="color:var(--gold)">*</span> are mandatory.</p></div>
+      <div class="intro-notice">
+        <p><strong>FAFICS and the Expertise Pool</strong></p>
+        <p>Members of FAFICS Associations can participate in the work of FAFICS through service in:</p>
+        <div class="pillar-item"><div class="pillar-dot"></div><span>The <strong>elected positions</strong> of President, Vice-President, Secretary and Treasurer;</span></div>
+        <div class="pillar-item" style="margin-bottom:0"><div class="pillar-dot"></div><span><strong>FAFICS Standing Committees</strong> in the areas of Pensions, After Service Health and Life Insurance, Communications and Membership, including Chairs/Co-Chairs nominated by the President and appointed by the Council; on the <strong>United Nations Pension Board</strong> as part of the FAFICS delegation or on one of the Pension Board's subsidiary bodies/working groups.</span></div>
+        <p style="margin-top:10px">The FAFICS Rules of Procedure established an <strong>Expertise Pool</strong> as a repository of members interested in serving. Selection for <strong>non-elected positions</strong> is managed through the Expertise Pool. Please submit through your Local Association President or designated official. Individuals may remain in the Expertise Pool for <strong>three (3) years</strong>.</p>
+        <p><strong>Mandatory:</strong> Visit <a href="https://fafics.org" target="_blank" style="color:var(--navy-mid);font-weight:600">FAFICS.ORG</a> before completing this form.</p>
+      </div>
+      <div style="margin-top:18px"></div>
+      <div class="card">
+        <div class="card-head"><div class="dot"></div><h3>Personal Information</h3></div>
+        <div class="card-body">
+          <div class="form-grid col-3">
+            <div class="field"><label>First Name <span class="req">*</span></label><input id="p_fn" type="text" placeholder="e.g. Marie"/></div>
+            <div class="field"><label>Middle Name</label><input id="p_mn" type="text" placeholder="e.g. Claire"/></div>
+            <div class="field"><label>Last Name <span class="req">*</span></label><input id="p_ln" type="text" placeholder="e.g. Dubois"/></div>
+          </div>
+          <div class="form-grid col-3" style="margin-top:12px">
+            <div class="field"><label>Date of Birth <span class="req">*</span></label><input id="p_dob" type="date"/></div>
+            <div class="field"><label>Nationality <span class="req">*</span></label><select id="p_nat"><option value="">Select…</option><option>Afghan</option><option>American</option><option>Belgian</option><option>Brazilian</option><option>British</option><option>Cameroonian</option><option>Canadian</option><option>Chinese</option><option>Egyptian</option><option>Ethiopian</option><option>Finnish</option><option>French</option><option>German</option><option>Ghanaian</option><option>Greek</option><option>Indian</option><option>Italian</option><option>Japanese</option><option>Kenyan</option><option>Lebanese</option><option>Mexican</option><option>Moroccan</option><option>Nigerian</option><option>Norwegian</option><option>Pakistani</option><option>Philippine</option><option>Polish</option><option>Portuguese</option><option>Russian</option><option>Senegalese</option><option>South African</option><option>South Korean</option><option>Spanish</option><option>Swedish</option><option>Swiss</option><option>Tanzanian</option><option>Turkish</option><option>Ukrainian</option><option>Venezuelan</option><option>Vietnamese</option></select></div>
+            <div class="field"><label>Gender <span class="req">*</span></label><select id="p_gen"><option value="">Select…</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div>
+          </div>
+          <div class="form-grid col-3" style="margin-top:12px">
+            <div class="field"><label>Phone <span class="req">*</span></label><input id="p_ph" type="tel" placeholder="+1 212 000 0000"/><span class="field-hint">Include country code</span></div>
+            <div class="field"><label>Email <span class="req">*</span></label><input id="p_em" type="email" placeholder="name@example.com"/></div>
+            <div class="field"><label>Date of Separation <span class="req">*</span></label><input id="p_sep" type="date"/></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="dot"></div><h3>Member Association Details</h3></div>
+        <div class="card-body">
+          <div class="form-grid col-3">
+            <div class="field"><label>Member Association <span class="req">*</span></label><input id="p_assoc" type="text" placeholder="e.g. AFICS-NY, USA"/></div>
+            <div class="field"><label>Country <span class="req">*</span></label><select id="p_cty"><option value="">Select…</option><option>Belgium</option><option>Cameroon</option><option>Canada</option><option>Egypt</option><option>France</option><option>Germany</option><option>Ghana</option><option>India</option><option>Italy</option><option>Japan</option><option>Kenya</option><option>Nigeria</option><option>Russia</option><option>Senegal</option><option>South Africa</option><option>Spain</option><option>Switzerland</option><option>United Kingdom</option><option>United States</option><option>Venezuela</option><option>Vietnam</option></select></div>
+            <div class="field"><label>Email of Association President <span class="req">*</span></label><input id="p_pres" type="email" placeholder="president@association.org"/><span class="field-hint">Routes application for endorsement</span></div>
+          </div>
+          <div class="sub-head" style="margin-top:16px"><span>Other Association Membership (optional)</span></div>
+          <div class="form-grid col-2"><div class="field"><label>Other Association</label><input id="p_a2" type="text" placeholder="e.g. AFICS Geneva"/></div><div class="field"><label>Country</label><select id="p_a2c"><option value="">Select…</option><option>France</option><option>Switzerland</option><option>United States</option><option>United Kingdom</option><option>Germany</option><option>Italy</option></select></div></div>
+        </div>
+      </div>
+      <div class="nav-bar"><span></span><button class="btn btn-primary" onclick="fNext(1,2)">Next: Education &amp; Languages<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button></div>
+    </div>
+    <!-- STEP 2 -->
+    <div class="form-section" id="fs2">
+      <div class="section-header"><h2>Education &amp; Languages</h2><p>List your highest qualifications and working languages.</p></div>
+      <div class="card"><div class="card-head"><div class="dot"></div><h3>Educational Qualifications</h3></div><div class="card-body"><div class="dynamic-list" id="edu-list"></div><button class="btn-add" onclick="addEdu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Add Qualification</button></div></div>
+      <div class="card"><div class="card-head"><div class="dot"></div><h3>UN Working Languages</h3></div><div class="card-body"><div class="dynamic-list" id="lang-list"></div><button class="btn-add" onclick="addLang()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Add Language</button></div></div>
+      <div class="nav-bar"><button class="btn btn-ghost" onclick="fGoTo(1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</button><button class="btn btn-primary" onclick="fNext(2,3)">Next: Work Experience<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button></div>
+    </div>
+    <!-- STEP 3 -->
+    <div class="form-section" id="fs3">
+      <div class="section-header"><h2>Work Experience</h2><p>List your 2–3 most relevant positions per category.</p></div>
+      <div class="card"><div class="card-head"><div class="dot"></div><h3>A — United Nations Experience</h3></div><div class="card-body"><div class="dynamic-list" id="un-list"></div><button class="btn-add" onclick="addUN()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Add UN Position</button><div class="sub-head" style="margin-top:14px"><span>Summary of UN experience</span></div><textarea id="un-summ" placeholder="Briefly describe key UN achievements…" style="width:100%;min-height:80px;padding:9px 11px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;outline:none;background:var(--off-white);box-sizing:border-box"></textarea></div></div>
+      <div class="card"><div class="card-head"><div class="dot"></div><h3>B — Non-UN &nbsp;/&nbsp; C — FAFICS &nbsp;/&nbsp; D — Local Association Experience</h3></div><div class="card-body">
+        <div class="sub-head"><span>Non-UN Experience</span></div><div class="dynamic-list" id="nonun-list"></div><button class="btn-add" onclick="addNonUN()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Add Position</button>
+        <div class="sub-head" style="margin-top:14px"><span>FAFICS / Local Association Experience</span></div><div class="dynamic-list" id="fafics-list"></div><button class="btn-add" onclick="addFAFICS()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Add FAFICS / Local Position</button>
+      </div></div>
+      <div class="nav-bar"><button class="btn btn-ghost" onclick="fGoTo(2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</button><button class="btn btn-primary" onclick="fNext(3,4)">Next: Self Assessment<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button></div>
+    </div>
+    <!-- STEP 4 -->
+    <div class="form-section" id="fs4">
+      <div class="section-header"><h2>Self-Assessment on Expertise</h2><p>Rate your level and select your <strong>top 3 preferred areas</strong>.</p></div>
+      <div class="card"><div class="card-head"><div class="dot"></div><h3>Expertise Level &amp; Preference</h3></div><div class="card-body" style="overflow-x:auto">
+        <table class="exp-table">
+          <thead><tr><th style="width:40%">Area of Expertise</th><th class="center level-head" colspan="3">Level</th><th class="center" style="width:80px">Preferred<br/><small style="font-weight:400;letter-spacing:0;text-transform:none">(Max 3 ✓)</small></th></tr><tr><th></th><th class="center" style="width:80px">Average</th><th class="center" style="width:80px">Advanced</th><th class="center" style="width:80px">Expert</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="exp-name">Governance / Leadership / Management</td><td class="radio-cell"><input type="radio" name="e1" value="avg"/></td><td class="radio-cell"><input type="radio" name="e1" value="adv"/></td><td class="radio-cell"><input type="radio" name="e1" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Pension Fund Matters / Policy</td><td class="radio-cell"><input type="radio" name="e2" value="avg"/></td><td class="radio-cell"><input type="radio" name="e2" value="adv"/></td><td class="radio-cell"><input type="radio" name="e2" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Actuarial / Financial Analysis</td><td class="radio-cell"><input type="radio" name="e3" value="avg"/></td><td class="radio-cell"><input type="radio" name="e3" value="adv"/></td><td class="radio-cell"><input type="radio" name="e3" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Audit</td><td class="radio-cell"><input type="radio" name="e4" value="avg"/></td><td class="radio-cell"><input type="radio" name="e4" value="adv"/></td><td class="radio-cell"><input type="radio" name="e4" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Budget</td><td class="radio-cell"><input type="radio" name="e5" value="avg"/></td><td class="radio-cell"><input type="radio" name="e5" value="adv"/></td><td class="radio-cell"><input type="radio" name="e5" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Treasury</td><td class="radio-cell"><input type="radio" name="e6" value="avg"/></td><td class="radio-cell"><input type="radio" name="e6" value="adv"/></td><td class="radio-cell"><input type="radio" name="e6" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Health &amp; Life Insurance Matters / Policy</td><td class="radio-cell"><input type="radio" name="e7" value="avg"/></td><td class="radio-cell"><input type="radio" name="e7" value="adv"/></td><td class="radio-cell"><input type="radio" name="e7" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Communications — Social Media<small>Content creation, platform management</small></td><td class="radio-cell"><input type="radio" name="e8" value="avg"/></td><td class="radio-cell"><input type="radio" name="e8" value="adv"/></td><td class="radio-cell"><input type="radio" name="e8" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Communications — Website Management<small>Content editing, publishing</small></td><td class="radio-cell"><input type="radio" name="e9" value="avg"/></td><td class="radio-cell"><input type="radio" name="e9" value="adv"/></td><td class="radio-cell"><input type="radio" name="e9" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Information Technology (IT)<small>Website development &amp; system automation</small></td><td class="radio-cell"><input type="radio" name="e10" value="avg"/></td><td class="radio-cell"><input type="radio" name="e10" value="adv"/></td><td class="radio-cell"><input type="radio" name="e10" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+            <tr><td class="exp-name">Membership Advocacy</td><td class="radio-cell"><input type="radio" name="e11" value="avg"/></td><td class="radio-cell"><input type="radio" name="e11" value="adv"/></td><td class="radio-cell"><input type="radio" name="e11" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td></tr>
+          </tbody>
+          <tbody id="other-exp-rows"></tbody>
+        </table>
+        <button class="btn-add" onclick="addOtherExp()" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Add Other Area</button>
+        <p id="pref-warn" style="display:none;color:var(--danger);font-size:12px;margin-top:8px;font-weight:600">⚠ Please select a maximum of 3 preferred areas.</p>
+      </div></div>
+      <div class="nav-bar"><button class="btn btn-ghost" onclick="fGoTo(3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</button><button class="btn btn-primary" onclick="fNext(4,5)">Next: Review &amp; Submit<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button></div>
+    </div>
+    <!-- STEP 5 -->
+    <div class="form-section" id="fs5">
+      <div class="section-header"><h2>Review, Consent &amp; Submit</h2><p>Review your summary, then consent and submit.</p></div>
+      <div class="card"><div class="card-head"><div class="dot"></div><h3>Application Summary</h3></div><div class="card-body"><div class="summary-grid"><div class="summary-block"><div class="summary-label">Personal</div><div id="rev-personal"></div><button class="edit-link" onclick="fGoTo(1)">Edit ↗</button></div><div class="summary-block"><div class="summary-label">Education &amp; Languages</div><div id="rev-edu"></div><button class="edit-link" onclick="fGoTo(2)">Edit ↗</button></div><div class="summary-block"><div class="summary-label">Work Experience</div><div id="rev-exp"></div><button class="edit-link" onclick="fGoTo(3)">Edit ↗</button></div><div class="summary-block"><div class="summary-label">Expertise &amp; Preferences</div><div id="rev-exp2"></div><button class="edit-link" onclick="fGoTo(4)">Edit ↗</button></div></div></div></div>
+      <div class="consent-box">
+        <p>FAFICS will store and keep your personal information <strong>confidential</strong>.</p>
+        <p>It will be used solely to assess your potential selection to serve in FAFICS or as a FAFICS representative. The individual and/or the Local Association may be contacted to obtain any further information. Your data will be held for a <strong>three year period</strong> and securely deleted or archived thereafter unless renewed.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+          <div class="consent-check"><input type="checkbox" id="con1"/><label for="con1">I <strong>consent</strong> to FAFICS storing and using my personal information as described above for Expertise Pool purposes.</label></div>
+          <div class="consent-check"><input type="checkbox" id="con2"/><label for="con2">I <strong>declare</strong> that all information provided is accurate, complete, and up to date to the best of my knowledge.</label></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-head"><div class="dot"></div><h3>What Happens After You Submit</h3></div><div class="card-body">
+        <div class="flow-steps">
+          <div class="flow-step"><div class="flow-icon flow-blue"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z"/></svg></div><div class="flow-body"><div class="flow-title">Application submitted &amp; reference number assigned</div><div class="flow-desc">System records your submission. A confirmation is sent to your email.</div></div><div class="flow-auto"><span>Automatic</span></div></div>
+          <div class="flow-connector"></div>
+          <div class="flow-step"><div class="flow-icon flow-amber"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="flow-body"><div class="flow-title">Local Association President notified for endorsement</div><div class="flow-desc">A secure endorsement link is sent to your Local Association President or designated official.</div></div><div class="flow-auto"><span>Automatic</span></div></div>
+          <div class="flow-connector"></div>
+          <div class="flow-step"><div class="flow-icon flow-green"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="flow-body"><div class="flow-title">Profile added to the Expertise Pool</div><div class="flow-desc">Once endorsed, your profile is added to the FAFICS Expertise Pool with three-year validity.</div></div><div class="flow-auto"><span>Automatic</span></div></div>
+        </div>
+      </div></div>
+      <div class="audit-notice"><div class="audit-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div class="audit-title">Audit trail &amp; data security</div><div class="audit-desc">Every action — submission, Local Association President endorsement, and future edits — is automatically recorded with timestamps and user identity.</div></div></div>
+      <div class="nav-bar"><button class="btn btn-ghost" onclick="fGoTo(4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</button><button class="btn btn-submit" onclick="fSubmit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z"/></svg>Submit Application</button></div>
+    </div>
+    <!-- SUCCESS -->
+    <div class="success-screen" id="form-success">
+      <div class="success-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#C8973A" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h2>Application Submitted</h2>
+      <p>Thank you. A confirmation has been sent to your email. Your application is now <span style="color:var(--navy);font-weight:600">pending endorsement</span> from your Local Association President.</p>
+      <div class="ref-box">Application Reference Number<strong id="form-ref">EP-0001</strong></div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Keep this reference number for your records. Valid for 3 years from approval.</p>
+      <div style="margin-top:24px;display:flex;gap:12px;justify-content:center">
+        <button class="btn btn-ghost" onclick="gotoLanding()">Back to Home</button>
+        <button class="btn btn-primary" onclick="gotoAdmin()">View in Officer Dashboard →</button>
+      </div>
+    </div>
+  </div>
+  <footer class="site-footer"><p>© 2026 FAFICS — Federation of Associations of Former International Civil Servants &nbsp;·&nbsp; fafics.org</p></footer>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div id="screen-admin" class="screen">
+  <!-- Login -->
+  <div id="admin-login" class="login-overlay">
+    <div class="login-card">
+      <div class="login-logo"><div class="emb"><svg viewBox="0 0 24 24" fill="none" stroke="#C8973A" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10"/><path d="M2 12h20"/></svg></div><span>FAFICS</span></div>
+      <h2>Officer Dashboard</h2>
+      <p>Secure access for FAFICS Officers to manage and search the Expertise Pool.</p>
+      <div class="login-field"><label>Username</label><input type="text" id="lu" value="officer@fafics.org"/></div>
+      <div class="login-field"><label>Password</label><input type="password" id="lp" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <p class="login-err" id="lerr">Incorrect password. Please try again.</p>
+      <button class="login-btn" onclick="doLogin()">Sign In →</button>
+      <div class="login-hint">🔑 <strong>Demo credentials:</strong> Any username &nbsp;·&nbsp; Password: <strong>demo2026</strong></div>
+      <span class="login-back" onclick="gotoLanding()">← Back to Home</span>
+    </div>
+  </div>
+  <!-- Dashboard -->
+  <div id="admin-dash" style="display:none">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="sidebar-logo"><div class="org">FAFICS</div><div class="role">Officer Dashboard</div></div>
+        <div class="sidebar-nav">
+          <div class="nav-label">Main</div>
+          <div class="nav-item active" id="ni-overview" onclick="showTab('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Overview</div>
+          <div class="nav-item" id="ni-roster" onclick="showTab('roster')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Expertise Pool Roster</div>
+          <div class="nav-item" id="ni-pending" onclick="showTab('pending')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Pending Endorsement<span class="badge" id="pend-badge">2</span></div>
+          <div class="nav-item" id="ni-reports" onclick="showTab('reports')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Reports &amp; Analytics</div>
+        </div>
+        <div class="sidebar-footer">
+          <div class="user">Signed in as FAFICS Officer</div>
+          <div class="logout" onclick="doLogout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</div>
+        </div>
+      </aside>
+      <div class="admin-main">
+        <div class="admin-topbar">
+          <div><div class="topbar-title" id="tb-title">Overview</div><div class="topbar-date" id="tb-date"></div></div>
+          <div style="display:flex;gap:8px">
+            <button class="dash-btn dash-btn-outline" onclick="gotoLanding()">← Home</button>
+            <button class="dash-btn dash-btn-gold" onclick="gotoForm()">+ New Application</button>
+          </div>
+        </div>
+        <div class="admin-content">
+          <!-- OVERVIEW -->
+          <div class="tab-page active" id="tab-overview">
+            <div class="stats-grid">
+              <div class="stat-card s-navy"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="stat-value" id="sv-active">12</div><div class="stat-label">Active in Pool</div><div class="stat-sub">Endorsed &amp; approved</div></div>
+              <div class="stat-card s-pending"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-value" id="sv-pending">2</div><div class="stat-label">Pending Endorsement</div><div class="stat-sub">Awaiting President review</div></div>
+              <div class="stat-card s-gold"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div><div class="stat-value" id="sv-nations">11</div><div class="stat-label">Nationalities</div><div class="stat-sub">Geographic diversity</div></div>
+              <div class="stat-card s-success"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="stat-value" id="sv-areas">11</div><div class="stat-label">Expertise Areas Covered</div><div class="stat-sub">All 11 areas represented</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+              <div class="report-card"><h4>Top Preferred Expertise Areas</h4><div class="bar-chart" id="ov-exp-chart"></div></div>
+              <div class="report-card"><h4>Language Coverage</h4><div class="bar-chart" id="ov-lang-chart"></div></div>
+            </div>
+            <div class="report-card"><h4>Recent Activity</h4><div id="activity-feed"></div></div>
+          </div>
+          <!-- ROSTER -->
+          <div class="tab-page" id="tab-roster">
+            <div class="sec-head"><div><h3>Expertise Pool Roster</h3><p>Search and filter all approved profiles.</p></div><button class="dash-btn dash-btn-navy" onclick="exportCSV()">↓ Export CSV</button></div>
+            <div class="roster-controls">
+              <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="r-search" placeholder="Search by name, nationality, association…" oninput="renderRoster()"/></div>
+              <select class="f-select" id="r-exp" onchange="renderRoster()"><option value="">All Expertise Areas</option><option>Governance / Leadership / Management</option><option>Pension Fund Matters / Policy</option><option>Actuarial / Financial Analysis</option><option>Audit</option><option>Budget</option><option>Treasury</option><option>Health &amp; Life Insurance Matters / Policy</option><option>Communications — Social Media</option><option>Communications — Website Management</option><option>Information Technology (IT)</option><option>Membership Advocacy</option></select>
+              <select class="f-select" id="r-lang" onchange="renderRoster()"><option value="">All Languages</option><option>Arabic</option><option>Chinese</option><option>English</option><option>French</option><option>Japanese</option><option>Russian</option><option>Spanish</option></select>
+              <select class="f-select" id="r-gen" onchange="renderRoster()"><option value="">All Genders</option><option>Female</option><option>Male</option></select>
+              <span class="filter-count" id="r-count">Showing 12 profiles</span>
+            </div>
+            <div class="roster-grid" id="roster-grid"></div>
+          </div>
+          <!-- PENDING -->
+          <div class="tab-page" id="tab-pending">
+            <div class="sec-head"><div><h3>Pending Endorsement</h3><p>Applications awaiting Local Association President endorsement.</p></div></div>
+            <div class="report-card" style="padding:0;overflow:hidden">
+              <table class="ptable"><thead><tr><th>Reference</th><th>Applicant</th><th>Association</th><th>Country</th><th>Submitted</th><th>Top Expertise</th><th>Action</th></tr></thead><tbody id="pend-tbody"></tbody></table>
+            </div>
+          </div>
+          <!-- REPORTS -->
+          <div class="tab-page" id="tab-reports">
+            <div class="sec-head"><div><h3>Reports &amp; Analytics</h3><p>Insights across the full Expertise Pool.</p></div><button class="dash-btn dash-btn-navy" onclick="exportCSV()">↓ Export CSV</button></div>
+            <div class="reports-grid" style="margin-bottom:18px">
+              <div class="report-card"><h4>Expertise Distribution (Preferred Areas)</h4><div class="bar-chart" id="rpt-exp"></div></div>
+              <div class="report-card"><h4>Nationality Breakdown</h4><div class="bar-chart" id="rpt-nat"></div></div>
+              <div class="report-card"><h4>Gender Balance</h4><div class="donut-wrap" id="rpt-gen"></div></div>
+              <div class="report-card"><h4>Language Coverage</h4><div class="bar-chart" id="rpt-lang"></div></div>
+            </div>
+            <div class="report-card"><h4>Highest Grade Attained in UN Service</h4><div id="rpt-grade" style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:flex-end;padding-top:8px;min-height:110px"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-avatar" id="modal-av"></div>
+      <div class="modal-head-info"><div class="mname" id="modal-name"></div><div class="msub" id="modal-sub"></div></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════
+// SEED DATA — 12 approved + 2 pending profiles
+// ═══════════════════════════════════════════════════════════
+const SEEDS=[
+  {id:'EP-0001',status:'approved',firstName:'Marie',lastName:'Dubois',gender:'Female',nationality:'French',email:'marie.dubois@example.com',phone:'+33 0 00 00 00 00',association:'AAFI-AFICS Paris',country:'France',sepYear:2018,
+   langs:['French (Mother tongue)','English (Proficient)','Spanish (Working-level)'],
+   edu:['Master of Public Administration — Sciences Po Paris','B.A. International Relations — Université Paris I'],
+   unExp:['UNDP — Chief of Staff, D-2 — 15 years','UNESCO — Programme Director, D-1 — 8 years'],
+   nonUnExp:['French Ministry of Foreign Affairs — Policy Adviser — 5 years'],
+   expertise:[{area:'Governance / Leadership / Management',lvl:'Expert',pref:true},{area:'Pension Fund Matters / Policy',lvl:'Advanced',pref:true},{area:'Membership Advocacy',lvl:'Advanced',pref:true},{area:'Budget',lvl:'Advanced',pref:false}],
+   submitted:'2024-01-10',approved:'2024-02-01',expires:'2027-02-01'},
+  {id:'EP-0002',status:'approved',firstName:'John',lastName:'Okafor',gender:'Male',nationality:'Nigerian',email:'j.okafor@example.com',phone:'+234 00 0000 0000',association:'AFICS Nigeria',country:'Nigeria',sepYear:2020,
+   langs:['English (Mother tongue)','French (Working-level)'],
+   edu:['M.D. Public Health — University of Ibadan','M.Sc. Health Policy — London School of Hygiene & Tropical Medicine'],
+   unExp:['WHO — Director Health Systems, D-2 — 18 years','UNFPA — Representative, P-5 — 6 years'],
+   nonUnExp:['Federal Ministry of Health Nigeria — Director General — 4 years'],
+   expertise:[{area:'Health & Life Insurance Matters / Policy',lvl:'Expert',pref:true},{area:'Governance / Leadership / Management',lvl:'Expert',pref:true},{area:'Membership Advocacy',lvl:'Advanced',pref:true},{area:'Budget',lvl:'Average',pref:false}],
+   submitted:'2024-01-15',approved:'2024-02-10',expires:'2027-02-10'},
+  {id:'EP-0003',status:'approved',firstName:'Priya',lastName:'Sharma',gender:'Female',nationality:'Indian',email:'p.sharma@example.com',phone:'+91 00000 00000',association:'AFICS India',country:'India',sepYear:2021,
+   langs:['Hindi (Mother tongue)','English (Proficient)','French (Working-level)'],
+   edu:['M.Tech Computer Science — IIT Delhi','B.Sc. Mathematics — Delhi University'],
+   unExp:['UNICEF — Chief of ICT, P-5 — 12 years','UNESCO — IT Manager, P-4 — 5 years'],
+   nonUnExp:['Infosys — Senior Consultant — 4 years'],
+   expertise:[{area:'Information Technology (IT)',lvl:'Expert',pref:true},{area:'Communications — Social Media',lvl:'Advanced',pref:true},{area:'Communications — Website Management',lvl:'Advanced',pref:true},{area:'Membership Advocacy',lvl:'Average',pref:false}],
+   submitted:'2024-02-01',approved:'2024-03-05',expires:'2027-03-05'},
+  {id:'EP-0004',status:'approved',firstName:'Hans',lastName:'Müller',gender:'Male',nationality:'German',email:'h.muller@example.com',phone:'+49 00 0000 0000',association:'AFICS Germany',country:'Germany',sepYear:2019,
+   langs:['German (Mother tongue)','English (Proficient)','French (Proficient)'],
+   edu:['Ph.D. Economics — Humboldt University Berlin','M.Sc. Finance — Frankfurt School of Finance'],
+   unExp:['ILO — Chief Financial Officer, D-2 — 20 years','IMF — Senior Economist, P-5 — 5 years'],
+   nonUnExp:['Deutsche Bank — Senior Risk Analyst — 3 years'],
+   expertise:[{area:'Budget',lvl:'Expert',pref:true},{area:'Treasury',lvl:'Expert',pref:true},{area:'Actuarial / Financial Analysis',lvl:'Expert',pref:true},{area:'Audit',lvl:'Advanced',pref:false}],
+   submitted:'2024-02-12',approved:'2024-03-01',expires:'2027-03-01'},
+  {id:'EP-0005',status:'approved',firstName:'Fatima',lastName:'Al-Hassan',gender:'Female',nationality:'Egyptian',email:'f.alhassan@example.com',phone:'+20 000 000 0000',association:'AFICS Cairo',country:'Egypt',sepYear:2020,
+   langs:['Arabic (Mother tongue)','French (Proficient)','English (Proficient)'],
+   edu:['M.A. Communications — Cairo University','B.A. Journalism — American University in Cairo'],
+   unExp:['UNESCO — Chief of Communications, P-5 — 14 years','UN Secretariat — Public Information Officer, P-4 — 6 years'],
+   nonUnExp:['Al Arabiya — Senior Editor — 3 years'],
+   expertise:[{area:'Communications — Social Media',lvl:'Expert',pref:true},{area:'Communications — Website Management',lvl:'Advanced',pref:true},{area:'Membership Advocacy',lvl:'Advanced',pref:true},{area:'Governance / Leadership / Management',lvl:'Average',pref:false}],
+   submitted:'2024-03-01',approved:'2024-03-20',expires:'2027-03-20'},
+  {id:'EP-0006',status:'approved',firstName:'Robert',lastName:'Chen',gender:'Male',nationality:'Canadian',email:'r.chen@example.com',phone:'+1 000 000 0000',association:'AFICS Canada',country:'Canada',sepYear:2018,
+   langs:['English (Mother tongue)','French (Proficient)','Chinese (Working-level)'],
+   edu:['LL.M. International Law — McGill University','B.A. Political Science — University of Toronto'],
+   unExp:['UNHCR — Deputy Representative, D-1 — 16 years','OHCHR — Legal Officer, P-5 — 7 years'],
+   nonUnExp:['Government of Canada — Senior Policy Analyst — 4 years'],
+   expertise:[{area:'Governance / Leadership / Management',lvl:'Expert',pref:true},{area:'Pension Fund Matters / Policy',lvl:'Advanced',pref:true},{area:'Membership Advocacy',lvl:'Advanced',pref:true},{area:'Audit',lvl:'Advanced',pref:false}],
+   submitted:'2024-03-05',approved:'2024-04-01',expires:'2027-04-01'},
+  {id:'EP-0007',status:'approved',firstName:'Amara',lastName:'Diallo',gender:'Female',nationality:'Senegalese',email:'a.diallo@example.com',phone:'+221 00 000 0000',association:'AFICS Senegal',country:'Senegal',sepYear:2022,
+   langs:['French (Mother tongue)','English (Proficient)','Arabic (Working-level)'],
+   edu:['Master of Development Economics — UCAD Dakar','B.Sc. Public Administration — Université Cheikh Anta Diop'],
+   unExp:['WFP — Country Director, D-1 — 12 years','UNDP — Programme Manager, P-5 — 6 years'],
+   nonUnExp:['African Development Bank — Programme Consultant — 2 years'],
+   expertise:[{area:'Membership Advocacy',lvl:'Expert',pref:true},{area:'Governance / Leadership / Management',lvl:'Advanced',pref:true},{area:'Budget',lvl:'Advanced',pref:true},{area:'Pension Fund Matters / Policy',lvl:'Average',pref:false}],
+   submitted:'2024-03-20',approved:'2024-04-15',expires:'2027-04-15'},
+  {id:'EP-0008',status:'approved',firstName:'Elena',lastName:'Petrova',gender:'Female',nationality:'Russian',email:'e.petrova@example.com',phone:'+7 000 000 0000',association:'AFICS Russia',country:'Russia',sepYear:2020,
+   langs:['Russian (Mother tongue)','English (Proficient)','French (Working-level)'],
+   edu:['Ph.D. Applied Mathematics — Moscow State University','M.Sc. Actuarial Science — London School of Economics'],
+   unExp:['IAEA — Chief Actuary, P-5 — 15 years','UN Secretariat — Pension Actuary, P-4 — 7 years'],
+   nonUnExp:['Gazprombank — Risk Analyst — 3 years'],
+   expertise:[{area:'Actuarial / Financial Analysis',lvl:'Expert',pref:true},{area:'Pension Fund Matters / Policy',lvl:'Expert',pref:true},{area:'Treasury',lvl:'Advanced',pref:true},{area:'Audit',lvl:'Advanced',pref:false}],
+   submitted:'2024-04-01',approved:'2024-04-20',expires:'2027-04-20'},
+  {id:'EP-0009',status:'approved',firstName:'James',lastName:'Whitfield',gender:'Male',nationality:'British',email:'j.whitfield@example.com',phone:'+44 00 0000 0000',association:'AFICS United Kingdom',country:'United Kingdom',sepYear:2019,
+   langs:['English (Mother tongue)','French (Proficient)','Spanish (Working-level)'],
+   edu:['M.Sc. Accounting & Finance — London School of Economics','B.A. Economics — University of Oxford'],
+   unExp:['UN Secretariat — Director Internal Oversight, D-2 — 20 years','UNDP — Chief Audit Executive, D-1 — 8 years'],
+   nonUnExp:['PricewaterhouseCoopers — Senior Manager — 5 years'],
+   expertise:[{area:'Audit',lvl:'Expert',pref:true},{area:'Budget',lvl:'Expert',pref:true},{area:'Governance / Leadership / Management',lvl:'Advanced',pref:true},{area:'Treasury',lvl:'Advanced',pref:false}],
+   submitted:'2024-04-10',approved:'2024-05-01',expires:'2027-05-01'},
+  {id:'EP-0010',status:'approved',firstName:'Yuki',lastName:'Tanaka',gender:'Female',nationality:'Japanese',email:'y.tanaka@example.com',phone:'+81 0 0000 0000',association:'AFICS Japan',country:'Japan',sepYear:2021,
+   langs:['Japanese (Mother tongue)','English (Proficient)','French (Working-level)'],
+   edu:['M.Sc. Public Health — University of Tokyo','M.B.B.S. Medicine — Keio University School of Medicine'],
+   unExp:['WHO — Director Universal Health Coverage, P-5 — 14 years','UNICEF — Health Specialist, P-4 — 6 years'],
+   nonUnExp:['Japanese Ministry of Health — Senior Adviser — 3 years'],
+   expertise:[{area:'Health & Life Insurance Matters / Policy',lvl:'Expert',pref:true},{area:'Pension Fund Matters / Policy',lvl:'Advanced',pref:true},{area:'Governance / Leadership / Management',lvl:'Average',pref:true},{area:'Membership Advocacy',lvl:'Average',pref:false}],
+   submitted:'2024-04-20',approved:'2024-05-10',expires:'2027-05-10'},
+  {id:'EP-0011',status:'approved',firstName:'Sarah',lastName:'Mensah',gender:'Female',nationality:'Ghanaian',email:'s.mensah@example.com',phone:'+233 00 000 0000',association:'AFICS Ghana',country:'Ghana',sepYear:2022,
+   langs:['English (Mother tongue)','French (Working-level)'],
+   edu:['M.A. International Development — University of Ghana','B.A. Social Work — KNUST Kumasi'],
+   unExp:['UNFPA — Representative, P-5 — 11 years','UN Women — Programme Officer, P-4 — 5 years'],
+   nonUnExp:['ActionAid Ghana — Country Director — 3 years'],
+   expertise:[{area:'Membership Advocacy',lvl:'Expert',pref:true},{area:'Communications — Social Media',lvl:'Advanced',pref:true},{area:'Governance / Leadership / Management',lvl:'Advanced',pref:true},{area:'Health & Life Insurance Matters / Policy',lvl:'Average',pref:false}],
+   submitted:'2024-05-01',approved:'2024-05-20',expires:'2027-05-20'},
+  {id:'EP-0012',status:'approved',firstName:'Carlos',lastName:'Rivera',gender:'Male',nationality:'Venezuelan',email:'c.rivera@example.com',phone:'+58 000 000 0000',association:'AFICS Venezuela',country:'Venezuela',sepYear:2019,
+   langs:['Spanish (Mother tongue)','English (Proficient)','French (Working-level)','Portuguese (Working-level)'],
+   edu:['M.Sc. Digital Media — Universidad Central de Venezuela','B.Eng. Computer Engineering — USB Caracas'],
+   unExp:['OCHA — Digital Communications Lead, P-5 — 10 years','UNICEF — Web Manager, P-4 — 7 years'],
+   nonUnExp:['Google LATAM — Digital Strategist — 3 years'],
+   expertise:[{area:'Communications — Website Management',lvl:'Expert',pref:true},{area:'Information Technology (IT)',lvl:'Advanced',pref:true},{area:'Communications — Social Media',lvl:'Advanced',pref:true},{area:'Membership Advocacy',lvl:'Average',pref:false}],
+   submitted:'2024-05-10',approved:'2024-06-01',expires:'2027-06-01'},
+  // Pending
+  {id:'EP-0013',status:'pending',firstName:'Beatrice',lastName:'Nkemdirim',gender:'Female',nationality:'Cameroonian',email:'b.nkemdirim@example.com',phone:'+237 0 00 00 00 00',association:'AFICS Cameroon',country:'Cameroon',sepYear:2023,
+   langs:['French (Mother tongue)','English (Proficient)'],
+   edu:['M.Sc. Information Technology — Université de Yaoundé I'],
+   unExp:['UNICEF — IT Officer, P-4 — 9 years'],nonUnExp:[],
+   expertise:[{area:'Information Technology (IT)',lvl:'Advanced',pref:true},{area:'Communications — Social Media',lvl:'Advanced',pref:true},{area:'Membership Advocacy',lvl:'Average',pref:true}],
+   submitted:'2025-11-01',approved:null,expires:null},
+  {id:'EP-0014',status:'pending',firstName:'Nguyen',lastName:'Minh',gender:'Male',nationality:'Vietnamese',email:'n.minh@example.com',phone:'+84 00 000 0000',association:'AFICS Vietnam',country:'Vietnam',sepYear:2023,
+   langs:['Vietnamese (Mother tongue)','English (Proficient)','French (Working-level)'],
+   edu:['M.A. Mass Communications — Vietnam National University Hanoi'],
+   unExp:['UNESCO — Communications Officer, P-3 — 7 years'],nonUnExp:['Vietnam News Agency — Senior Editor — 4 years'],
+   expertise:[{area:'Communications — Social Media',lvl:'Advanced',pref:true},{area:'Communications — Website Management',lvl:'Average',pref:true},{area:'Membership Advocacy',lvl:'Average',pref:true}],
+   submitted:'2025-11-15',approved:null,expires:null}
+];
+
+// ═══════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════
+function getProfiles(){
+  try{const s=localStorage.getItem('fafics_ep_v2');if(s)return JSON.parse(s);}catch(e){}
+  const d=JSON.parse(JSON.stringify(SEEDS));
+  localStorage.setItem('fafics_ep_v2',JSON.stringify(d));
+  return d;
+}
+function saveProfiles(p){localStorage.setItem('fafics_ep_v2',JSON.stringify(p));}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function setScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function gotoLanding(){setScreen('screen-landing');}
+function gotoForm(){
+  setScreen('screen-form');
+  // reset form if success was showing
+  document.getElementById('form-success').classList.remove('show');
+  fGoTo(1);
+}
+function gotoAdminLogin(){
+  setScreen('screen-admin');
+  document.getElementById('admin-login').style.display='flex';
+  document.getElementById('admin-dash').style.display='none';
+}
+function gotoAdmin(){
+  setScreen('screen-admin');
+  document.getElementById('admin-login').style.display='none';
+  document.getElementById('admin-dash').style.display='block';
+  initDash();
+}
+function doLogin(){
+  if(document.getElementById('lp').value==='demo2026'){
+    document.getElementById('lerr').style.display='none';
+    document.getElementById('lp').style.borderColor='';
+    gotoAdmin();
+  } else {
+    document.getElementById('lerr').style.display='block';
+    document.getElementById('lp').style.borderColor='var(--danger)';
+  }
+}
+function doLogout(){document.getElementById('lp').value='';gotoAdminLogin();}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD INIT
+// ═══════════════════════════════════════════════════════════
+function initDash(){
+  document.getElementById('tb-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  showTab('overview');
+}
+function showTab(t){
+  document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('ni-'+t).classList.add('active');
+  const titles={overview:'Overview',roster:'Expertise Pool Roster',pending:'Pending Endorsement',reports:'Reports & Analytics'};
+  document.getElementById('tb-title').textContent=titles[t];
+  if(t==='overview')renderOverview();
+  if(t==='roster')renderRoster();
+  if(t==='pending')renderPending();
+  if(t==='reports')renderReports();
+}
+
+// ═══════════════════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════════════════
+function renderOverview(){
+  const pp=getProfiles();
+  const appr=pp.filter(p=>p.status==='approved');
+  const pend=pp.filter(p=>p.status==='pending');
+  document.getElementById('sv-active').textContent=appr.length;
+  document.getElementById('sv-pending').textContent=pend.length;
+  document.getElementById('sv-nations').textContent=new Set(appr.map(p=>p.nationality)).size;
+  document.getElementById('sv-areas').textContent=new Set(appr.flatMap(p=>p.expertise.map(e=>e.area))).size;
+  document.getElementById('pend-badge').textContent=pend.length;
+  renderBarChart('ov-exp-chart',getExpCounts(appr,true),5,'bf-navy');
+  renderBarChart('ov-lang-chart',getLangCounts(appr),6,'bf-gold');
+  renderActivity(pp);
+}
+function getExpCounts(profiles,prefOnly){
+  const c={};
+  profiles.forEach(p=>p.expertise.forEach(e=>{if(!prefOnly||e.pref)c[e.area]=(c[e.area]||0)+1;}));
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]);
+}
+function getLangCounts(profiles){
+  const c={};
+  profiles.forEach(p=>p.langs.forEach(l=>{const k=l.split(' ')[0];c[k]=(c[k]||0)+1;}));
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]);
+}
+function shortArea(a){
+  return a.replace(' / Leadership / Management','').replace(' Fund Matters / Policy',' Fund').replace(' & Life Insurance Matters / Policy',' Insurance').replace('Communications — ','').replace('Information Technology (IT)','IT').trim();
+}
+function renderBarChart(id,data,limit,cls){
+  const el=document.getElementById(id);if(!el)return;
+  const d=data.slice(0,limit||data.length);
+  const max=d[0]?.[1]||1;
+  el.innerHTML=d.map(([label,count])=>`<div class="bar-row"><div class="bar-label">${shortArea(label)}</div><div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.max(5,count/max*100)}%"></div></div><div class="bar-count">${count}</div></div>`).join('');
+}
+function renderActivity(pp){
+  const el=document.getElementById('activity-feed');if(!el)return;
+  const recent=[...pp].sort((a,b)=>{const da=a.approved||a.submitted,db=b.approved||b.submitted;return db.localeCompare(da);}).slice(0,6);
+  el.innerHTML=recent.map(p=>`<div class="activity-row"><div style="width:32px;height:32px;border-radius:50%;background:${p.status==='approved'?'var(--navy)':'var(--gold)'};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:white;flex-shrink:0">${p.firstName[0]}${p.lastName[0]}</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">${p.firstName} ${p.lastName}</div><div style="font-size:11.5px;color:var(--text-muted)">${p.status==='approved'?'Added to Expertise Pool — '+p.approved:'Submitted '+p.submitted+' — awaiting endorsement'} · ${p.association}</div></div><span class="sbadge ${p.status}">${p.status==='approved'?'Active':'Pending'}</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROSTER
+// ═══════════════════════════════════════════════════════════
+function renderRoster(){
+  const pp=getProfiles().filter(p=>p.status==='approved');
+  const q=(document.getElementById('r-search')?.value||'').toLowerCase();
+  const ef=document.getElementById('r-exp')?.value||'';
+  const lf=document.getElementById('r-lang')?.value||'';
+  const gf=document.getElementById('r-gen')?.value||'';
+  const filtered=pp.filter(p=>{
+    const nm=!q||[p.firstName,p.lastName,p.nationality,p.association,p.country].some(v=>v.toLowerCase().includes(q));
+    const em=!ef||p.expertise.some(e=>e.area===ef);
+    const lm=!lf||p.langs.some(l=>l.startsWith(lf));
+    const gm=!gf||p.gender===gf;
+    return nm&&em&&lm&&gm;
+  });
+  document.getElementById('r-count').textContent=`Showing ${filtered.length} profile${filtered.length!==1?'s':''}`;
+  const grid=document.getElementById('roster-grid');if(!grid)return;
+  if(!filtered.length){
+    grid.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><h4>No profiles found</h4><p>Try adjusting your search or filters.</p></div>`;
+    return;
+  }
+  grid.innerHTML=filtered.map(p=>{
+    const prefs=p.expertise.filter(e=>e.pref);
+    const langs=p.langs.slice(0,2).map(l=>l.split(' ')[0]).join(', ')+(p.langs.length>2?` +${p.langs.length-2}`:'');
+    return `<div class="profile-card" onclick="openModal('${p.id}')">
+      <div class="pc-head"><div class="pc-avatar">${p.firstName[0]}${p.lastName[0]}</div><div><div class="pc-name">${p.firstName} ${p.lastName}</div><div class="pc-meta">${p.nationality} · ${p.association}</div></div><div class="pc-ref">${p.id}</div></div>
+      <div class="pc-body"><div class="pc-tags">${prefs.map(e=>`<span class="tag tp" title="${e.area}">${shortArea(e.area)}</span>`).join('')}</div><div class="pc-langs">🗣 ${langs}</div></div>
+      <div class="pc-foot"><span class="sbadge approved">Active</span><span class="exp-text">Expires ${p.expires}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════════════
+function openModal(id){
+  const p=getProfiles().find(x=>x.id===id);if(!p)return;
+  document.getElementById('modal-av').textContent=p.firstName[0]+p.lastName[0];
+  document.getElementById('modal-name').textContent=`${p.firstName} ${p.lastName}`;
+  document.getElementById('modal-sub').textContent=`${p.nationality} · ${p.association} · ${p.id}`;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-grid">
+      <div class="modal-block"><div class="mbt">Personal Details</div>
+        <div class="mrow"><span class="mkey">Gender</span><span class="mval">${p.gender}</span></div>
+        <div class="mrow"><span class="mkey">Nationality</span><span class="mval">${p.nationality}</span></div>
+        <div class="mrow"><span class="mkey">Email</span><span class="mval">${p.email}</span></div>
+        <div class="mrow"><span class="mkey">Phone</span><span class="mval">${p.phone}</span></div>
+        <div class="mrow"><span class="mkey">Separated</span><span class="mval">${p.sepYear}</span></div>
+        <div class="mrow"><span class="mkey">Association</span><span class="mval">${p.association}, ${p.country}</span></div>
+      </div>
+      <div class="modal-block"><div class="mbt">Languages</div>
+        <ul class="m-list">${p.langs.map(l=>`<li>${l}</li>`).join('')}</ul>
+        <div class="mbt" style="margin-top:12px">Education</div>
+        <ul class="m-list">${p.edu.map(e=>`<li>${e}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="modal-block" style="margin-bottom:14px"><div class="mbt">UN Experience</div>
+      <ul class="m-list">${p.unExp.map(e=>`<li>${e}</li>`).join('')}</ul>
+      ${p.nonUnExp&&p.nonUnExp.length?`<div class="mbt" style="margin-top:10px">Non-UN Experience</div><ul class="m-list">${p.nonUnExp.map(e=>`<li>${e}</li>`).join('')}</ul>`:''}
+    </div>
+    <div class="modal-block"><div class="mbt">Self-Assessment</div>
+      <div class="exp-grid">${p.expertise.map(e=>`<div class="exp-item-row"><span class="exp-item-name">${e.area}</span><span class="level-pill ${e.lvl.toLowerCase()}">${e.lvl}</span>${e.pref?'<span class="pref-star" title="Preferred area">★</span>':''}</div>`).join('')}
+      </div>
+    </div>
+    ${p.status==='approved'?`<div style="margin-top:12px;padding:10px 14px;background:var(--success-light);border:1px solid #c0dd97;border-radius:8px;font-size:12px;color:var(--success)"><strong>✓ Active in Expertise Pool</strong> — Approved ${p.approved} · Expires ${p.expires}</div>`:''}`;
+  document.getElementById('profile-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('profile-modal').classList.remove('open');}
+
+// ═══════════════════════════════════════════════════════════
+// PENDING
+// ═══════════════════════════════════════════════════════════
+function renderPending(){
+  const pp=getProfiles().filter(p=>p.status==='pending');
+  const tb=document.getElementById('pend-tbody');if(!tb)return;
+  if(!pp.length){
+    tb.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:44px;color:var(--text-muted);font-size:13px">✓ No applications pending endorsement.</td></tr>`;
+    return;
+  }
+  tb.innerHTML=pp.map(p=>{
+    const top=p.expertise.filter(e=>e.pref).map(e=>shortArea(e.area)).join(', ');
+    return `<tr><td style="font-weight:600;color:var(--navy);white-space:nowrap">${p.id}</td><td>${p.firstName} ${p.lastName}<br/><small style="color:var(--text-muted)">${p.nationality}</small></td><td>${p.association}</td><td>${p.country}</td><td style="white-space:nowrap">${p.submitted}</td><td style="font-size:12px;color:var(--text-mid)">${top}</td><td><button class="approve-btn" onclick="approvePending('${p.id}')">✓ Endorse</button></td></tr>`;
+  }).join('');
+}
+function approvePending(id){
+  const pp=getProfiles();const p=pp.find(x=>x.id===id);if(!p)return;
+  const today=new Date();
+  p.status='approved';
+  p.approved=today.toISOString().split('T')[0];
+  p.expires=new Date(today.getFullYear()+3,today.getMonth(),today.getDate()).toISOString().split('T')[0];
+  saveProfiles(pp);
+  toast(`${p.firstName} ${p.lastName} has been endorsed and added to the Expertise Pool.`);
+  renderPending();
+  const pendCount=pp.filter(x=>x.status==='pending').length;
+  document.getElementById('pend-badge').textContent=pendCount;
+  const sv=document.getElementById('sv-pending');if(sv)sv.textContent=pendCount;
+  const sva=document.getElementById('sv-active');if(sva)sva.textContent=pp.filter(x=>x.status==='approved').length;
+}
+
+// ═══════════════════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════════════════
+function renderReports(){
+  const pp=getProfiles().filter(p=>p.status==='approved');
+  renderBarChart('rpt-exp',getExpCounts(pp,true),11,'bf-navy');
+  const natC={};pp.forEach(p=>natC[p.nationality]=(natC[p.nationality]||0)+1);
+  renderBarChart('rpt-nat',Object.entries(natC).sort((a,b)=>b[1]-a[1]),10,'bf-teal');
+  renderBarChart('rpt-lang',getLangCounts(pp),8,'bf-gold');
+  renderGender('rpt-gen',pp);
+  renderGrades('rpt-grade',pp);
+}
+function renderGender(id,pp){
+  const el=document.getElementById(id);if(!el)return;
+  const f=pp.filter(p=>p.gender==='Female').length;
+  const m=pp.filter(p=>p.gender==='Male').length;
+  const tot=f+m||1;const R=50,cx=70,cy=70,C=2*Math.PI*R;
+  const fs=C*(f/tot),ms=C*(m/tot);
+  el.innerHTML=`<svg width="140" height="140" viewBox="0 0 140 140">
+    <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--navy)" stroke-width="22" stroke-dasharray="${fs} ${C}" transform="rotate(-90 ${cx} ${cy})"/>
+    <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--gold)" stroke-width="22" stroke-dasharray="${ms} ${C}" stroke-dashoffset="${-fs}" transform="rotate(-90 ${cx} ${cy})"/>
+    <text x="${cx}" y="${cy-2}" text-anchor="middle" font-family="'Playfair Display',serif" font-size="20" font-weight="700" fill="var(--navy)">${tot}</text>
+    <text x="${cx}" y="${cy+14}" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="9" fill="var(--text-muted)">TOTAL</text>
+  </svg>
+  <div class="donut-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--navy)"></div><span class="legend-label">Female</span><span class="legend-val">${f} (${Math.round(f/tot*100)}%)</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div><span class="legend-label">Male</span><span class="legend-val">${m} (${Math.round(m/tot*100)}%)</span></div>
+    <div style="margin-top:12px;font-size:11px;color:var(--text-muted);line-height:1.5">FAFICS target: gender-balanced<br/>pool across all expertise areas.</div>
+  </div>`;
+}
+function renderGrades(id,pp){
+  const el=document.getElementById(id);if(!el)return;
+  const gc={};
+  pp.forEach(p=>p.unExp.forEach(e=>{const m=e.match(/\b(D-[12]|P-[1-5]|USG|ASG)\b/);if(m)gc[m[1]]=(gc[m[1]]||0)+1;}));
+  const order=['USG','ASG','D-2','D-1','P-5','P-4','P-3'];
+  const sorted=order.filter(g=>gc[g]).map(g=>[g,gc[g]]);
+  const max=Math.max(...sorted.map(x=>x[1]),1);
+  const colors={'D-2':'var(--navy)','D-1':'var(--navy-mid)','P-5':'var(--gold)','P-4':'#b5842e','P-3':'#8892aa','USG':'#1a2540','ASG':'#2a3a5a'};
+  el.innerHTML=sorted.map(([g,c])=>`<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:14px;font-weight:700;color:var(--navy)">${c}</div><div style="width:52px;background:${colors[g]||'var(--navy)'};border-radius:5px 5px 0 0;height:${Math.max(18,Math.round(c/max*90))}px"></div><div style="font-size:11px;font-weight:600;color:var(--text-mid)">${g}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT CSV
+// ═══════════════════════════════════════════════════════════
+function exportCSV(){
+  const pp=getProfiles().filter(p=>p.status==='approved');
+  const hdr=['Reference','First Name','Last Name','Gender','Nationality','Country','Association','Languages','Top Expertise (Preferred)','UN Experience','Sep. Year','Approved','Expires'];
+  const rows=pp.map(p=>[p.id,p.firstName,p.lastName,p.gender,p.nationality,p.country,p.association,p.langs.join('; '),p.expertise.filter(e=>e.pref).map(e=>e.area).join('; '),p.unExp.join('; '),p.sepYear,p.approved,p.expires].map(v=>`"${String(v||'').replace(/"/g,'""')}"`));
+  const csv=[hdr,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='FAFICS_Expertise_Pool_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
+  toast('CSV exported — '+pp.length+' profiles.');
+}
+
+// ═══════════════════════════════════════════════════════════
+// FORM LOGIC
+// ═══════════════════════════════════════════════════════════
+let fCur=1;
+function fGoTo(n){
+  document.getElementById('fs'+fCur)?.classList.remove('active');
+  for(let i=1;i<=5;i++){
+    document.getElementById('st'+i).classList.remove('active','done');
+    const sn=document.getElementById('sn'+i);
+    if(i<n){document.getElementById('st'+i).classList.add('done');sn.textContent='✓';}
+    else sn.textContent=String(i);
+  }
+  fCur=n;
+  document.getElementById('fs'+n)?.classList.add('active');
+  document.getElementById('st'+n)?.classList.add('active');
+  if(n===5)buildReview();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function fNext(from,to){if(fValidate(from))fGoTo(to);}
+function fValidate(step){
+  let errs=[];
+  if(step===1){
+    [{id:'p_fn',l:'First Name'},{id:'p_ln',l:'Last Name'},{id:'p_dob',l:'Date of Birth'},{id:'p_nat',l:'Nationality'},{id:'p_gen',l:'Gender'},{id:'p_ph',l:'Phone'},{id:'p_em',l:'Email'},{id:'p_sep',l:'Date of Separation'},{id:'p_assoc',l:'Association'},{id:'p_cty',l:'Country'},{id:'p_pres',l:'President Email'}].forEach(f=>{
+      const el=document.getElementById(f.id);
+      if(!el||!el.value.trim()){errs.push(f.l);el?.classList.add('err');}else el.classList.remove('err');
+    });
+  }
+  if(step===2){
+    if(!document.querySelectorAll('#edu-list .dynamic-row').length)errs.push('at least one qualification');
+    if(!document.querySelectorAll('#lang-list .dynamic-row').length)errs.push('at least one language');
+  }
+  if(step===3){
+    if(!document.querySelectorAll('#un-list .dynamic-row').length)errs.push('at least one UN position');
+  }
+  if(step===5){
+    if(!document.getElementById('con1').checked)errs.push('data consent');
+    if(!document.getElementById('con2').checked)errs.push('declaration of accuracy');
+  }
+  if(errs.length){toast('Please complete: '+errs.slice(0,3).join(', ')+(errs.length>3?'…':''),true);return false;}
+  return true;
+}
+function buildReview(){
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  const sr=(k,val)=>val?`<div class="summary-row"><span class="sk">${k}</span><span class="sv">${val}</span></div>`:'';
+  document.getElementById('rev-personal').innerHTML=sr('Name',[v('p_fn'),v('p_mn'),v('p_ln')].filter(Boolean).join(' '))+sr('Email',v('p_em'))+sr('Assoc.',v('p_assoc'))+sr('Country',v('p_cty'));
+  let eduH='';
+  document.querySelectorAll('#edu-list .dynamic-row').forEach((r,i)=>{const ins=r.querySelectorAll('input');if(ins[0]?.value)eduH+=sr('Deg.'+(i+1),ins[0].value+(ins[1]?.value?' — '+ins[1].value:''));});
+  let langH='';
+  document.querySelectorAll('#lang-list .dynamic-row').forEach(r=>{const s=r.querySelectorAll('select');if(s[0]?.value)langH+=(langH?', ':'')+s[0].value;});
+  document.getElementById('rev-edu').innerHTML=eduH+sr('Languages',langH||'—');
+  const ec=[[' UN',document.querySelectorAll('#un-list .dynamic-row').length],['Non-UN',document.querySelectorAll('#nonun-list .dynamic-row').length],['FAFICS',document.querySelectorAll('#fafics-list .dynamic-row').length]];
+  document.getElementById('rev-exp').innerHTML=ec.map(([k,c])=>sr(k,`${c} position${c!==1?'s':''}`)).join('');
+  const prefs=[];
+  document.querySelectorAll('.pchk:checked').forEach(cb=>{const n=cb.closest('tr')?.querySelector('.exp-name')?.textContent.trim().split('\n')[0];if(n)prefs.push(n);});
+  document.getElementById('rev-exp2').innerHTML=prefs.length?sr('Preferred',prefs.join(', ')):`<div class="summary-row"><span class="sv" style="color:var(--text-muted)">No selections yet — go back to Step 4</span></div>`;
+}
+function fSubmit(){
+  if(!fValidate(5))return;
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  const today=new Date().toISOString().split('T')[0];
+  const ENAMES=['Governance / Leadership / Management','Pension Fund Matters / Policy','Actuarial / Financial Analysis','Audit','Budget','Treasury','Health & Life Insurance Matters / Policy','Communications — Social Media','Communications — Website Management','Information Technology (IT)','Membership Advocacy'];
+  const expertise=[];
+  for(let i=1;i<=11;i++){
+    const r=document.querySelector(`input[name="e${i}"]:checked`);
+    const pref=document.querySelectorAll('.pchk')[i-1]?.checked||false;
+    if(r)expertise.push({area:ENAMES[i-1],lvl:r.value==='exp'?'Expert':r.value==='adv'?'Advanced':'Average',pref});
+  }
+  const langs=[];
+  document.querySelectorAll('#lang-list .dynamic-row').forEach(r=>{const s=r.querySelectorAll('select');if(s[0]?.value)langs.push(s[0].value+(s[1]?.value?' ('+s[1].value+')':''));});
+  const edus=[];
+  document.querySelectorAll('#edu-list .dynamic-row').forEach(r=>{const ins=r.querySelectorAll('input');if(ins[0]?.value)edus.push(ins[0].value+(ins[1]?.value?' — '+ins[1].value:''));});
+  const unEx=[];
+  document.querySelectorAll('#un-list .dynamic-row').forEach(r=>{const s=r.querySelectorAll('select');const ins=r.querySelectorAll('input');if(s[0]?.value)unEx.push(`${s[0].value} — ${ins[0]?.value||'Position'}, ${s[1]?.value||''}`);});
+  const pp=getProfiles();
+  const nid='EP-'+String(pp.length+1).padStart(4,'0');
+  pp.push({id:nid,status:'pending',firstName:v('p_fn'),lastName:v('p_ln'),gender:v('p_gen'),nationality:v('p_nat'),email:v('p_em'),phone:v('p_ph'),association:v('p_assoc'),country:v('p_cty'),sepYear:v('p_sep')?new Date(v('p_sep')).getFullYear():'-',langs,edu:edus,unExp:unEx,nonUnExp:[],expertise,submitted:today,approved:null,expires:null});
+  saveProfiles(pp);
+  for(let i=1;i<=5;i++){document.getElementById('fs'+i)?.classList.remove('active');document.getElementById('st'+i)?.classList.add('done');document.getElementById('sn'+i).textContent='✓';}
+  document.getElementById('form-ref').textContent=nid;
+  document.getElementById('form-success').classList.add('show');
+  toast(`Application ${nid} submitted successfully.`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DYNAMIC ROW HELPERS
+// ═══════════════════════════════════════════════════════════
+const rmB=`<button type="button" class="btn-remove" onclick="this.closest('.dynamic-row').remove()" title="Remove">×</button>`;
+const LANGS_O=`<option value="">Language…</option><option>Arabic</option><option>Chinese</option><option>English</option><option>French</option><option>Russian</option><option>Spanish</option>`;
+const PROF_O=`<option value="">Level…</option><option>Mother tongue</option><option>Proficient</option><option>Working-level</option><option>Basic</option>`;
+const AGY_O=`<option value="">Agency…</option><option>FAO</option><option>IAEA</option><option>ICAO</option><option>ILO</option><option>IMO</option><option>IOM</option><option>ITU</option><option>OCHA</option><option>OHCHR</option><option>UNAIDS</option><option>UNDP</option><option>UNEP</option><option>UNESCO</option><option>UNFPA</option><option>UNHCR</option><option>UNICEF</option><option>UNIDO</option><option>UN Secretariat</option><option>UN Women</option><option>WFP</option><option>WHO</option><option>WIPO</option><option>WMO</option><option>World Bank</option><option>Other</option>`;
+const GRD_O=`<option value="">Grade</option><option>P-3</option><option>P-4</option><option>P-5</option><option>D-1</option><option>D-2</option><option>ASG</option><option>USG</option><option>Other</option>`;
+const YRS_O=`<option value="">Years</option>${['1','2','3','4','5','6','7','8','10','12','15','18','20','25','30+'].map(v=>`<option>${v}</option>`).join('')}`;
+function addRow(listId,html){const l=document.getElementById(listId);const d=document.createElement('div');d.className='dynamic-row';d.innerHTML=html;l.appendChild(d);}
+function addEdu(){addRow('edu-list',`<span class="row-index">·</span><div class="row-fields" style="grid-template-columns:1fr 1fr"><input type="text" placeholder="Degree / Qualification e.g. Master of Public Administration"/><input type="text" placeholder="Institution e.g. University of Geneva"/></div>${rmB}`);}
+function addLang(){addRow('lang-list',`<span class="row-index">·</span><div class="row-fields" style="grid-template-columns:1fr 1fr"><select>${LANGS_O}</select><select>${PROF_O}</select></div>${rmB}`);}
+function addUN(){addRow('un-list',`<span class="row-index">·</span><div class="row-fields" style="grid-template-columns:1.2fr 1.6fr 80px 80px"><select>${AGY_O}</select><input type="text" placeholder="Position title e.g. Chief of Policy"/><select>${GRD_O}</select><select>${YRS_O}</select></div>${rmB}`);}
+function addNonUN(){addRow('nonun-list',`<span class="row-index">·</span><div class="row-fields" style="grid-template-columns:1.2fr 1.6fr 80px"><input type="text" placeholder="Organisation"/><input type="text" placeholder="Position title"/><select>${YRS_O}</select></div>${rmB}`);}
+function addFAFICS(){addRow('fafics-list',`<span class="row-index">·</span><div class="row-fields" style="grid-template-columns:1fr 80px"><input type="text" placeholder="Role e.g. Member – Standing Committee on Pensions"/><select>${YRS_O}</select></div>${rmB}`);}
+let oec=0;
+function addOtherExp(){
+  oec++;const n=11+oec;
+  const tb=document.getElementById('other-exp-rows');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td class="exp-name"><div style="display:flex;align-items:center;gap:8px"><input type="text" placeholder="Specify additional area…" style="flex:1;height:32px;padding:0 9px;border:1.5px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12.5px"/><button onclick="this.closest('tr').remove()" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--text-muted);line-height:1">×</button></div></td><td class="radio-cell"><input type="radio" name="e${n}" value="avg"/></td><td class="radio-cell"><input type="radio" name="e${n}" value="adv"/></td><td class="radio-cell"><input type="radio" name="e${n}" value="exp"/></td><td class="pref-cell"><input type="checkbox" class="pchk"/></td>`;
+  tb.appendChild(tr);
+}
+document.addEventListener('change',e=>{
+  if(e.target.classList.contains('pchk')){
+    if(document.querySelectorAll('.pchk:checked').length>3){
+      e.target.checked=false;
+      document.getElementById('pref-warn').style.display='block';
+      toast('Maximum 3 preferred areas allowed.',true);
+    } else document.getElementById('pref-warn').style.display='none';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════
+function toast(msg,isErr=false){
+  const tc=document.getElementById('toast-container');
+  const t=document.createElement('div');
+  t.className='toast'+(isErr?' terror':'');
+  const ico=isErr?'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>':'<polyline points="20 6 9 17 4 12"/>';
+  t.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="${isErr?'var(--danger)':'var(--success)'}" stroke-width="2.5" width="16" height="16" style="flex-shrink:0;margin-top:1px">${ico}</svg><span>${msg}</span>`;
+  tc.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(20px)';t.style.transition='all .3s ease';setTimeout(()=>t.remove(),300);},4000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  getProfiles(); // seed localStorage on first load
+  addEdu(); addLang(); addUN(); addNonUN(); addFAFICS();
+});
+</script>
+</body>
+</html>

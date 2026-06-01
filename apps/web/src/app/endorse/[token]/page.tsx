@@ -21,7 +21,9 @@ async function getApplication(token: string) {
     throw new Error('Failed to fetch endorsement data');
   }
 
-  return res.json();
+  const json = await res.json();
+  // Unwrap the { data, meta } envelope from TransformInterceptor
+  return json.data ?? json;
 }
 
 export default async function EndorsePage({ params }: PageProps) {
