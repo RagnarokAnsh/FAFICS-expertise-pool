@@ -1,12 +1,12 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TokensService } from '../tokens/tokens.service';
-import { EndorsementView, QueueJobType, NotificationType } from '@fafics/shared';
+import { EndorsementView, NotificationType } from '@fafics/shared';
 import { EndorseDto } from './dto/endorse.dto';
 import { ReturnDto } from './dto/return.dto';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { AuditService } from '../audit/audit.service';
+import { NotificationService } from '../mail/notification.service';
+import { addYears } from 'date-fns';
 
 @Injectable()
 export class EndorsementService {
@@ -14,7 +14,7 @@ export class EndorsementService {
     private readonly prisma: PrismaService,
     private readonly tokensService: TokensService,
     private readonly auditService: AuditService,
-    @InjectQueue('email') private readonly emailQueue: Queue,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async validateAndGetApplication(rawToken: string): Promise<EndorsementView> {
@@ -129,12 +129,15 @@ export class EndorsementService {
       throw new BadRequestException('Application is not in a valid state to be endorsed');
     }
 
+    const now = new Date();
     await this.prisma.$transaction(async (tx) => {
       await tx.application.update({
         where: { id: application.id },
         data: {
-          status: 'endorsed',
-          endorsedAt: new Date(),
+          status: 'approved',
+          endorsedAt: now,
+          approvedAt: now,
+          expiresAt: addYears(now, 3),
           presidentNotes: dto.presidentNotes || null,
         },
       });
@@ -143,23 +146,15 @@ export class EndorsementService {
         applicationId: application.id,
         actorEmail: magicToken.recipientEmail,
         actorRole: 'president' as any,
-        action: 'president.endorsed',
+        action: 'president.endorsed_and_approved',
         oldStatus: 'submitted' as any,
-        newStatus: 'endorsed' as any,
+        newStatus: 'approved' as any,
       });
     });
 
-    await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-      notificationType: NotificationType.ENDORSED,
-      applicationId: application.id,
-    });
+    await this.notificationService.sendEmail(NotificationType.APPROVED, application.id);
 
-    await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-      notificationType: NotificationType.SECRETARY_REVIEW_PENDING,
-      applicationId: application.id,
-    });
-
-    return { message: 'Application endorsed successfully' };
+    return { message: 'Application endorsed and added to Expertise Pool' };
   }
 
   async returnApplication(rawToken: string, dto: ReturnDto): Promise<{ message: string }> {
@@ -196,10 +191,7 @@ export class EndorsementService {
       });
     });
 
-    await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-      notificationType: NotificationType.CHANGES_REQUESTED,
-      applicationId: application.id,
-    });
+    await this.notificationService.sendEmail(NotificationType.CHANGES_REQUESTED, application.id);
 
     return { message: 'Application returned for revision' };
   }

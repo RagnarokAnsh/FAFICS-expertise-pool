@@ -16,11 +16,9 @@ import { RequestEditLinkDto } from './dto/request-edit-link.dto';
 import { Prisma } from '@prisma/client';
 import { TokensService } from '../tokens/tokens.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../mail/notification.service';
 import { ConfigService } from '@nestjs/config';
-import { TokenPurpose } from '@fafics/shared';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import { QueueJobType, NotificationType } from '@fafics/shared';
+import { TokenPurpose, NotificationType } from '@fafics/shared';
 /**
  * ApplicationsService handles the core CRUD lifecycle of an application:
  * creating drafts, updating drafts, submitting, and checking status.
@@ -36,8 +34,8 @@ export class ApplicationsService {
     private readonly auditService: AuditService,
     private readonly tokensService: TokensService,
     private readonly mailService: MailService,
+    private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
-    @InjectQueue('email') private readonly emailQueue: Queue,
   ) {}
 
   /**
@@ -142,22 +140,8 @@ export class ApplicationsService {
 
     this.logger.log(`Draft created: ${result.id}`);
 
-    // Queue draft resume email (non-blocking)
-    if (this.emailQueue) {
-      try {
-        await this.emailQueue.add(QueueJobType.SEND_DRAFT_RESUME_LINK, {
-          applicationId: result.id,
-        });
-        this.logger.log(
-          `Draft resume link queued for ${dto.personal.email} (app: ${result.id})`,
-        );
-      } catch (err) {
-        // Do not fail the request if queueing fails — draft was still created
-        this.logger.warn(
-          `Could not queue draft resume link for ${result.id}: ${(err as Error).message}`,
-        );
-      }
-    }
+    // Send draft resume email (non-blocking — NotificationService handles its own errors)
+    void this.notificationService.sendDraftResumeLink(result.id);
 
     return { id: result.id };
   }
@@ -440,21 +424,9 @@ export class ApplicationsService {
       return refNumber;
     });
 
-    // After transaction: queue the jobs
-    try {
-      await this.emailQueue.add(QueueJobType.SEND_PRESIDENT_LINK, {
-        applicationId: id,
-      });
-      await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-        notificationType: NotificationType.SUBMISSION_CONFIRMATION,
-        applicationId: id,
-      });
-    } catch (error) {
-      this.logger.error(
-        `Failed to queue send_president_link job for application ${id}`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
+    // After transaction: send notifications (non-blocking — NotificationService handles its own errors)
+    void this.notificationService.sendPresidentLink(id);
+    void this.notificationService.sendEmail(NotificationType.SUBMISSION_CONFIRMATION, id);
 
     this.logger.log(`Application submitted: ${id} → ${referenceNumber}`);
     return { referenceNumber };

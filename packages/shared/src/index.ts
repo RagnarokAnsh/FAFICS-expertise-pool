@@ -10,7 +10,6 @@ export { ProficiencyLevel } from './enums/proficiency-level.enum';
 export { UserRole } from './enums/user-role.enum';
 export { TokenPurpose } from './enums/token-purpose.enum';
 export { NotificationType } from './enums/notification-type.enum';
-export { QueueJobType } from './enums/queue-job-type.enum';
 
 // Types
 export type {

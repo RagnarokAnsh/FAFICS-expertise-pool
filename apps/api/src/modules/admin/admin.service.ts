@@ -7,13 +7,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { NotificationService } from '../mail/notification.service';
 import * as bcrypt from 'bcrypt';
 import { addYears } from 'date-fns';
 import {
   ApplicationStatus,
-  QueueJobType,
   NotificationType,
   UserRole,
 } from '@fafics/shared';
@@ -28,6 +26,7 @@ import { RejectDto } from './dto/reject.dto';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { AnalyticsResponse } from './dto/analytics-response.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -37,7 +36,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
-    @InjectQueue('email') private readonly emailQueue: Queue,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // ─── Applications ──────────────────────────────────────────────────────
@@ -298,10 +297,7 @@ export class AdminService {
       });
     });
 
-    await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-      notificationType: NotificationType.APPROVED,
-      applicationId: id,
-    });
+    await this.notificationService.sendEmail(NotificationType.APPROVED, id);
 
     this.logger.log(`Application ${id} approved by ${actorEmail}`);
   }
@@ -342,10 +338,7 @@ export class AdminService {
       });
     });
 
-    await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-      notificationType: NotificationType.REJECTED,
-      applicationId: id,
-    });
+    await this.notificationService.sendEmail(NotificationType.REJECTED, id);
 
     this.logger.log(`Application ${id} rejected by ${actorEmail}`);
   }
@@ -383,10 +376,7 @@ export class AdminService {
       });
     });
 
-    await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-      notificationType: NotificationType.CHANGES_REQUESTED,
-      applicationId: id,
-    });
+    await this.notificationService.sendEmail(NotificationType.CHANGES_REQUESTED, id);
 
     this.logger.log(`Changes requested on application ${id} by ${actorEmail}`);
   }
@@ -498,16 +488,23 @@ export class AdminService {
    * Bulk send renewal reminder emails for specified application IDs.
    */
   async sendRenewalReminders(applicationIds: string[]): Promise<{ sent: number }> {
-    let sent = 0;
     for (const id of applicationIds) {
-      await this.emailQueue.add(QueueJobType.SEND_EMAIL, {
-        notificationType: NotificationType.RENEWAL_REMINDER_90D,
-        applicationId: id,
-        daysLeft: 90,
-      });
-      sent++;
+      await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_90D, id, 90);
     }
-    return { sent };
+    return { sent: applicationIds.length };
+  }
+
+  async listNotifications(filters: {
+    applicationId?: string;
+    failedOnly?: boolean;
+    page?: number;
+    limit?: number;
+  }) {
+    return this.notificationService.listNotifications(filters);
+  }
+
+  async retryNotification(logId: string) {
+    return this.notificationService.retryNotification(logId);
   }
 
   // ─── User Management ──────────────────────────────────────────────────
@@ -607,5 +604,65 @@ export class AdminService {
     });
 
     this.logger.log(`User ${userId} role changed from ${oldRole} to ${role} by ${actorEmail}`);
+  }
+
+  // ─── Analytics ─────────────────────────────────────────────────────────
+
+  async getAnalytics(): Promise<AnalyticsResponse> {
+    const [expertise, nationality, gender, language, grade] = await Promise.all([
+      this.prisma.$queryRaw<{ label: string; count: bigint }[]>`
+        SELECT ae.area_label AS label, COUNT(*) AS count
+        FROM application_expertise ae
+        JOIN applications a ON a.id = ae.application_id
+        WHERE a.status = 'approved'::application_status
+          AND ae.is_preferred = true
+        GROUP BY ae.area_label
+        ORDER BY count DESC
+      `,
+      this.prisma.$queryRaw<{ label: string; count: bigint }[]>`
+        SELECT nationality AS label, COUNT(*) AS count
+        FROM applications
+        WHERE status = 'approved'::application_status
+        GROUP BY nationality
+        ORDER BY count DESC
+        LIMIT 15
+      `,
+      this.prisma.$queryRaw<{ label: string; count: bigint }[]>`
+        SELECT gender AS label, COUNT(*) AS count
+        FROM applications
+        WHERE status = 'approved'::application_status
+        GROUP BY gender
+        ORDER BY count DESC
+      `,
+      this.prisma.$queryRaw<{ label: string; count: bigint }[]>`
+        SELECT al.language AS label, COUNT(DISTINCT al.application_id) AS count
+        FROM application_languages al
+        JOIN applications a ON a.id = al.application_id
+        WHERE a.status = 'approved'::application_status
+        GROUP BY al.language
+        ORDER BY count DESC
+      `,
+      this.prisma.$queryRaw<{ label: string; count: bigint }[]>`
+        SELECT aue.grade AS label, COUNT(*) AS count
+        FROM application_un_experiences aue
+        JOIN applications a ON a.id = aue.application_id
+        WHERE a.status = 'approved'::application_status
+          AND aue.grade IS NOT NULL
+          AND aue.grade <> ''
+        GROUP BY aue.grade
+        ORDER BY aue.grade
+      `,
+    ]);
+
+    const toItems = (rows: { label: string; count: bigint }[]) =>
+      rows.map((r) => ({ label: r.label, count: Number(r.count) }));
+
+    return {
+      expertiseDistribution: toItems(expertise),
+      nationalityBreakdown: toItems(nationality),
+      genderBalance: toItems(gender),
+      languageCoverage: toItems(language),
+      gradeDistribution: toItems(grade),
+    };
   }
 }

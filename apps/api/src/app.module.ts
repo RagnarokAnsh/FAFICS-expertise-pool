@@ -15,7 +15,6 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ExportModule } from './modules/export/export.module';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
-import redisConfig from './config/redis.config';
 import mailConfig from './config/mail.config';
 import jwtConfig from './config/jwt.config';
 
@@ -30,14 +29,13 @@ import jwtConfig from './config/jwt.config';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
-      load: [appConfig, databaseConfig, redisConfig, mailConfig, jwtConfig],
+      load: [appConfig, databaseConfig, mailConfig, jwtConfig],
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
           .default('development'),
         API_PORT: Joi.number().default(3001),
         DATABASE_URL: Joi.string().required(),
-        REDIS_URL: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRES_IN: Joi.string().default('8h'),
         JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),

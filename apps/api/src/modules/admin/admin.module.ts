@@ -2,15 +2,10 @@ import { Module } from '@nestjs/common';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { ExportModule } from '../export/export.module';
-import { BullModule } from '@nestjs/bullmq';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [
-    ExportModule,
-    BullModule.registerQueue({
-      name: 'email',
-    }),
-  ],
+  imports: [ExportModule, MailModule],
   controllers: [AdminController],
   providers: [AdminService],
 })

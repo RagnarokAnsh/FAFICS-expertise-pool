@@ -16,7 +16,7 @@
 //   - ApplicationExpertise: partial unique index strategy for multiple "Other" rows
 //   - Reference number: EP-NNNN (sequential, no year prefix)
 //   - Added president_link_expired, secretary_review_pending to NotificationType
-//   - Added QueueJobType enum for BullMQ
+//   - QueueJobType enum kept in DB (legacy, not used by application code)
 //   - officerNotes → secretaryNotes; added under_review status
 // =============================================================================
 
@@ -426,7 +426,6 @@ model AuditLog {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NOTIFICATION LOG
-// queueJobId links back to BullMQ job for retry / correlation.
 // ─────────────────────────────────────────────────────────────────────────────
 
 model NotificationLog {

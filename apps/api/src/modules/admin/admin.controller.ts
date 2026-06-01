@@ -52,6 +52,14 @@ export class AdminController {
     return this.adminService.getDashboardStats();
   }
 
+  @Get('analytics')
+  @Roles('secretary', 'committee', 'admin')
+  @ApiOperation({ summary: 'Get reporting analytics for approved profiles' })
+  @ApiResponse({ status: 200, description: 'Analytics data returned' })
+  async getAnalytics() {
+    return this.adminService.getAnalytics();
+  }
+
   // ─── Applications ──────────────────────────────────────────────────────
 
   @Get('applications')
@@ -227,5 +235,35 @@ export class AdminController {
   ) {
     await this.adminService.updateUserRole(id, body.role, actorEmail);
     return { message: 'Role updated' };
+  }
+
+  // ─── Notification Logs ────────────────────────────────────────────────
+
+  @Get('notifications')
+  @Roles('secretary', 'admin')
+  @ApiOperation({ summary: 'List notification logs' })
+  @ApiResponse({ status: 200, description: 'Paginated notification log list' })
+  async listNotifications(
+    @Query('applicationId') applicationId?: string,
+    @Query('failedOnly') failedOnly?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminService.listNotifications({
+      applicationId,
+      failedOnly: failedOnly === 'true',
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 50,
+    });
+  }
+
+  @Post('notifications/:id/retry')
+  @Roles('secretary', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retry a failed notification' })
+  @ApiParam({ name: 'id', description: 'Notification log UUID' })
+  @ApiResponse({ status: 200, description: 'Notification retried' })
+  async retryNotification(@Param('id') id: string) {
+    return this.adminService.retryNotification(id);
   }
 }
