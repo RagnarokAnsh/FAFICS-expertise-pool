@@ -60,6 +60,14 @@ export class AdminController {
     return this.adminService.getAnalytics();
   }
 
+  @Get('countries')
+  @Roles('secretary', 'committee', 'admin')
+  @ApiOperation({ summary: 'Get distinct association countries for filter dropdowns' })
+  @ApiResponse({ status: 200, description: 'List of distinct countries' })
+  async getDistinctCountries() {
+    return this.adminService.getDistinctCountries();
+  }
+
   // ─── Applications ──────────────────────────────────────────────────────
 
   @Get('applications')
@@ -144,7 +152,7 @@ export class AdminController {
 
   @Get('export/roster')
   @Roles('secretary', 'admin')
-  @ApiOperation({ summary: 'Download full roster as Excel file' })
+  @ApiOperation({ summary: 'Download full Expertise Pool as Excel file' })
   @ApiResponse({ status: 200, description: 'Excel file download' })
   async exportRoster(@Res() res: Response) {
     const buffer = await this.exportService.generateRosterExcel();
@@ -156,7 +164,7 @@ export class AdminController {
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="fafics-roster-${date}.xlsx"`,
+      `attachment; filename="fafics-expertise-pool-${date}.xlsx"`,
     );
     res.send(buffer);
   }

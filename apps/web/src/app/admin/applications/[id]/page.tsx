@@ -44,7 +44,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
         <div className="flex-1 xl:w-2/3">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h1 className="font-serif text-[28px] font-bold text-navy">{app.applicantFullName}</h1>
+              <h1 className="font-serif text-[28px] font-bold text-navy">{[app.firstName, app.middleName, app.lastName].filter(Boolean).join(' ')}</h1>
               <p className="text-text-mid font-mono text-[14px]">{app.referenceNumber}</p>
             </div>
             <div className="xl:hidden">
@@ -96,7 +96,9 @@ export default function ApplicationDetailPage({ params }: PageProps) {
             </div>
 
             <Card title="Audit Timeline">
-              <AuditTimeline logs={app.auditLogs} />
+              <div className="max-h-[500px] overflow-y-auto pr-1">
+                <AuditTimeline logs={app.auditLogs} />
+              </div>
             </Card>
           </div>
         </div>

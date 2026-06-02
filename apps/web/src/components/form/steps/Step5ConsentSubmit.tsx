@@ -185,7 +185,7 @@ export function Step5ConsentSubmit({ onNext, onBack, goToStep, isSubmitting }: S
         <div>
           <div className="text-[13px] font-semibold text-navy mb-1">Audit Trail & Data Security</div>
           <div className="text-[12.5px] text-text-mid leading-[1.65]">
-            All actions taken on your application (endorsements, reviews, status changes) are securely logged in our immutable audit trail.
+            All actions taken on your application (endorsements by the Local Association President, status changes) are securely logged in our immutable audit trail.
           </div>
         </div>
       </div>

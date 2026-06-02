@@ -10,7 +10,7 @@ export class ExportService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Generates the full FAFICS Expertise Pool roster as an Excel workbook.
+   * Generates the full FAFICS Expertise Pool data as an Excel workbook.
    * Queries vw_active_roster and formats with navy/gold styling.
    */
   async generateRosterExcel(): Promise<Buffer> {
@@ -21,13 +21,13 @@ export class ExportService {
     workbook.creator = 'FAFICS Expertise Pool';
     workbook.created = new Date();
 
-    const sheet = workbook.addWorksheet('FAFICS Expertise Pool Roster');
+    const sheet = workbook.addWorksheet('FAFICS Expertise Pool Data');
 
     // ── Row 1: Title row ──────────────────────────────────────────────
     const today = format(new Date(), 'dd/MM/yyyy');
     sheet.mergeCells('A1:R1');
     const titleCell = sheet.getCell('A1');
-    titleCell.value = `FAFICS Expertise Pool — Active Roster — Generated: ${today}`;
+    titleCell.value = `FAFICS Expertise Pool — Active Members — Generated: ${today}`;
     titleCell.font = {
       name: 'Calibri',
       size: 14,
@@ -146,7 +146,7 @@ export class ExportService {
     };
 
     const buffer = await workbook.xlsx.writeBuffer();
-    this.logger.log(`Roster Excel generated: ${rows.length} rows`);
+    this.logger.log(`Expertise Pool Excel generated: ${rows.length} rows`);
     return Buffer.from(buffer);
   }
 

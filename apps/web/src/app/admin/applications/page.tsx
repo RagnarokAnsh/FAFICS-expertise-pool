@@ -29,6 +29,13 @@ export default function AdminApplicationsPage() {
     queryFn: () => adminApi.listApplications({ page, limit, search: debouncedSearch, status, country }),
   });
 
+  // Fetch distinct countries for the filter dropdown
+  const { data: countries } = useQuery({
+    queryKey: ['distinct-countries'],
+    queryFn: () => adminApi.getDistinctCountries(),
+    staleTime: 5 * 60 * 1000, // cache for 5 minutes
+  });
+
   const clearFilters = () => {
     setSearch('');
     setStatus('');
@@ -40,7 +47,6 @@ export default function AdminApplicationsPage() {
     <div className="p-8 max-w-[1200px] mx-auto">
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-[28px] font-bold text-navy mb-2">Applications</h1>
           <p className="text-text-mid">Manage and review submissions to the Expertise Pool.</p>
         </div>
       </div>
@@ -75,13 +81,16 @@ export default function AdminApplicationsPage() {
         </div>
         <div className="w-[180px]">
           <label className="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5">Country</label>
-          <input 
-            type="text" 
-            placeholder="e.g. France" 
+          <select 
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="w-full border border-border rounded h-[38px] px-3 text-[13px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
-          />
+            className="w-full border border-border rounded h-[38px] px-3 text-[13px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy bg-white"
+          >
+            <option value="">All Countries</option>
+            {(countries || []).map((c: string) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </div>
         <button 
           onClick={clearFilters}
@@ -101,7 +110,7 @@ export default function AdminApplicationsPage() {
         data={data?.data || []} 
         isLoading={isLoading} 
         page={page} 
-        total={data?.meta?.total || 0} 
+        total={data?.total || 0} 
         limit={limit}
         onPageChange={setPage}
       />

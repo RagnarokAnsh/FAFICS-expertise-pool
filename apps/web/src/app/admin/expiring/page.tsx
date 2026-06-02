@@ -49,7 +49,6 @@ export default function AdminExpiringPage() {
     <div className="p-8 max-w-[1200px] mx-auto">
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-[28px] font-bold text-navy mb-2">Expiring Profiles</h1>
           <p className="text-text-mid">Profiles expiring within the next 90 days.</p>
         </div>
         <Button 
@@ -89,9 +88,9 @@ export default function AdminExpiringPage() {
                 const daysLeft = calculateDaysLeft(app.expiresAt);
                 return (
                   <tr key={app.id} className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4 text-[14px] text-navy font-semibold">{app.applicantFullName}</td>
+                    <td className="py-3 px-4 text-[14px] text-navy font-semibold">{[app.firstName, app.lastName].filter(Boolean).join(' ')}</td>
                     <td className="py-3 px-4 text-[14px] text-text-mid">{app.associationName}</td>
-                    <td className="py-3 px-4 text-[14px] text-text-mid">{app.nationality}</td>
+                    <td className="py-3 px-4 text-[14px] text-text-mid">{app.associationCountry}</td>
                     <td className="py-3 px-4 text-[14px] text-text-light">{new Date(app.approvedAt).toLocaleDateString()}</td>
                     <td className="py-3 px-4 text-[14px] text-navy font-medium">{new Date(app.expiresAt).toLocaleDateString()}</td>
                     <td className="py-3 px-4">

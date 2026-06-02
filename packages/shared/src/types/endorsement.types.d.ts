@@ -2,6 +2,9 @@ import { EducationRow, LanguageRow, UnExperienceRow, NonUnExperienceRow, FaficsE
 export interface EndorsementView {
     referenceNumber: string;
     applicantFullName: string;
+    firstName: string;
+    middleName: string | null;
+    lastName: string;
     email: string;
     nationality: string;
     secondNationality: string | null;
@@ -11,6 +14,11 @@ export interface EndorsementView {
     separationDate: string;
     associationName: string;
     associationCountry: string;
+    associationGeneralEmail: string | null;
+    presidentEmail: string;
+    presidentPhone: string;
+    associateMemberName: string | null;
+    associateMemberCountry: string | null;
     educations: EducationRow[];
     languages: LanguageRow[];
     unExperiences: UnExperienceRow[];

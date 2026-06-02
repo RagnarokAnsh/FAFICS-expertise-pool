@@ -16,7 +16,7 @@ export default function AdminExportPage() {
       await adminApi.exportRoster();
       setLastExport(new Date());
     } catch (err) {
-      setError('Failed to download the roster. Please try again.');
+      setError('Failed to download the Expertise Pool. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -25,8 +25,7 @@ export default function AdminExportPage() {
   return (
     <div className="p-8 max-w-[800px] mx-auto">
       <div className="mb-8">
-        <h1 className="font-serif text-[28px] font-bold text-navy mb-2">Export Roster</h1>
-        <p className="text-text-mid">Download the current FAFICS Expertise Pool roster.</p>
+        <p className="text-text-mid">Download the current FAFICS Expertise Pool data.</p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-border overflow-hidden">
@@ -65,7 +64,7 @@ export default function AdminExportPage() {
               disabled={isExporting}
               className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
             >
-              {isExporting ? 'Generating Excel...' : 'Download Roster (Excel)'}
+              {isExporting ? 'Generating Excel...' : 'Download Expertise Pool (Excel)'}
             </Button>
           </div>
         </div>

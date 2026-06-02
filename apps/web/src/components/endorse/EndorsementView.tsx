@@ -27,7 +27,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
             Reviewing Application
           </h2>
           <p className="text-[14px] text-text-mid">
-            You are reviewing this application as <span className="font-semibold text-navy">{application.applicantFullName}</span>'s Association President. This is a read-only view. Please review the details carefully before endorsing or returning with comments.
+            You are reviewing this application as <span className="font-semibold text-navy">{[application.firstName, application.middleName, application.lastName].filter(Boolean).join(' ')}</span>'s Association President. This is a read-only view. Please review the details carefully before endorsing or returning with comments.
           </p>
         </div>
       )}
@@ -37,7 +37,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
           <div className="grid grid-cols-2 gap-4">
             {renderField("Reference Number", application.referenceNumber)}
             {renderField("Submitted At", application.submittedAt ? new Date(application.submittedAt).toLocaleDateString() : '-')}
-            {renderField("Full Name", application.applicantFullName)}
+            {renderField("Full Name", [application.firstName, application.middleName, application.lastName].filter(Boolean).join(' '))}
             {renderField("Email", application.email)}
             {renderField("Gender", application.gender)}
             {renderField("Phone", application.phone)}
@@ -49,9 +49,14 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
         </Card>
 
         <Card title="Association Details">
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {renderField("Association Name", application.associationName)}
             {renderField("Association Country", application.associationCountry)}
+            {renderField("General Email", application.associationGeneralEmail)}
+            {renderField("President Email", application.presidentEmail)}
+            {renderField("President Phone", application.presidentPhone)}
+            {renderField("Associate Member Name", application.associateMemberName)}
+            {renderField("Associate Member Country", application.associateMemberCountry)}
           </div>
         </Card>
       </div>
@@ -233,7 +238,6 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
           <thead>
             <tr className="border-b border-border">
               <th className="py-2 text-[12px] font-semibold text-navy uppercase">Area</th>
-              <th className="py-2 text-[12px] font-semibold text-navy uppercase">Description</th>
               <th className="py-2 text-[12px] font-semibold text-navy uppercase">Level</th>
               <th className="py-2 text-[12px] font-semibold text-navy uppercase">Preferred?</th>
             </tr>
@@ -241,8 +245,12 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
           <tbody>
             {application.expertise.map((exp: any, idx: number) => (
               <tr key={idx} className="border-b border-border last:border-0">
-                <td className="py-3 text-[14px] text-text-mid">{exp.areaLabel}</td>
-                <td className="py-3 text-[14px] text-text-mid">{exp.otherDescription || '-'}</td>
+                <td className="py-3 text-[14px] text-text-mid">
+                  {exp.areaLabel}
+                  {exp.isCustom && exp.otherDescription && (
+                    <span className="block text-[12px] text-text-light mt-0.5">{exp.otherDescription}</span>
+                  )}
+                </td>
                 <td className="py-3 text-[14px] text-text-mid capitalize">{exp.expertiseLevel || '-'}</td>
                 <td className="py-3 text-[14px] text-text-mid">{exp.isPreferred ? 'Yes' : 'No'}</td>
               </tr>

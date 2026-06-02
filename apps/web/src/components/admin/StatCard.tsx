@@ -1,40 +1,45 @@
 import React from 'react';
 import Link from 'next/link';
 
+type Accent = 'navy' | 'gold' | 'success' | 'pending';
+
 interface StatCardProps {
   label: string;
   value: number | string;
-  color: string;
+  accent?: Accent;
+  sub?: string;
+  icon?: React.ReactNode;
   href?: string;
 }
 
-export function StatCard({ label, value, color, href }: StatCardProps) {
-  const cardContent = (
-    <div className={`bg-white rounded-lg shadow-sm border border-border p-6 flex flex-col h-full border-l-4 ${color}`}>
-      <span className="text-[12px] font-semibold text-text-light tracking-[0.03em] uppercase mb-2">
-        {label}
-      </span>
-      <span className="text-[32px] font-serif font-bold text-navy leading-none mb-4">
-        {value}
-      </span>
-      {href && (
-        <div className="mt-auto flex items-center text-[12px] font-semibold text-gold group-hover:text-gold-hover transition-colors">
-          View Details
-          <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
+const ACCENT_BAR: Record<Accent, string> = {
+  navy: 'bg-navy',
+  gold: 'bg-gold',
+  success: 'bg-success',
+  pending: 'bg-[#c07a00]',
+};
+
+export function StatCard({ label, value, accent = 'navy', sub, icon, href }: StatCardProps) {
+  const card = (
+    <div className="relative h-full overflow-hidden rounded-theme border border-border bg-white p-5 shadow-theme transition-shadow group-hover:shadow-md">
+      <div className={`absolute inset-x-0 top-0 h-[3px] ${ACCENT_BAR[accent]}`} />
+      {icon && (
+        <div className="pointer-events-none absolute right-3.5 top-3.5 text-navy opacity-[0.07]">
+          {icon}
         </div>
       )}
+      <div className="mb-1 font-serif text-[34px] font-bold leading-none text-navy">{value}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">{label}</div>
+      {sub && <div className="mt-2 text-[11px] text-text-muted">{sub}</div>}
     </div>
   );
 
   if (href) {
     return (
-      <Link href={href} className="group h-full block">
-        {cardContent}
+      <Link href={href} className="group block h-full">
+        {card}
       </Link>
     );
   }
-
-  return <div className="h-full block">{cardContent}</div>;
+  return <div className="h-full">{card}</div>;
 }

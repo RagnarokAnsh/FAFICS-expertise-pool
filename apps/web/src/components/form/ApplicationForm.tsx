@@ -100,6 +100,18 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
 
   return (
     <>
+      <div className="bg-navy text-white px-4 md:px-8 py-8 lg:py-10 border-t border-white/10">
+        <div className="max-w-[1020px] mx-auto text-center">
+          <div className="text-[12px] uppercase tracking-[0.1em] text-gold font-bold mb-3">Volunteer Application</div>
+          <h1 className="font-serif text-[28px] md:text-[36px] font-bold mb-4 leading-tight">
+            Federation's Expertise Pool<br />Application Form
+          </h1>
+          <p className="text-[14px] md:text-[15px] text-white/80 max-w-[700px] leading-relaxed text-center mx-auto">
+            For all former International Civil Servants wishing to volunteer their time and expertise for positions and functions within the Federation.
+          </p>
+        </div>
+      </div>
+
       <FormProgress currentStep={currentStep} highestStep={highestStep} goToStep={goToStep} />
       
       <main className="max-w-[1020px] mx-auto px-4 md:px-8 py-8 md:py-10">
@@ -137,7 +149,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
         {/* ── Draft creation toast (appears once after Step 1 completes) ── */}
         {showDraftToast && draftCreatedEmail && (
           <div
-            className="fixed top-6 right-6 z-50 max-w-[380px] animate-[fadeIn_0.3s_ease]"
+            className="fixed top-6 right-6 z-[110] max-w-[380px] animate-[fadeIn_0.3s_ease]"
             style={{ animation: 'fadeIn 0.3s ease, fadeOut 0.5s ease 5.5s forwards' }}
           >
             <div className="bg-white border-l-4 border-[#3B6D11] rounded-lg shadow-lg p-4 flex items-start gap-3">
@@ -160,7 +172,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
 
         {/* ── Persistent auto-save indicator (bottom-right, visible on steps 2–5 when draftId exists) ── */}
         {draftId && currentStep > 1 && (
-          <div className="fixed bottom-6 right-6 z-50">
+          <div className="fixed bottom-6 right-6 z-[110]">
             {saveStatus === 'saving' ? (
               <div className="bg-navy text-white text-[13px] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-[fadeIn_0.3s_ease]">
                 <svg className="animate-spin h-3.5 w-3.5 text-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

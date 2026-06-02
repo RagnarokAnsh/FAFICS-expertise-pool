@@ -41,9 +41,9 @@ export function ApplicationTable({ data, isLoading, page, total, limit, onPageCh
             {data.map((app) => (
               <tr key={app.id} className="border-b border-border last:border-0 hover:bg-gray-50 transition-colors">
                 <td className="py-3 px-4 text-[14px] text-text-mid font-mono">{app.referenceNumber}</td>
-                <td className="py-3 px-4 text-[14px] text-navy font-semibold">{app.applicantFullName}</td>
+                <td className="py-3 px-4 text-[14px] text-navy font-semibold">{[app.firstName, app.lastName].filter(Boolean).join(' ')}</td>
                 <td className="py-3 px-4 text-[14px] text-text-mid">{app.associationName}</td>
-                <td className="py-3 px-4 text-[14px] text-text-mid">{app.nationality}</td>
+                <td className="py-3 px-4 text-[14px] text-text-mid">{app.associationCountry}</td>
                 <td className="py-3 px-4">
                   <Badge status={app.status} />
                 </td>

@@ -43,6 +43,9 @@ export class EndorsementService {
     return {
       referenceNumber: application.referenceNumber!,
       applicantFullName: `${application.firstName} ${application.lastName}`,
+      firstName: application.firstName,
+      middleName: application.middleName,
+      lastName: application.lastName,
       email: application.email,
       nationality: application.nationality,
       secondNationality: application.secondNationality,
@@ -52,6 +55,11 @@ export class EndorsementService {
       separationDate: application.separationDate.toISOString().split('T')[0],
       associationName: application.associationName,
       associationCountry: application.associationCountry,
+      associationGeneralEmail: application.associationGeneralEmail,
+      presidentEmail: application.presidentEmail,
+      presidentPhone: application.presidentPhone,
+      associateMemberName: application.associateMemberName,
+      associateMemberCountry: application.associateMemberCountry,
       educations: application.educations.map(e => ({
         id: e.id,
         sortOrder: e.sortOrder,

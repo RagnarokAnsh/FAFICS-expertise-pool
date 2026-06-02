@@ -27,46 +27,32 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
       <div className="mb-7">
         <h2 className="font-serif text-[22px] font-bold text-navy mb-1">Personal Information</h2>
         <p className="text-[13.5px] text-text-mid leading-relaxed">
-          Please enter your details exactly as they appear on your UN records. Fields marked <span className="text-gold">*</span> are mandatory.
+          Fields marked <span className="text-gold">*</span> are mandatory.
         </p>
       </div>
 
       <div className="bg-gold-light border-[1.5px] border-gold rounded-theme px-[26px] py-[22px] mb-7 mt-7">
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          <strong>About FAFICS and this Expertise Pool</strong>
+          <strong>FAFICS and the Expertise Pool</strong>
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          FAFICS members can be considered for a variety of positions including as an elected Officer — President, Secretary, Treasurer, Vice-President — or Chairs of Standing Committees in the areas of:
+          Members of FAFICS Associations can participate in the work of FAFICS through service in:
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 my-2.5">
-          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
-            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
-            <span>After Service Health & Life Insurance</span>
-          </div>
-          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
-            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
-            <span>Pension Issues</span>
-          </div>
-          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
-            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
-            <span>Communications (Social Media / Website management)</span>
-          </div>
-          <div className="flex items-start gap-2 text-[12.5px] text-text-mid leading-relaxed">
-            <div className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-[5px]"></div>
-            <span>Membership</span>
-          </div>
-        </div>
+        <ul className="list-disc pl-5 mb-2.5 text-[13.5px] text-text leading-[1.8]">
+          <li>The elected positions of President, Vice-President, Secretary, Treasurer.</li>
+          <li>FAFICS Standing Committees in the areas of Pensions, After Service Health and Life Insurance, Communications and Membership, including serving as Chairs/Co-Chairs of these Committees, who are nominated by the President and appointed by the Council; on the United Nations Pension Board as part of the FAFICS delegation or on one of the Pension Board’s subsidiary bodies/working groups.</li>
+        </ul>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          Selection of candidates for <strong>non-elected positions</strong> is through the Expertise Pool; a few positions are through election. <strong>This form is for members who are interested to include their name in the Expertise Pool</strong> of FAFICS and committed to volunteer their time and services for different positions & functions within the FAFICS.
+          The FAFICS Rules of Procedure adopted by the FAFICS Council, established an Expertise Pool to serve as a repository of Association members interested in serving in these positions.
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          Please submit your application form <strong>through your Local Association President or designated delegate</strong>, providing complete details for consideration & inclusion in the Expertise Pool.
+          Selection for non-elected positions is managed through the Expertise Pool. If you would wish to serve in a non-elected position, please complete and submit the Expertise Pool Form through your Local Association President or designated official within your Association, for inclusion in the Expertise Pool.
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          <strong>Mandatory:</strong> Before you fill this form, please visit <a href="https://fafics.org" target="_blank" rel="noreferrer" className="text-navy-mid font-semibold">FAFICS.ORG</a> to know about FAFICS and the different areas for contribution.
+          Individuals may remain in the Expertise Pool for a period of three years, after which they will be contacted to ascertain their continued interest and availability to serve in FAFICS.
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-0">
-          <strong>Note:</strong> Candidates in the Expertise Pool will be valid for a period of <strong>three (3) years</strong> and will need to reconfirm their interest for continuation in the Expertise Pool.
+          <strong>Mandatory:</strong> Before you complete the Expertise Pool Form, please visit <a href="https://fafics.org" target="_blank" rel="noreferrer" className="text-navy-mid font-semibold">FAFICS.ORG</a> to fully acquaint yourself with FAFICS.
         </p>
       </div>
 
@@ -159,7 +145,7 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
         </div>
 
         <div className="flex items-center gap-2.5 mt-5 mb-3">
-          <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-navy-mid whitespace-nowrap">Associate Membership (optional)</span>
+          <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-navy-mid whitespace-nowrap">Other Association Membership (optional)</span>
           <div className="flex-1 h-px bg-border"></div>
         </div>
 

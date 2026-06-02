@@ -54,7 +54,6 @@ export default function AdminUsersPage() {
     <div className="p-8 max-w-[1000px] mx-auto">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-[28px] font-bold text-navy mb-2">User Management</h1>
           <p className="text-text-mid">Manage officer and admin access to the dashboard.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>+ Add New User</Button>

@@ -38,6 +38,11 @@ export const adminApi = {
     return unwrap(response);
   },
 
+  getDistinctCountries: async (): Promise<string[]> => {
+    const response = await adminApiClient.get('/admin/countries');
+    return unwrap(response);
+  },
+
   listApplications: async (params?: { page?: number; limit?: number; status?: string; search?: string; country?: string }) => {
     const response = await adminApiClient.get('/admin/applications', { params });
     return unwrap(response);
@@ -73,7 +78,7 @@ export const adminApi = {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'FAFICS_Expertise_Pool_Roster.xlsx');
+    link.setAttribute('download', 'FAFICS_Expertise_Pool.xlsx');
     document.body.appendChild(link);
     link.click();
     link.parentNode?.removeChild(link);

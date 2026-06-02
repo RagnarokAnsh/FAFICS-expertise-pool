@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { StatusBadge } from './ui';
 
 interface ApplicationSummary {
   id: string;
@@ -18,69 +19,75 @@ interface ApplicationSummary {
 
 interface Props {
   applications: ApplicationSummary[];
+  onSelect: (id: string) => void;
 }
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
 
-function ExpiryBadge({ expiresAt }: { expiresAt: string | null }) {
+function expiryLabel(expiresAt: string | null) {
   if (!expiresAt) return null;
-  const days = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000);
-  if (days <= 30) return <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Expires in {days}d</span>;
-  if (days <= 90) return <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Expires in {days}d</span>;
-  return null;
+  return `Expires ${new Date(expiresAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`;
 }
 
-export function RosterGrid({ applications }: Props) {
+export function RosterGrid({ applications, onSelect }: Props) {
   if (!applications.length) {
     return (
-      <div className="text-center py-16 text-text-light">
-        <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      <div className="py-14 text-center text-text-muted">
+        <svg className="mx-auto mb-3 h-11 w-11 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <p className="text-sm">No profiles found</p>
+        <h4 className="mb-1 text-[14px] text-text-mid">No profiles found</h4>
+        <p className="text-[12.5px]">Try adjusting your search or filters.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
       {applications.map((app) => (
-        <div key={app.id} className="bg-white border border-border rounded-lg p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-start gap-3 mb-3">
-            <div className="w-11 h-11 rounded-full bg-navy border-2 border-gold flex items-center justify-center shrink-0">
-              <span className="text-gold text-[13px] font-bold">{getInitials(app.firstName, app.lastName)}</span>
+        <button
+          key={app.id}
+          onClick={() => onSelect(app.id)}
+          className="group flex h-full flex-col overflow-hidden rounded-theme border border-border bg-white text-left shadow-theme transition-all hover:-translate-y-0.5 hover:border-gold hover:shadow-md"
+        >
+          <div className="flex w-full items-center gap-3 bg-navy px-4 py-3">
+            <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-gold font-serif text-[14px] font-bold text-white">
+              {getInitials(app.firstName, app.lastName)}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-navy text-[14px] truncate">
-                {app.firstName} {app.lastName}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13.5px] font-semibold text-white">{app.firstName} {app.lastName}</div>
+              <div className="truncate text-[11px] text-white/50">
+                {[app.nationality, app.associationName].filter(Boolean).join(' · ')}
               </div>
-              {app.referenceNumber && (
-                <div className="text-[11px] text-text-light font-mono">{app.referenceNumber}</div>
-              )}
             </div>
-            <ExpiryBadge expiresAt={app.expiresAt} />
+            {app.referenceNumber && <div className="shrink-0 text-[10px] text-white/30">{app.referenceNumber}</div>}
           </div>
 
-          <div className="text-[12px] text-text-mid mb-1 truncate">{app.associationName}</div>
-          <div className="text-[12px] text-text-light mb-3">{app.associationCountry}</div>
+          <div className="flex-1 w-full px-4 py-3">
+            {app.preferredAreas.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {app.preferredAreas.slice(0, 3).map((area) => (
+                  <span key={area} className="rounded-[10px] border border-gold bg-gold-light px-2 py-[3px] text-[10px] font-semibold text-[#7a5010]">
+                    {area}
+                  </span>
+                ))}
+                {app.preferredAreas.length > 3 && (
+                  <span className="px-1 py-[3px] text-[10px] text-text-muted">+{app.preferredAreas.length - 3}</span>
+                )}
+              </div>
+            ) : (
+              <div className="text-[11.5px] text-text-muted">No preferred areas listed</div>
+            )}
+          </div>
 
-          {app.preferredAreas.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {app.preferredAreas.slice(0, 3).map((area) => (
-                <span key={area} className="text-[10px] bg-gold/10 text-[#8a6520] px-2 py-0.5 rounded-full font-medium">
-                  {area}
-                </span>
-              ))}
-              {app.preferredAreas.length > 3 && (
-                <span className="text-[10px] text-text-light px-2 py-0.5">
-                  +{app.preferredAreas.length - 3} more
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+          <div className="mt-auto flex w-full items-center justify-between border-t border-border px-4 py-2.5">
+            <StatusBadge status={app.status} />
+            <span className="text-[10.5px] text-text-muted">{expiryLabel(app.expiresAt)}</span>
+          </div>
+        </button>
       ))}
     </div>
   );

@@ -126,12 +126,14 @@ export class ApplicationsService {
         },
       });
 
-      // Write audit log for draft creation
+      // Write a single audit entry when the application is first started.
+      // Subsequent auto-saves (updateDraft) intentionally do NOT write audit
+      // rows — they would flood the timeline with one entry every ~30s.
       await this.auditService.log({
         applicationId: application.id,
         actorEmail: dto.personal.email ?? '',
         actorRole: 'member',
-        action: 'application.draft_saved',
+        action: 'application.draft_created',
         newStatus: 'draft',
       });
 
@@ -310,13 +312,11 @@ export class ApplicationsService {
 
     });
 
-    // Write audit log outside the transaction to avoid connection pool deadlock
-    await this.auditService.log({
-      applicationId: id,
-      actorEmail: application.email,
-      actorRole: 'member',
-      action: 'application.draft_saved',
-    });
+    // NOTE: Draft auto-saves deliberately do not write an audit log row.
+    // The frontend auto-saves every ~30s of inactivity, so logging each save
+    // would spam the immutable audit trail (and the admin timeline) with
+    // dozens of "draft saved" entries per application. Meaningful lifecycle
+    // events (created, submitted, endorsed, approved, …) are still audited.
 
     this.logger.log(`Draft updated: ${id}`);
   }

@@ -4,23 +4,134 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
+import { useQuery } from '@tanstack/react-query';
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider';
+import { adminApi } from '@/lib/api/admin.api';
+
+const NAV_SECTIONS: {
+  label: string;
+  links: { href: string; label: string; icon: string; badge?: 'pending' }[];
+}[] = [
+  {
+    label: 'Main',
+    links: [
+      { href: '/admin/dashboard', label: 'Overview', icon: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z' },
+      { href: '/admin/applications', label: 'Applications', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', badge: 'pending' },
+      { href: '/admin/roster', label: 'Expertise Pool', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
+    ],
+  },
+  {
+    label: 'Insights',
+    links: [
+      { href: '/admin/expiring', label: 'Expiring Profiles', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+      { href: '/admin/reports', label: 'Reports & Analytics', icon: 'M18 20V10M12 20V4M6 20v-6' },
+      { href: '/admin/export', label: 'Export', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
+    ],
+  },
+];
+
+const TITLES: { match: string; title: string }[] = [
+  { match: '/admin/dashboard', title: 'Overview' },
+  { match: '/admin/applications', title: 'Applications' },
+  { match: '/admin/roster', title: 'Expertise Pool' },
+  { match: '/admin/expiring', title: 'Expiring Profiles' },
+  { match: '/admin/reports', title: 'Reports & Analytics' },
+  { match: '/admin/export', title: 'Export' },
+  { match: '/admin/users', title: 'User Management' },
+];
+
+function PendingBadge() {
+  const { data } = useQuery({ queryKey: ['admin-stats'], queryFn: adminApi.getStats, refetchInterval: 60000 });
+  const count = data?.pendingEndorsement ?? 0;
+  if (!count) return null;
+  return (
+    <span className="ml-auto rounded-[10px] bg-gold px-1.5 py-0.5 text-[10px] font-bold text-white">{count}</span>
+  );
+}
+
+function Sidebar({ role, pathname, onLogout }: { role: string | null; pathname: string; onLogout: () => void }) {
+  return (
+    <aside className="sticky top-0 flex h-screen w-[236px] shrink-0 flex-col overflow-y-auto bg-navy">
+      <div className="border-b border-white/10 px-5 py-[18px]">
+        <div className="font-serif text-[14px] font-bold text-gold">FAFICS</div>
+        <div className="mt-0.5 text-[10px] uppercase tracking-[0.06em] text-white/40">Officer Dashboard</div>
+      </div>
+
+      <nav className="flex-1 px-3 py-4">
+        {NAV_SECTIONS.map((section) => {
+          return (
+            <div key={section.label}>
+              <div className="mb-1.5 mt-3.5 px-2 text-[9px] font-bold uppercase tracking-[0.1em] text-white/30">
+                {section.label}
+              </div>
+              {section.links.map((link) => {
+                const active = pathname.startsWith(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
+                      active ? 'bg-gold/[0.18] text-gold' : 'text-white/55 hover:bg-white/[0.08] hover:text-white'
+                    }`}
+                  >
+                    <svg className="h-[15px] w-[15px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={link.icon} />
+                    </svg>
+                    <span className="truncate">{link.label}</span>
+                    {link.badge === 'pending' && <PendingBadge />}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
+        {role === 'admin' && (
+          <div>
+            <div className="mb-1.5 mt-3.5 px-2 text-[9px] font-bold uppercase tracking-[0.1em] text-white/30">Admin</div>
+            <Link
+              href="/admin/users"
+              className={`mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
+                pathname.startsWith('/admin/users') ? 'bg-gold/[0.18] text-gold' : 'text-white/55 hover:bg-white/[0.08] hover:text-white'
+              }`}
+            >
+              <svg className="h-[15px] w-[15px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </svg>
+              <span className="truncate">User Management</span>
+            </Link>
+          </div>
+        )}
+      </nav>
+
+      <div className="border-t border-white/10 px-5 py-3.5">
+        <div className="mb-2 text-[11.5px] capitalize text-white/40">Signed in as {role ?? 'Officer'}</div>
+        <button onClick={onLogout} className="flex items-center gap-1.5 text-[12px] text-white/40 transition-colors hover:text-gold">
+          <svg className="h-[13px] w-[13px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+  );
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isMounted, setIsMounted] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  const [today, setToday] = useState('');
 
   useEffect(() => {
     const token = Cookies.get('fafics_token');
     const userRole = Cookies.get('fafics_role');
-    
     if (!token && !pathname.includes('/admin/login')) {
       router.push('/admin/login');
     } else {
       setRole(userRole || null);
       setIsMounted(true);
+      setToday(new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
     }
   }, [pathname, router]);
 
@@ -30,84 +141,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login');
   };
 
-  if (!isMounted && !pathname.includes('/admin/login')) {
-    return <div className="min-h-screen bg-off-white"></div>;
-  }
-
   if (pathname.includes('/admin/login')) {
     return <>{children}</>;
   }
 
-  const navLinks = [
-    { href: '/admin/dashboard', label: 'Dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
-    { href: '/admin/applications', label: 'Applications', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-    { href: '/admin/roster', label: 'Roster', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-    { href: '/admin/expiring', label: 'Expiring', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { href: '/admin/reports', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-    { href: '/admin/export', label: 'Export', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
-  ];
-
-  if (role === 'admin') {
-    navLinks.push({ href: '/admin/users', label: 'Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' });
+  if (!isMounted) {
+    return <div className="min-h-screen bg-off-white" />;
   }
 
+  const title = TITLES.find((t) => pathname.startsWith(t.match))?.title ?? 'Dashboard';
+
   return (
-    <div className="flex min-h-screen bg-off-white">
-      {/* Sidebar */}
-      <aside className="w-[240px] bg-navy flex flex-col shrink-0">
-        <div className="p-6 flex items-center gap-3 border-b border-white/10">
-          <div className="w-10 h-10 border-2 border-gold rounded-full flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#C8973A" strokeWidth="1.5" className="w-5 h-5">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-              <path d="M2 12h20"/>
-            </svg>
-          </div>
-          <div>
-            <div className="font-serif font-bold text-white tracking-[0.02em]">FAFICS</div>
-            <div className="text-[10px] text-white/55 tracking-[0.05em] uppercase">Expertise Pool</div>
-          </div>
+    <ReactQueryProvider>
+      <div className="flex min-h-screen bg-off-white">
+        <Sidebar role={role} pathname={pathname} onLogout={handleLogout} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-40 flex h-[62px] items-center justify-between border-b border-border bg-white px-6">
+            <div>
+              <h1 className="font-serif text-[24px] font-bold text-navy">{title}</h1>
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto">{children}</main>
         </div>
-
-        <nav className="flex-1 py-6 px-3 flex flex-col gap-1">
-          {navLinks.map((link) => {
-            const isActive = pathname.startsWith(link.href);
-            return (
-              <Link 
-                key={link.href} 
-                href={link.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded transition-colors ${
-                  isActive ? 'bg-gold/10 text-gold' : 'text-white/70 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d={link.icon} />
-                </svg>
-                <span className="text-[14px] font-medium tracking-[0.01em]">{link.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 border-t border-white/10">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 w-full rounded text-white/70 hover:bg-white/5 hover:text-white transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className="text-[14px] font-medium tracking-[0.01em]">Log out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <ReactQueryProvider>
-          {children}
-        </ReactQueryProvider>
-      </main>
-    </div>
+      </div>
+    </ReactQueryProvider>
   );
 }

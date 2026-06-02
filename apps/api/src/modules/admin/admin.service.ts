@@ -245,16 +245,20 @@ export class AdminService {
         customIndex: e.customIndex,
         otherDescription: e.otherDescription,
       })),
-      auditLogs: app.auditLogs.map((log) => ({
-        id: log.id,
-        action: log.action,
-        actorEmail: log.actorEmail,
-        actorRole: log.actorRole as string,
-        oldStatus: log.oldStatus as string | null,
-        newStatus: log.newStatus as string | null,
-        metadata: log.metadata as Record<string, unknown> | null,
-        createdAt: log.createdAt.toISOString(),
-      })),
+      auditLogs: app.auditLogs
+        // Hide per-save draft noise from older records. New drafts no longer
+        // write these rows, but existing databases may have many of them.
+        .filter((log) => log.action !== 'application.draft_saved')
+        .map((log) => ({
+          id: log.id,
+          action: log.action,
+          actorEmail: log.actorEmail,
+          actorRole: log.actorRole as string,
+          oldStatus: log.oldStatus as string | null,
+          newStatus: log.newStatus as string | null,
+          metadata: log.metadata as Record<string, unknown> | null,
+          createdAt: log.createdAt.toISOString(),
+        })),
     };
   }
 
@@ -604,6 +608,26 @@ export class AdminService {
     });
 
     this.logger.log(`User ${userId} role changed from ${oldRole} to ${role} by ${actorEmail}`);
+  }
+
+  // ─── Distinct Filter Options ────────────────────────────────────────────
+
+  /**
+   * Returns distinct association countries from all applications for filter dropdowns.
+   */
+  async getDistinctCountries(): Promise<string[]> {
+    const results = await this.prisma.application.findMany({
+      where: {
+        associationCountry: { not: '' },
+      },
+      select: { associationCountry: true },
+      distinct: ['associationCountry'],
+      orderBy: { associationCountry: 'asc' },
+    });
+
+    return results
+      .map((r) => r.associationCountry)
+      .filter((c): c is string => !!c);
   }
 
   // ─── Analytics ─────────────────────────────────────────────────────────
