@@ -23,7 +23,7 @@ export function GradeBarChart({ data }: Props) {
         <Tooltip
           cursor={{ fill: 'rgba(13,34,64,0.05)' }}
           contentStyle={{ fontSize: 12, borderRadius: 6, border: '1px solid #e5e7eb' }}
-          formatter={(v: number) => [v, 'Positions']}
+          formatter={(v) => [v ?? 0, 'Positions']}
         />
         <Bar dataKey="count" fill="#0D2240" radius={[3, 3, 0, 0]} />
       </BarChart>

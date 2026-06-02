@@ -28,7 +28,7 @@ export function ExpertiseBarChart({ data }: Props) {
         <Tooltip
           cursor={{ fill: 'rgba(13,34,64,0.05)' }}
           contentStyle={{ fontSize: 12, borderRadius: 6, border: '1px solid #e5e7eb' }}
-          formatter={(v: number) => [v, 'Experts']}
+          formatter={(v) => [v ?? 0, 'Experts']}
         />
         <Bar dataKey="count" radius={[0, 3, 3, 0]}>
           {data.map((_, i) => (

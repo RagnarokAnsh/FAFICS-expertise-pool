@@ -46,7 +46,7 @@ export function GenderDonutChart({ data }: Props) {
           </Pie>
           <Tooltip
             contentStyle={{ fontSize: 12, borderRadius: 6, border: '1px solid #e5e7eb' }}
-            formatter={(v: number) => [v, 'Experts']}
+            formatter={(v) => [v ?? 0, 'Experts']}
           />
           <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
         </PieChart>
