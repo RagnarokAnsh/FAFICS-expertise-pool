@@ -17,11 +17,19 @@ export class TokensService {
   }): Promise<{ rawToken: string; tokenHash: string }> {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const expiresAt = new Date(Date.now() + params.ttlMs);
+    // Coerce ttlMs to a number: callers that pass a value straight from
+    // ConfigService.get() hand us a STRING (e.g. PRESIDENT_LINK_TTL_MS), and
+    // `Date.now() + "1209600000"` would string-concatenate into an Invalid Date.
+    const ttlMs = Number(params.ttlMs);
+    if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+      throw new Error(`Invalid token ttlMs: ${params.ttlMs}`);
+    }
+    const expiresAt = new Date(Date.now() + ttlMs);
 
     await this.prisma.magicToken.create({
       data: {
-        token: rawToken, // Store raw token as per spec (though arguably only tokenHash should be stored, spec says both)
+        // Only the SHA-256 hash is persisted — the raw token is never stored,
+        // so a database leak cannot reveal live magic links.
         tokenHash,
         purpose: params.purpose as any, // Cast to Prisma enum if needed
         applicationId: params.applicationId,

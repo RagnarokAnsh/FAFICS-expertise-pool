@@ -11,7 +11,7 @@ export function presidentReviewTemplate(params: {
   const body = `
     <p>Dear President of ${params.associationName},</p>
     <p><strong>${params.applicantName}</strong> has submitted an application to join the FAFICS Expertise Pool on ${formattedDate}.</p>
-    <p>As their Member Association President, your endorsement is required before their application can proceed to the FAFICS Secretary for review.</p>
+    <p>As their Member Association President, your endorsement is required before their application can proceed to the Expertise Pool.</p>
     <div style="text-align: center; margin: 32px 0;">
       <a href="${params.magicLinkUrl}" style="display: inline-block; background-color: #C8973A; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-size: 16px;">Review & Endorse Application</a>
     </div>

@@ -6,16 +6,25 @@ export const adminApiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // The JWT lives in an HttpOnly cookie set by the server; withCredentials makes
+  // the browser send it automatically. JS never reads or attaches the token.
   withCredentials: true,
 });
 
-adminApiClient.interceptors.request.use((config) => {
-  const token = Cookies.get('fafics_token');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// On an expired/invalid session the API replies 401 — drop the UI role hint and
+// bounce to login.
+adminApiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      Cookies.remove('fafics_role');
+      if (!window.location.pathname.includes('/admin/login')) {
+        window.location.href = '/admin/login';
+      }
+    }
+    return Promise.reject(error);
+  },
+);
 
 /**
  * Helper to unwrap the { data, meta } envelope from the NestJS TransformInterceptor.
@@ -30,6 +39,12 @@ function unwrap(response: { data: any }): any {
 export const adminApi = {
   login: async (email: string, password: string) => {
     const response = await adminApiClient.post('/auth/login', { email, password });
+    return unwrap(response);
+  },
+
+  logout: async () => {
+    // Clears the server-side HttpOnly auth cookie.
+    const response = await adminApiClient.post('/auth/logout');
     return unwrap(response);
   },
   

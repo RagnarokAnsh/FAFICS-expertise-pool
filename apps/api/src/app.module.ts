@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import * as Joi from 'joi';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
@@ -36,7 +38,7 @@ import jwtConfig from './config/jwt.config';
           .default('development'),
         API_PORT: Joi.number().default(3001),
         DATABASE_URL: Joi.string().required(),
-        JWT_SECRET: Joi.string().required(),
+        JWT_SECRET: Joi.string().min(32).required(),
         JWT_EXPIRES_IN: Joi.string().default('8h'),
         JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
         PRESIDENT_LINK_TTL_MS: Joi.number().default(1209600000),
@@ -61,6 +63,11 @@ import jwtConfig from './config/jwt.config';
     // ── Scheduling (required for @Cron decorators) ────────────────────
     ScheduleModule.forRoot(),
 
+    // ── Rate limiting ─────────────────────────────────────────────────
+    // Global default: 100 requests / minute / IP. Sensitive endpoints
+    // (login, email-sending) tighten this further with @Throttle().
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+
     // ── Global modules ────────────────────────────────────────────────
     PrismaModule,
     AuditModule,
@@ -77,6 +84,10 @@ import jwtConfig from './config/jwt.config';
     AuthModule,
     AdminModule,
     ExportModule,
+  ],
+  providers: [
+    // Apply rate limiting globally.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

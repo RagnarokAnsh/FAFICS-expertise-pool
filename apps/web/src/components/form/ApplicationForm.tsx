@@ -17,14 +17,15 @@ interface ApplicationFormProps {
   initialDraftId?: string;
   isResume?: boolean;
   presidentNotes?: string | null;
+  editToken?: string;
 }
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-export function ApplicationForm({ initialData, initialDraftId, isResume, presidentNotes }: ApplicationFormProps = {}) {
-  const { form, currentStep, highestStep, draftId, saveStatus, lastSavedAt, draftCreatedEmail, handleNext, handleBack, goToStep } = useApplicationForm(initialData, initialDraftId, isResume);
+export function ApplicationForm({ initialData, initialDraftId, isResume, presidentNotes, editToken }: ApplicationFormProps = {}) {
+  const { form, currentStep, highestStep, draftId, editToken: activeEditToken, saveStatus, lastSavedAt, draftCreatedEmail, resumePrompt, resumeExisting, startOver, handleNext, handleBack, goToStep } = useApplicationForm(initialData, initialDraftId, isResume, editToken);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
@@ -46,22 +47,42 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
       const consent = { consentData: true, consentAccurate: true };
       if (draftId) {
         // Final save before submission
-        await applicationsApi.updateDraft(draftId, sanitizeForApi(data));
-        const submitResponse = await applicationsApi.submitApplication(draftId, consent);
+        await applicationsApi.updateDraft(draftId, sanitizeForApi(data), activeEditToken);
+        const submitResponse = await applicationsApi.submitApplication(draftId, consent, activeEditToken);
         setReferenceNumber(submitResponse.referenceNumber);
         setSubmitSuccess(true);
         if (!isResume) {
           localStorage.removeItem('fafics_draft_id');
+          localStorage.removeItem('fafics_draft_token');
         }
       } else {
+        // No draft yet (user reached submit without the auto-save creating one):
+        // create it now and reuse the returned edit token to authorize submission.
         const createResponse = await applicationsApi.createDraft(sanitizeForApi(data));
-        const submitResponse = await applicationsApi.submitApplication(createResponse.id, consent);
+        if (createResponse.resumed) {
+          // An existing editable application was found — send the user to review
+          // it before submitting rather than duplicating.
+          window.location.href = `/apply/resume/${createResponse.editToken}`;
+          return;
+        }
+        const submitResponse = await applicationsApi.submitApplication(
+          createResponse.id,
+          consent,
+          createResponse.editToken,
+        );
         setReferenceNumber(submitResponse.referenceNumber);
         setSubmitSuccess(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting application:', error);
-      alert('Failed to submit application. Please try again.');
+      if (error?.response?.status === 409) {
+        alert(
+          error.response?.data?.message ||
+            'You already have an application for this association. Please track or edit it from the status page.',
+        );
+      } else {
+        alert('Failed to submit application. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -100,6 +121,35 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
 
   return (
     <>
+      {resumePrompt && (
+        <div className="fixed inset-0 z-[130] bg-black/50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-theme shadow-theme max-w-[460px] w-full p-8 text-center">
+            <h2 className="font-serif text-[22px] font-bold text-navy mb-3">
+              You have an application in progress
+            </h2>
+            <p className="text-[14px] text-text-mid mb-7 leading-relaxed">
+              We found a saved application for these details. You can pick up where you
+              left off, or start over. Starting over replaces the saved progress — it
+              does <strong>not</strong> create a duplicate.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={resumeExisting}
+                className="px-6 py-3 bg-navy text-white text-[14px] font-semibold rounded-lg hover:bg-navy-mid transition-colors"
+              >
+                Resume my application
+              </button>
+              <button
+                onClick={startOver}
+                className="px-6 py-3 bg-white border border-border text-navy text-[14px] font-semibold rounded-lg hover:bg-navy-light transition-colors"
+              >
+                Start over
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-navy text-white px-4 md:px-8 py-8 lg:py-10 border-t border-white/10">
         <div className="max-w-[1020px] mx-auto text-center">
           <div className="text-[12px] uppercase tracking-[0.1em] text-gold font-bold mb-3">Volunteer Application</div>

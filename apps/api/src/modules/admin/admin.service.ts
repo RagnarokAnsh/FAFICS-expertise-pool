@@ -148,14 +148,14 @@ export class AdminService {
       firstName: app.firstName,
       middleName: app.middleName,
       lastName: app.lastName,
-      dateOfBirth: app.dateOfBirth.toISOString().split('T')[0],
+      dateOfBirth: app.dateOfBirth ? app.dateOfBirth.toISOString().split('T')[0] : '',
       nationality: app.nationality,
       secondNationality: app.secondNationality,
       gender: app.gender,
       phone: app.phone,
       whatsapp: app.whatsapp,
       email: app.email,
-      separationDate: app.separationDate.toISOString().split('T')[0],
+      separationDate: app.separationDate ? app.separationDate.toISOString().split('T')[0] : '',
 
       // Association
       associationName: app.associationName,
@@ -594,6 +594,19 @@ export class AdminService {
     if (!user) throw new NotFoundException(`User ${userId} not found`);
 
     const oldRole = user.role;
+
+    // Prevent removing the last active administrator — doing so would lock
+    // everyone out of admin-only functions (user management, etc.).
+    if (oldRole === 'admin' && role !== 'admin') {
+      const activeAdmins = await this.prisma.user.count({
+        where: { role: 'admin' as any, isActive: true },
+      });
+      if (activeAdmins <= 1) {
+        throw new BadRequestException(
+          'Cannot change the role of the last active administrator.',
+        );
+      }
+    }
 
     await this.prisma.user.update({
       where: { id: userId },

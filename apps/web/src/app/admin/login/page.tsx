@@ -20,7 +20,8 @@ export default function AdminLogin() {
 
     try {
       const result = await adminApi.login(email, password);
-      Cookies.set('fafics_token', result.accessToken, { expires: 1 });
+      // The JWT is set by the server as an HttpOnly cookie (not readable by JS).
+      // We only keep the non-sensitive role here for UI gating.
       Cookies.set('fafics_role', result.role, { expires: 1 });
       router.push('/admin/dashboard');
     } catch (err: any) {

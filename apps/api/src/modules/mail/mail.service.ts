@@ -60,6 +60,13 @@ export class MailService {
         to,
         subject,
         html,
+        // Force base64 for the HTML body. The default quoted-printable encoding
+        // soft-wraps lines at column 76, which can land mid-URL and split a
+        // 64-char magic-link token across a `=\r\n` break. Fragile decode paths
+        // (e.g. a browser stripping the newline but keeping the stray `=`)
+        // then corrupt the token, so the endorsement link 404s as "expired".
+        // base64 wraps on its own boundaries and is decoded intact by clients.
+        textEncoding: 'base64',
       });
       return { messageId: info.messageId };
     }
@@ -98,7 +105,7 @@ export class MailService {
     return this.sendEmail(app.presidentEmail, subject, html);
   }
 
-  async sendChangesRequested(applicationId: string): Promise<{ messageId: string }> {
+  async sendChangesRequested(applicationId: string, resumeUrl: string): Promise<{ messageId: string }> {
     const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
     
     // Determine the reviewer name based on who left the most recent notes, or status context
@@ -123,7 +130,7 @@ export class MailService {
       applicantName: `${app.firstName} ${app.lastName}`,
       reviewerName,
       reviewerNotes: notes,
-      webBaseUrl: this.getWebBaseUrl(),
+      resumeUrl,
     });
     return this.sendEmail(app.email, subject, html);
   }
@@ -161,12 +168,27 @@ export class MailService {
       where: { id: applicationId },
       include: { expertise: true },
     });
-    const approvedAreas = app.expertise.map(exp => exp.isCustom && exp.otherDescription ? exp.otherDescription : exp.areaLabel);
-    
+    const labelOf = (exp: (typeof app.expertise)[number]) =>
+      exp.isCustom && exp.otherDescription ? exp.otherDescription : exp.areaLabel;
+
+    // Only the areas the applicant rated as "expert".
+    const expertAreas = app.expertise
+      .filter(exp => exp.expertiseLevel === 'expert')
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map(labelOf);
+
+    // The applicant's top 3 preferred areas (preference is capped at 3 in the form).
+    const preferredAreas = app.expertise
+      .filter(exp => exp.isPreferred)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .slice(0, 3)
+      .map(labelOf);
+
     const { subject, html } = approvedTemplate({
       applicantName: `${app.firstName} ${app.lastName}`,
       expiryDate: app.expiresAt!,
-      approvedAreas,
+      expertAreas,
+      preferredAreas,
     });
     return this.sendEmail(app.email, subject, html);
   }

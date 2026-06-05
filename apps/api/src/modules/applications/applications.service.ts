@@ -2,6 +2,9 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+  ConflictException,
   Logger,
   GoneException,
 } from '@nestjs/common';
@@ -45,10 +48,13 @@ export class ApplicationsService {
    * @param dto - Full application payload from the form
    * @returns Object containing the new application UUID
    */
-  async createDraft(dto: CreateDraftDto): Promise<{ id: string }> {
+  async createDraft(
+    dto: CreateDraftDto,
+  ): Promise<{ id: string; editToken: string; resumed: boolean }> {
     const result = await this.prisma.$transaction(async (tx) => {
       // Create or find user for this applicant (applicants don't have accounts,
-      // but we need a user row for the FK constraint)
+      // but we need a user row for the FK constraint). User is unique by email,
+      // so this is the "individual" half of the dedup key.
       const user = await tx.user.upsert({
         where: { email: dto.personal.email ?? '' },
         update: {},
@@ -60,7 +66,12 @@ export class ApplicationsService {
         },
       });
 
-      // Resolve association: use provided ID if valid, otherwise find by name or create new
+      // Resolve association — the other half of the dedup key. Match on name +
+      // country, both trimmed and case-insensitive, so the same real-world
+      // association doesn't fork into multiple rows (a unique index on
+      // lower(trim(name)), lower(trim(country)) backstops this).
+      const assocName = (dto.association.associationName ?? '').trim();
+      const assocCountry = (dto.association.associationCountry ?? '').trim();
       let assocId = dto.association.associationId || undefined;
 
       // If an associationId was provided, verify it actually exists
@@ -72,10 +83,13 @@ export class ApplicationsService {
         }
       }
 
-      // Find by name or create new association
+      // Find by name + country or create new association
       if (!assocId) {
         const existingAssoc = await tx.association.findFirst({
-          where: { name: { equals: dto.association.associationName ?? '', mode: 'insensitive' } },
+          where: {
+            name: { equals: assocName, mode: 'insensitive' },
+            country: { equals: assocCountry, mode: 'insensitive' },
+          },
         });
         if (existingAssoc) {
           assocId = existingAssoc.id;
@@ -83,45 +97,76 @@ export class ApplicationsService {
         } else {
           const newAssoc = await tx.association.create({
             data: {
-              name: dto.association.associationName ?? '',
-              country: dto.association.associationCountry ?? '',
+              name: assocName,
+              country: assocCountry,
               email: dto.association.associationGeneralEmail || null,
             },
           });
           assocId = newAssoc.id;
-          this.logger.log(`Created new association: ${dto.association.associationName} (${assocId})`);
+          this.logger.log(`Created new association: ${assocName} (${assocId})`);
         }
       }
 
-      // Create the application with all personal + association fields flattened
+      // ── Deduplication: one ACTIVE application per individual + association ──
+      // "Active" = anything not in a terminal state (rejected/expired). A fresh
+      // record is only allowed once a previous cycle has terminated.
+      const existing = await tx.application.findFirst({
+        where: {
+          userId: user.id,
+          associationId: assocId,
+          status: { notIn: ['rejected', 'expired'] },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      // Step-1 scalar fields shared by the create and resume paths.
+      const step1Fields = {
+        firstName: dto.personal.firstName ?? '',
+        middleName: dto.personal.middleName,
+        lastName: dto.personal.lastName ?? '',
+        dateOfBirth: dto.personal.dateOfBirth ? new Date(dto.personal.dateOfBirth) : null,
+        nationality: dto.personal.nationality ?? '',
+        secondNationality: dto.personal.secondNationality,
+        gender: dto.personal.gender ?? '',
+        phone: dto.personal.phone ?? '',
+        whatsapp: dto.personal.whatsapp,
+        email: dto.personal.email ?? '',
+        separationDate: dto.personal.separationDate ? new Date(dto.personal.separationDate) : null,
+        associationName: assocName,
+        associationCountry: assocCountry,
+        associationGeneralEmail: dto.association.associationGeneralEmail,
+        presidentEmail: dto.association.presidentEmail ?? '',
+        presidentPhone: dto.association.presidentPhone ?? '',
+        associateMemberName: dto.association.associateMemberName,
+        associateMemberCountry: dto.association.associateMemberCountry,
+      };
+
+      if (existing) {
+        const editable =
+          existing.status === 'draft' || existing.status === 'changes_requested';
+        if (!editable) {
+          // submitted / endorsed / under_review / approved → don't duplicate.
+          throw new ConflictException(
+            `An application for this association already exists under ${step1Fields.email} ` +
+              `(status: ${existing.status}). Please track or edit it from the status page.`,
+          );
+        }
+        // Resume the existing editable record: refresh Step-1 fields only, leave
+        // child records (education, experience, …) untouched.
+        await tx.application.update({
+          where: { id: existing.id },
+          data: step1Fields,
+        });
+        return { application: existing, resumed: true };
+      }
+
+      // No active record → create a new draft.
       const application = await tx.application.create({
         data: {
           userId: user.id,
           associationId: assocId,
           status: 'draft',
-
-          // Personal fields
-          firstName: dto.personal.firstName ?? '',
-          middleName: dto.personal.middleName,
-          lastName: dto.personal.lastName ?? '',
-          dateOfBirth: dto.personal.dateOfBirth ? new Date(dto.personal.dateOfBirth) : new Date(),
-          nationality: dto.personal.nationality ?? '',
-          secondNationality: dto.personal.secondNationality,
-          gender: dto.personal.gender ?? '',
-          phone: dto.personal.phone ?? '',
-          whatsapp: dto.personal.whatsapp,
-          email: dto.personal.email ?? '',
-          separationDate: dto.personal.separationDate ? new Date(dto.personal.separationDate) : new Date(),
-
-          // Association snapshot
-          associationName: dto.association.associationName ?? '',
-          associationCountry: dto.association.associationCountry ?? '',
-          associationGeneralEmail: dto.association.associationGeneralEmail,
-          presidentEmail: dto.association.presidentEmail ?? '',
-          presidentPhone: dto.association.presidentPhone ?? '',
-          associateMemberName: dto.association.associateMemberName,
-          associateMemberCountry: dto.association.associateMemberCountry,
-
+          ...step1Fields,
           // No child records or experience summaries are saved during Step 1 draft creation
         },
       });
@@ -137,15 +182,61 @@ export class ApplicationsService {
         newStatus: 'draft',
       });
 
-      return application;
+      return { application, resumed: false };
     });
 
-    this.logger.log(`Draft created: ${result.id}`);
+    const { application, resumed } = result;
+    this.logger.log(`Draft ${resumed ? 'resumed' : 'created'}: ${application.id}`);
 
-    // Send draft resume email (non-blocking — NotificationService handles its own errors)
-    void this.notificationService.sendDraftResumeLink(result.id);
+    // Generate the applicant edit token up front. It is the ownership credential
+    // for this draft: the browser keeps it and must present it on every
+    // updateDraft/submit call (see assertEditToken), and the same token backs the
+    // emailed resume link below. This prevents anyone who merely guesses the
+    // application UUID from overwriting or submitting someone else's draft.
+    const { rawToken: editToken } = await this.tokensService.generate({
+      purpose: TokenPurpose.APPLICANT_EDIT,
+      applicationId: application.id,
+      recipientEmail: application.email,
+      ttlMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
 
-    return { id: result.id };
+    // Email the resume link only for genuinely new drafts — a resume re-entry is
+    // redirected straight into the form, so a duplicate email would be noise.
+    if (!resumed) {
+      void this.notificationService.sendDraftResumeLink(application.id, editToken);
+    }
+
+    return { id: application.id, editToken, resumed };
+  }
+
+  /**
+   * Verifies that the caller holds a valid applicant edit token bound to this
+   * application. Throws if the token is missing, invalid, expired, or scoped to
+   * a different application. This is the object-level authorization check for
+   * the otherwise-public draft write/submit endpoints.
+   */
+  private async assertEditToken(
+    applicationId: string,
+    rawToken?: string,
+  ): Promise<void> {
+    if (!rawToken) {
+      throw new UnauthorizedException(
+        'A valid edit link is required to modify this application.',
+      );
+    }
+
+    // validate(..., false) checks existence + expiry without consuming the token,
+    // so it can be reused across many auto-saves. Throws NotFound/Gone otherwise.
+    const magicToken = await this.tokensService.validate(rawToken, false);
+
+    if (
+      (magicToken.purpose as string) !== TokenPurpose.APPLICANT_EDIT ||
+      magicToken.applicationId !== applicationId
+    ) {
+      throw new ForbiddenException(
+        'This edit link is not valid for this application.',
+      );
+    }
   }
 
   /**
@@ -156,7 +247,13 @@ export class ApplicationsService {
    * @param id - Application UUID
    * @param dto - Partial application payload (only changed fields)
    */
-  async updateDraft(id: string, dto: UpdateApplicationDto): Promise<void> {
+  async updateDraft(
+    id: string,
+    dto: UpdateApplicationDto,
+    editToken?: string,
+  ): Promise<void> {
+    await this.assertEditToken(id, editToken);
+
     const application = await this.prisma.application.findUnique({
       where: { id },
     });
@@ -165,9 +262,11 @@ export class ApplicationsService {
       throw new NotFoundException(`Application ${id} not found`);
     }
 
-    if (application.status !== 'draft') {
+    // Editable states: a fresh draft, or an application a reviewer sent back
+    // for revision (changes_requested). Anything past that is locked.
+    if (application.status !== 'draft' && application.status !== 'changes_requested') {
       throw new BadRequestException(
-        `Cannot update application with status '${application.status}'. Only drafts can be updated.`,
+        `Cannot update application with status '${application.status}'. Only drafts or applications returned for changes can be edited.`,
       );
     }
 
@@ -333,7 +432,10 @@ export class ApplicationsService {
   async submitApplication(
     id: string,
     dto: SubmitApplicationDto,
+    editToken?: string,
   ): Promise<{ referenceNumber: string }> {
+    await this.assertEditToken(id, editToken);
+
     const application = await this.prisma.application.findUnique({
       where: { id },
       include: {
@@ -347,9 +449,11 @@ export class ApplicationsService {
       throw new NotFoundException(`Application ${id} not found`);
     }
 
-    if (application.status !== 'draft') {
+    // Submittable from a fresh draft, or as a resubmission after a reviewer
+    // returned it for changes. Both routes funnel back to 'submitted'.
+    if (application.status !== 'draft' && application.status !== 'changes_requested') {
       throw new BadRequestException(
-        `Cannot submit application with status '${application.status}'. Only drafts can be submitted.`,
+        `Cannot submit application with status '${application.status}'. Only drafts or applications returned for changes can be submitted.`,
       );
     }
 
@@ -357,6 +461,11 @@ export class ApplicationsService {
     if (!application.firstName || !application.lastName || !application.email) {
       throw new BadRequestException(
         'Personal information (first name, last name, email) is required.',
+      );
+    }
+    if (!application.dateOfBirth || !application.separationDate) {
+      throw new BadRequestException(
+        'Date of birth and separation date are required.',
       );
     }
     if (!application.presidentEmail || !application.presidentPhone) {
@@ -380,20 +489,28 @@ export class ApplicationsService {
       );
     }
 
+    const isResubmission = application.status === 'changes_requested';
+
     // Execute the submission transaction
     const referenceNumber = await this.prisma.$transaction(async (tx) => {
-      // Generate reference number via PostgreSQL function
-      const refResult = await tx.$queryRaw<
-        Array<{ fn_generate_reference_number: string }>
-      >`SELECT fn_generate_reference_number() as fn_generate_reference_number`;
+      // Reference number + UID are issued once, on the first submission, and
+      // preserved across resubmissions. Only generate them when absent so a
+      // returned-for-changes application keeps its original identifiers.
+      let refNumber = application.referenceNumber;
+      let uidNumber = application.uidNumber;
 
-      // Generate UID via PostgreSQL function
-      const uidResult = await tx.$queryRaw<
-        Array<{ fn_generate_uid: string }>
-      >`SELECT fn_generate_uid() as fn_generate_uid`;
-
-      const refNumber = refResult[0].fn_generate_reference_number;
-      const uidNumber = uidResult[0].fn_generate_uid;
+      if (!refNumber) {
+        const refResult = await tx.$queryRaw<
+          Array<{ fn_generate_reference_number: string }>
+        >`SELECT fn_generate_reference_number() as fn_generate_reference_number`;
+        refNumber = refResult[0].fn_generate_reference_number;
+      }
+      if (!uidNumber) {
+        const uidResult = await tx.$queryRaw<
+          Array<{ fn_generate_uid: string }>
+        >`SELECT fn_generate_uid() as fn_generate_uid`;
+        uidNumber = uidResult[0].fn_generate_uid;
+      }
 
       // Update application with submission data
       await tx.application.update({
@@ -415,8 +532,8 @@ export class ApplicationsService {
           applicationId: id,
           actorEmail: application.email,
           actorRole: 'member',
-          action: 'application.submitted',
-          oldStatus: 'draft',
+          action: isResubmission ? 'application.resubmitted' : 'application.submitted',
+          oldStatus: application.status as any,
           newStatus: 'submitted',
         },
       });
@@ -424,11 +541,16 @@ export class ApplicationsService {
       return refNumber;
     });
 
-    // After transaction: send notifications (non-blocking — NotificationService handles its own errors)
+    // After transaction: send notifications (non-blocking — NotificationService
+    // handles its own errors). sendPresidentLink reissues a fresh president
+    // magic link, which is exactly what a resubmission needs (the prior link was
+    // consumed when the application was returned).
     void this.notificationService.sendPresidentLink(id);
     void this.notificationService.sendEmail(NotificationType.SUBMISSION_CONFIRMATION, id);
 
-    this.logger.log(`Application submitted: ${id} → ${referenceNumber}`);
+    this.logger.log(
+      `Application ${isResubmission ? 'resubmitted' : 'submitted'}: ${id} → ${referenceNumber}`,
+    );
     return { referenceNumber };
   }
 
@@ -479,6 +601,13 @@ export class ApplicationsService {
    * Generates a new edit token and emails the applicant with a resume link.
    */
   async requestEditLink(dto: RequestEditLinkDto): Promise<{ message: string }> {
+    // Always return the same generic message so the response cannot be used to
+    // discover which email/reference combinations exist or are editable.
+    const generic = {
+      message:
+        'If an editable application matches those details, an edit link has been sent to the email on file.',
+    };
+
     const application = await this.prisma.application.findFirst({
       where: {
         email: dto.email,
@@ -487,11 +616,11 @@ export class ApplicationsService {
     });
 
     if (!application) {
-      throw new NotFoundException('No application found.');
+      return generic;
     }
 
     if (application.status !== 'draft' && application.status !== 'changes_requested') {
-      throw new BadRequestException(`This application cannot be edited. Status: ${application.status}`);
+      return generic;
     }
 
     const { rawToken } = await this.tokensService.reissue({
@@ -522,7 +651,7 @@ export class ApplicationsService {
       action: 'application.edit_link_sent',
     });
 
-    return { message: 'Edit link sent to your email address.' };
+    return generic;
   }
 
   /**

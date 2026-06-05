@@ -12,14 +12,23 @@ function unwrap<T>(response: { data: { data: T } }): T {
   return response.data as unknown as T;
 }
 
+/**
+ * The applicant edit token proves ownership of a draft. It is returned by
+ * createDraft (and available from the resume link URL) and must be sent on every
+ * draft write/submit so the backend can authorize the otherwise-public endpoints.
+ */
+function editTokenHeader(editToken?: string | null) {
+  return editToken ? { headers: { 'X-Edit-Token': editToken } } : undefined;
+}
+
 export const applicationsApi = {
-  createDraft: async (data: any): Promise<{ id: string }> => {
+  createDraft: async (data: any): Promise<{ id: string; editToken: string; resumed: boolean }> => {
     const response = await apiClient.post('/applications', data);
     return unwrap(response);
   },
 
-  updateDraft: async (id: string, data: any): Promise<{ message: string }> => {
-    const response = await apiClient.put(`/applications/${id}`, data);
+  updateDraft: async (id: string, data: any, editToken?: string | null): Promise<{ message: string }> => {
+    const response = await apiClient.put(`/applications/${id}`, data, editTokenHeader(editToken));
     return unwrap(response);
   },
 
@@ -31,8 +40,9 @@ export const applicationsApi = {
   submitApplication: async (
     id: string,
     consent: { consentData: boolean; consentAccurate: boolean } = { consentData: true, consentAccurate: true },
+    editToken?: string | null,
   ): Promise<{ referenceNumber: string }> => {
-    const response = await apiClient.post(`/applications/${id}/submit`, consent);
+    const response = await apiClient.post(`/applications/${id}/submit`, consent, editTokenHeader(editToken));
     return unwrap(response);
   },
 

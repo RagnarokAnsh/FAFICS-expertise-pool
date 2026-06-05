@@ -11,11 +11,12 @@ export default async function ResumePage({ params }: { params: { token: string }
     const resumeData = await applicationsApi.getResumeData(params.token);
     
     return (
-      <ApplicationForm 
+      <ApplicationForm
         initialDraftId={resumeData.id}
         initialData={resumeData}
         isResume={true}
         presidentNotes={resumeData.presidentNotes}
+        editToken={params.token}
       />
     );
   } catch (error: any) {

@@ -14,7 +14,7 @@ interface StepProps {
 export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
   const { register, control, formState: { errors }, trigger, getValues } = useFormContext<ApplicationData>();
   
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "expertise",
   });
@@ -27,21 +27,33 @@ export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
   const initialized = React.useRef(false);
 
   useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true;
-      const currentExpertise = getValues('expertise');
-      if (!currentExpertise || currentExpertise.length === 0) {
-        const fixedFields = FIXED_EXPERTISE_AREAS.map((area, index) => ({
-          areaKey: area.key,
-          areaLabel: area.label,
-          isPreferred: false,
-          isCustom: false,
-          sortOrder: index + 1,
-        }));
-        append(fixedFields);
-      }
-    }
-  }, [append, getValues]);
+    if (initialized.current) return;
+    initialized.current = true;
+
+    // Reconcile any saved expertise with the canonical 11 fixed areas so the
+    // matrix is ALWAYS rendered in full (per the form structure), with saved
+    // levels/preferences overlaid by areaKey and custom "Other" rows kept last.
+    const current = getValues('expertise') || [];
+    const savedByKey = new Map(
+      current.filter((e: any) => !e.isCustom).map((e: any) => [e.areaKey, e]),
+    );
+    const fixedRows = FIXED_EXPERTISE_AREAS.map((area, index) => {
+      const saved = savedByKey.get(area.key);
+      return saved
+        ? { ...saved, areaLabel: area.label, isCustom: false, sortOrder: index + 1 }
+        : {
+            areaKey: area.key,
+            areaLabel: area.label,
+            isPreferred: false,
+            isCustom: false,
+            sortOrder: index + 1,
+          };
+    });
+    const customRows = current
+      .filter((e: any) => e.isCustom)
+      .map((e: any, k: number) => ({ ...e, sortOrder: fixedRows.length + k + 1 }));
+    replace([...fixedRows, ...customRows]);
+  }, [replace, getValues]);
 
   const handleNext = async () => {
     const isValid = await trigger('expertise');

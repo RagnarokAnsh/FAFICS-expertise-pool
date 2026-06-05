@@ -1,18 +1,42 @@
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import { Card } from '../../ui/Card';
 import { Field, Input, Select } from '../../ui/Field';
+import { SearchableSelect, SearchableOption } from '../../ui/SearchableSelect';
+import { PhoneInput } from '../../ui/PhoneInput';
 import { Button } from '../../ui/Button';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
-import { COUNTRIES, NATIONALITIES } from '../../../lib/constants/countries';
+import { COUNTRY_DATA, NATIONALITIES, flagEmoji } from '../../../lib/constants/countries';
 
 interface StepProps {
   onNext: () => void;
   onBack?: () => void;
 }
 
+/** Country options carry a flag prefix and search by name + ISO code. */
+const COUNTRY_OPTIONS: SearchableOption[] = COUNTRY_DATA.map((c) => ({
+  value: c.name,
+  label: c.name,
+  prefix: flagEmoji(c.code),
+  keywords: c.code,
+}));
+
+const NATIONALITY_OPTIONS: SearchableOption[] = NATIONALITIES.map((n) => ({
+  value: n,
+  label: n,
+}));
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
 export function Step1PersonalInfo({ onNext }: StepProps) {
-  const { register, formState: { errors }, trigger } = useFormContext<ApplicationData>();
+  const { register, control, formState: { errors }, trigger } = useFormContext<ApplicationData>();
+
+  // Calendar bounds: applicants must be at least 18, and no older than 120.
+  const now = new Date();
+  const maxDob = fmtDate(new Date(now.getFullYear() - 18, now.getMonth(), now.getDate()));
+  const minDob = fmtDate(new Date(now.getFullYear() - 120, now.getMonth(), now.getDate()));
+  const todayStr = fmtDate(now);
 
   const handleNext = async () => {
     // Validate Step 1 fields before proceeding
@@ -70,20 +94,40 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3.5">
-          <Field label="Date of Birth" required error={errors.personal?.dateOfBirth?.message}>
-            <Input type="date" hasError={!!errors.personal?.dateOfBirth} {...register('personal.dateOfBirth')} />
+          <Field label="Date of Birth" required hint="Must be 18 years or older" error={errors.personal?.dateOfBirth?.message}>
+            <Input type="date" min={minDob} max={maxDob} hasError={!!errors.personal?.dateOfBirth} {...register('personal.dateOfBirth')} />
           </Field>
           <Field label="Nationality" required error={errors.personal?.nationality?.message}>
-            <Select hasError={!!errors.personal?.nationality} {...register('personal.nationality')}>
-              <option value="">Select nationality…</option>
-              {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
-            </Select>
+            <Controller
+              control={control}
+              name="personal.nationality"
+              render={({ field }) => (
+                <SearchableSelect
+                  options={NATIONALITY_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder="Select nationality…"
+                  hasError={!!errors.personal?.nationality}
+                />
+              )}
+            />
           </Field>
           <Field label="Second Nationality" hint="(if any)" error={errors.personal?.secondNationality?.message}>
-            <Select hasError={!!errors.personal?.secondNationality} {...register('personal.secondNationality')}>
-              <option value="">None / not applicable</option>
-              {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
-            </Select>
+            <Controller
+              control={control}
+              name="personal.secondNationality"
+              render={({ field }) => (
+                <SearchableSelect
+                  options={NATIONALITY_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder="None / not applicable"
+                  hasError={!!errors.personal?.secondNationality}
+                />
+              )}
+            />
           </Field>
         </div>
 
@@ -97,11 +141,33 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
               <option value="Prefer not to say">Prefer not to say</option>
             </Select>
           </Field>
-          <Field label="Phone Number" required hint="Include country code" error={errors.personal?.phone?.message}>
-            <Input type="tel" placeholder="+1 212 000 0000" hasError={!!errors.personal?.phone} {...register('personal.phone')} />
+          <Field label="Phone Number" required hint="Select country code, then enter number" error={errors.personal?.phone?.message}>
+            <Controller
+              control={control}
+              name="personal.phone"
+              render={({ field }) => (
+                <PhoneInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  hasError={!!errors.personal?.phone}
+                />
+              )}
+            />
           </Field>
-          <Field label="Mobile No (WhatsApp)" hint="Include country code" error={errors.personal?.whatsapp?.message}>
-            <Input type="tel" placeholder="+1 212 000 0000" hasError={!!errors.personal?.whatsapp} {...register('personal.whatsapp')} />
+          <Field label="Mobile No (WhatsApp)" hint="Optional" error={errors.personal?.whatsapp?.message}>
+            <Controller
+              control={control}
+              name="personal.whatsapp"
+              render={({ field }) => (
+                <PhoneInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  hasError={!!errors.personal?.whatsapp}
+                />
+              )}
+            />
           </Field>
         </div>
 
@@ -110,7 +176,7 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
             <Input type="email" placeholder="name@example.com" hasError={!!errors.personal?.email} {...register('personal.email')} />
           </Field>
           <Field label="Date of Separation from UN Service" required error={errors.personal?.separationDate?.message}>
-            <Input type="date" hasError={!!errors.personal?.separationDate} {...register('personal.separationDate')} />
+            <Input type="date" min={minDob} max={todayStr} hasError={!!errors.personal?.separationDate} {...register('personal.separationDate')} />
           </Field>
         </div>
       </Card>
@@ -125,10 +191,20 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
             <Input placeholder="e.g. AFICS-NY, USA" hasError={!!errors.association?.associationName} {...register('association.associationName')} />
           </Field>
           <Field label="Country" required error={errors.association?.associationCountry?.message}>
-            <Select hasError={!!errors.association?.associationCountry} {...register('association.associationCountry')}>
-              <option value="">Select country…</option>
-              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </Select>
+            <Controller
+              control={control}
+              name="association.associationCountry"
+              render={({ field }) => (
+                <SearchableSelect
+                  options={COUNTRY_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder="Select country…"
+                  hasError={!!errors.association?.associationCountry}
+                />
+              )}
+            />
           </Field>
           <Field label="General Email of Association" error={errors.association?.associationGeneralEmail?.message}>
             <Input type="email" placeholder="info@association.org" hasError={!!errors.association?.associationGeneralEmail} {...register('association.associationGeneralEmail')} />
@@ -139,8 +215,19 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
           <Field label="Email of Association President" required hint="Used to route your application for endorsement" error={errors.association?.presidentEmail?.message}>
             <Input type="email" placeholder="president@association.org" hasError={!!errors.association?.presidentEmail} {...register('association.presidentEmail')} />
           </Field>
-          <Field label="Phone of Association President" required hint="Include country code" error={errors.association?.presidentPhone?.message}>
-            <Input type="tel" placeholder="+1 212 000 0000" hasError={!!errors.association?.presidentPhone} {...register('association.presidentPhone')} />
+          <Field label="Phone of Association President" required hint="Select country code, then enter number" error={errors.association?.presidentPhone?.message}>
+            <Controller
+              control={control}
+              name="association.presidentPhone"
+              render={({ field }) => (
+                <PhoneInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  hasError={!!errors.association?.presidentPhone}
+                />
+              )}
+            />
           </Field>
         </div>
 
@@ -154,10 +241,20 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
             <Input placeholder="e.g. AFICS Geneva" hasError={!!errors.association?.associateMemberName} {...register('association.associateMemberName')} />
           </Field>
           <Field label="Country of other Association" error={errors.association?.associateMemberCountry?.message}>
-            <Select hasError={!!errors.association?.associateMemberCountry} {...register('association.associateMemberCountry')}>
-              <option value="">Select country…</option>
-              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </Select>
+            <Controller
+              control={control}
+              name="association.associateMemberCountry"
+              render={({ field }) => (
+                <SearchableSelect
+                  options={COUNTRY_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder="Select country…"
+                  hasError={!!errors.association?.associateMemberCountry}
+                />
+              )}
+            />
           </Field>
         </div>
       </Card>

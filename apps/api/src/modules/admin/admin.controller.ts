@@ -31,6 +31,8 @@ import { RejectDto } from './dto/reject.dto';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { SendRemindersDto } from './dto/send-reminders.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -204,7 +206,7 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Bulk send renewal reminders' })
   @ApiResponse({ status: 200, description: 'Reminders queued' })
-  async sendReminders(@Body() body: { applicationIds: string[] }) {
+  async sendReminders(@Body() body: SendRemindersDto) {
     return this.adminService.sendRenewalReminders(body.applicationIds);
   }
 
@@ -238,7 +240,7 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Role updated' })
   async updateUserRole(
     @Param('id') id: string,
-    @Body() body: { role: string },
+    @Body() body: UpdateUserRoleDto,
     @CurrentUser('email') actorEmail: string,
   ) {
     await this.adminService.updateUserRole(id, body.role, actorEmail);

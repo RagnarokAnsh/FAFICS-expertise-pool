@@ -1,7 +1,12 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Controller, Get, Logger, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Exempt health checks from rate limiting — load-balancer / uptime probes come
+// from a single IP at high frequency and would otherwise trip the global limit
+// and be reported as unhealthy.
+@SkipThrottle()
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
@@ -28,8 +33,14 @@ export class HealthController {
   }
 
   @Get('debug-sentry')
-  @ApiOperation({ summary: 'Intentional error for Sentry testing' })
+  @ApiOperation({ summary: 'Intentional error for Sentry testing (non-production only)' })
   debugSentry(): never {
+    // Disabled in production: this is a public, unauthenticated endpoint that
+    // throws on purpose. Leaving it live would let anyone generate error noise
+    // (and Sentry events) at will.
+    if (process.env.NODE_ENV === 'production') {
+      throw new NotFoundException();
+    }
     throw new Error('Sentry Integration Test Error from NestJS!');
   }
 }

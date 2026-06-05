@@ -1,18 +1,115 @@
 import { z } from 'zod';
 
-export const personalInfoSchema = z.object({
-  firstName: z.string().min(1, 'First Name is required'),
-  middleName: z.string().nullish(),
-  lastName: z.string().min(1, 'Last Name is required'),
-  dateOfBirth: z.string().min(1, 'Date of Birth is required'),
-  nationality: z.string().min(1, 'Nationality is required'),
-  secondNationality: z.string().nullish(),
-  gender: z.string().min(1, 'Gender is required'),
-  phone: z.string().min(1, 'Phone Number is required'),
-  whatsapp: z.string().nullish(),
-  email: z.string().email('Invalid email address').min(1, 'Email is required'),
-  separationDate: z.string().min(1, 'Date of Separation is required'),
-});
+/** Whole years between a past date and today. */
+function ageInYears(dob: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
+function startOfToday(): Date {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  return t;
+}
+
+/** Parses a yyyy-mm-dd string into a local Date, or null if invalid. */
+function parseDate(value: string): Date | null {
+  if (!value) return null;
+  // `new Date("2026-06-05")` parses as UTC midnight, but startOfToday() is
+  // LOCAL midnight. In a UTC+ timezone that makes today's date resolve to an
+  // instant *after* local midnight, so a date-of-separation of "today" wrongly
+  // trips the "cannot be in the future" check. Build the date from its parts so
+  // it is local midnight, matching startOfToday().
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** A phone number must carry an international dial code and enough digits. */
+const phoneNumber = (label: string) =>
+  z
+    .string()
+    .min(1, `${label} is required`)
+    .refine((v) => /^\+\d/.test(v.trim()), {
+      message: 'Select a country code',
+    })
+    .refine((v) => (v.replace(/\D/g, '').length >= 8), {
+      message: 'Enter a valid phone number',
+    });
+
+export const personalInfoSchema = z
+  .object({
+    firstName: z.string().min(1, 'First Name is required'),
+    middleName: z.string().nullish(),
+    lastName: z.string().min(1, 'Last Name is required'),
+    dateOfBirth: z.string().min(1, 'Date of Birth is required'),
+    nationality: z.string().min(1, 'Nationality is required'),
+    secondNationality: z.string().nullish(),
+    gender: z.string().min(1, 'Gender is required'),
+    phone: phoneNumber('Phone Number'),
+    whatsapp: z
+      .string()
+      .nullish()
+      .refine((v) => !v || /^\+\d/.test(v.trim()), { message: 'Select a country code' })
+      .refine((v) => !v || v.replace(/\D/g, '').length >= 8, {
+        message: 'Enter a valid phone number',
+      }),
+    email: z.string().min(1, 'Email is required').email('Invalid email address'),
+    separationDate: z.string().min(1, 'Date of Separation is required'),
+  })
+  .superRefine((data, ctx) => {
+    const today = startOfToday();
+    const dob = parseDate(data.dateOfBirth);
+    if (data.dateOfBirth) {
+      if (!dob) {
+        ctx.addIssue({ code: 'custom', path: ['dateOfBirth'], message: 'Invalid date' });
+      } else if (dob > today) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dateOfBirth'],
+          message: 'Date of Birth cannot be in the future',
+        });
+      } else if (ageInYears(dob) < 18) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dateOfBirth'],
+          message: 'Applicant must be at least 18 years old',
+        });
+      } else if (ageInYears(dob) > 120) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dateOfBirth'],
+          message: 'Please enter a valid Date of Birth',
+        });
+      }
+    }
+
+    const sep = parseDate(data.separationDate);
+    if (data.separationDate) {
+      if (!sep) {
+        ctx.addIssue({ code: 'custom', path: ['separationDate'], message: 'Invalid date' });
+      } else if (sep > today) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['separationDate'],
+          message: 'Date of Separation cannot be in the future',
+        });
+      } else if (dob && sep < dob) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['separationDate'],
+          message: 'Date of Separation must be after Date of Birth',
+        });
+      }
+    }
+  });
 
 export const associationSchema = z.object({
   // UUID will be populated by the frontend mapping or selection
@@ -20,8 +117,8 @@ export const associationSchema = z.object({
   associationName: z.string().min(1, 'Association Name is required'),
   associationCountry: z.string().min(1, 'Association Country is required'),
   associationGeneralEmail: z.union([z.string().email('Invalid email'), z.literal('')]).nullish(),
-  presidentEmail: z.string().email('Invalid email').min(1, 'President Email is required'),
-  presidentPhone: z.string().min(1, 'President Phone is required'),
+  presidentEmail: z.string().min(1, 'President Email is required').email('Invalid email'),
+  presidentPhone: phoneNumber('President Phone'),
   associateMemberName: z.string().nullish(),
   associateMemberCountry: z.string().nullish(),
 });

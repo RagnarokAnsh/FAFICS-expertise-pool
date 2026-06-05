@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Query,
+  Headers,
   HttpCode,
   HttpStatus,
   Logger,
@@ -18,6 +19,7 @@ import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ApplicationsService } from './applications.service';
 import { CreateDraftDto } from './dto/create-draft.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';
@@ -68,6 +70,7 @@ export class ApplicationsController {
    */
   @Post('request-edit-link')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } }) // limit email sends per IP
   @ApiOperation({ summary: 'Request an editing link for an application' })
   @ApiOkResponse({ description: 'Edit link sent' })
   @ApiNotFoundResponse({ description: 'Application not found' })
@@ -82,6 +85,7 @@ export class ApplicationsController {
    */
   @Post('request-draft-link')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } }) // limit email sends per IP
   @ApiOperation({ summary: 'Request a draft resume link (email only)' })
   @ApiOkResponse({ description: 'If a draft exists, a link has been sent' })
   async requestDraftLink(@Body() dto: RequestDraftLinkDto): Promise<{ message: string }> {
@@ -110,11 +114,11 @@ export class ApplicationsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new draft application' })
-  @ApiCreatedResponse({ description: 'Draft created', schema: { properties: { id: { type: 'string' } } } })
+  @ApiCreatedResponse({ description: 'Draft created or existing draft resumed', schema: { properties: { id: { type: 'string' }, editToken: { type: 'string' }, resumed: { type: 'boolean' } } } })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   async createDraft(
     @Body() dto: CreateDraftDto,
-  ): Promise<{ id: string }> {
+  ): Promise<{ id: string; editToken: string; resumed: boolean }> {
     this.logger.log(`Creating draft for ${dto.personal.email}`);
     return this.applicationsService.createDraft(dto);
   }
@@ -133,8 +137,9 @@ export class ApplicationsController {
   async updateDraft(
     @Param('id') id: string,
     @Body() dto: UpdateApplicationDto,
+    @Headers('x-edit-token') editToken?: string,
   ): Promise<{ message: string }> {
-    await this.applicationsService.updateDraft(id, dto);
+    await this.applicationsService.updateDraft(id, dto, editToken);
     return { message: 'Draft saved' };
   }
 
@@ -155,8 +160,9 @@ export class ApplicationsController {
   async submit(
     @Param('id') id: string,
     @Body() dto: SubmitApplicationDto,
+    @Headers('x-edit-token') editToken?: string,
   ): Promise<{ referenceNumber: string }> {
     this.logger.log(`Submitting application ${id}`);
-    return this.applicationsService.submitApplication(id, dto);
+    return this.applicationsService.submitApplication(id, dto, editToken);
   }
 }

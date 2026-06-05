@@ -76,11 +76,15 @@ export class MaintenanceService {
     });
 
     for (const app of apps90d) {
-      await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_90D, app.id, 90);
-      await this.prisma.application.update({
-        where: { id: app.id },
-        data: { renewalReminder90dSentAt: new Date() },
-      });
+      const sent = await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_90D, app.id, 90);
+      // Only mark the reminder as sent if the email actually went out, so a
+      // failed send is retried on the next run instead of being lost.
+      if (sent) {
+        await this.prisma.application.update({
+          where: { id: app.id },
+          data: { renewalReminder90dSentAt: new Date() },
+        });
+      }
     }
 
     const apps30d = await this.prisma.application.findMany({
@@ -92,11 +96,13 @@ export class MaintenanceService {
     });
 
     for (const app of apps30d) {
-      await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_30D, app.id, 30);
-      await this.prisma.application.update({
-        where: { id: app.id },
-        data: { renewalReminder30dSentAt: new Date() },
-      });
+      const sent = await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_30D, app.id, 30);
+      if (sent) {
+        await this.prisma.application.update({
+          where: { id: app.id },
+          data: { renewalReminder30dSentAt: new Date() },
+        });
+      }
     }
   }
 }

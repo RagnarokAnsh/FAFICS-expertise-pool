@@ -113,6 +113,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS uidx_expertise_fixed_area
   ON application_expertise (application_id, area_key)
   WHERE is_custom = false;
 
+-- ─── One application record per individual (email + association) ─────────────
+-- Association identity: one row per (name, country), trimmed + case-insensitive.
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_association_name_country
+  ON associations (lower(trim(name)), lower(trim(country)));
+
+-- At most one ACTIVE application per individual + association. Terminal states
+-- (rejected/expired) are excluded so a new cycle can start after them.
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_application_active_user_assoc
+  ON applications (user_id, association_id)
+  WHERE status NOT IN ('rejected', 'expired');
+
 -- ─── Immutable Unaccent Wrapper (required for index expressions) ────────────
 CREATE OR REPLACE FUNCTION immutable_unaccent(text)
 RETURNS text AS $$

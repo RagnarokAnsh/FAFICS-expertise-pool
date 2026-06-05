@@ -124,9 +124,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [today, setToday] = useState('');
 
   useEffect(() => {
-    const token = Cookies.get('fafics_token');
+    // The JWT is an HttpOnly cookie JS can't read; gate the UI on the readable
+    // role hint instead. The API still enforces auth on every request, and a
+    // 401 from an expired session redirects here via the admin API interceptor.
     const userRole = Cookies.get('fafics_role');
-    if (!token && !pathname.includes('/admin/login')) {
+    if (!userRole && !pathname.includes('/admin/login')) {
       router.push('/admin/login');
     } else {
       setRole(userRole || null);
@@ -135,8 +137,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [pathname, router]);
 
-  const handleLogout = () => {
-    Cookies.remove('fafics_token');
+  const handleLogout = async () => {
+    try {
+      await adminApi.logout();
+    } catch {
+      // Ignore network errors — we clear the client state and redirect regardless.
+    }
     Cookies.remove('fafics_role');
     router.push('/admin/login');
   };

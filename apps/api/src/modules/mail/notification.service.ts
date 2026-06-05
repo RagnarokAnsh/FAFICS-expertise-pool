@@ -18,15 +18,21 @@ export class NotificationService {
     private readonly auditService: AuditService,
   ) {}
 
+  /**
+   * Sends a standard notification email and logs the outcome.
+   * Returns true on success, false on failure — callers that need to react to
+   * the result (e.g. only stamp a "reminder sent" timestamp on success) can
+   * check it; fire-and-forget callers can ignore it.
+   */
   async sendEmail(
     notificationType: NotificationType,
     applicationId: string,
     daysLeft?: 90 | 30,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
     if (!application) {
       this.logger.error(`sendEmail: application ${applicationId} not found`);
-      return;
+      return false;
     }
 
     try {
@@ -36,9 +42,23 @@ export class NotificationService {
         case NotificationType.SUBMISSION_CONFIRMATION:
           result = await this.mailService.sendSubmissionConfirmation(applicationId);
           break;
-        case NotificationType.CHANGES_REQUESTED:
-          result = await this.mailService.sendChangesRequested(applicationId);
+        case NotificationType.CHANGES_REQUESTED: {
+          // Mint a single-use edit token so the email links the applicant
+          // straight to the editable form (not the status page).
+          const { rawToken } = await this.tokensService.generate({
+            purpose: TokenPurpose.APPLICANT_EDIT,
+            applicationId,
+            recipientEmail: application.email,
+            ttlMs: 30 * 24 * 60 * 60 * 1000,
+          });
+          const webBaseUrl =
+            this.configService.get<string>('app.webBaseUrl') ||
+            this.configService.get<string>('WEB_BASE_URL') ||
+            'http://localhost:3000';
+          const resumeUrl = `${webBaseUrl}/apply/resume/${rawToken}`;
+          result = await this.mailService.sendChangesRequested(applicationId, resumeUrl);
           break;
+        }
         case NotificationType.ENDORSED:
           result = await this.mailService.sendEndorsed(applicationId);
           break;
@@ -72,6 +92,7 @@ export class NotificationService {
           sentAt: new Date(),
         },
       });
+      return true;
     } catch (error: any) {
       this.logger.error(`Failed to send ${notificationType} for ${applicationId}: ${error.message}`);
       await this.prisma.notificationLog.create({
@@ -83,6 +104,7 @@ export class NotificationService {
           errorMessage: error.message,
         },
       });
+      return false;
     }
   }
 
@@ -140,7 +162,7 @@ export class NotificationService {
     }
   }
 
-  async sendDraftResumeLink(applicationId: string): Promise<void> {
+  async sendDraftResumeLink(applicationId: string, existingRawToken?: string): Promise<void> {
     const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
     if (!application) {
       this.logger.error(`sendDraftResumeLink: application ${applicationId} not found`);
@@ -148,12 +170,18 @@ export class NotificationService {
     }
 
     try {
-      const { rawToken } = await this.tokensService.generate({
-        purpose: TokenPurpose.APPLICANT_EDIT,
-        applicationId,
-        recipientEmail: application.email,
-        ttlMs: 30 * 24 * 60 * 60 * 1000,
-      });
+      // Reuse the caller's token when provided (e.g. the edit token minted in
+      // createDraft) so a draft has a single ownership token; otherwise mint one.
+      const rawToken =
+        existingRawToken ??
+        (
+          await this.tokensService.generate({
+            purpose: TokenPurpose.APPLICANT_EDIT,
+            applicationId,
+            recipientEmail: application.email,
+            ttlMs: 30 * 24 * 60 * 60 * 1000,
+          })
+        ).rawToken;
 
       const webBaseUrl =
         this.configService.get<string>('app.webBaseUrl') ||

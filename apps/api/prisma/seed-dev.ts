@@ -114,6 +114,30 @@ const THIRD_LANGS: { lang: string; prof: ProficiencyLevel }[] = [
   { lang: 'Chinese', prof: ProficiencyLevel.basic },
 ];
 
+// The form's language dropdown only lists the 6 UN working languages, so every
+// seeded language MUST be one of these or the <select> renders blank on resume.
+// (mirror of LANGUAGES in apps/web/src/components/form/steps/Step2Education.tsx)
+const UN_LANGUAGES = ['Arabic', 'Chinese', 'English', 'French', 'Russian', 'Spanish'];
+
+// Area-of-expertise options used by the work-experience dropdowns
+// (mirror of AREAS_OF_EXPERTISE in apps/web/src/lib/constants/work.ts).
+const AREAS_OF_EXPERTISE = [
+  'Administration / Operations',
+  'Finance / Budget',
+  'Human Resources',
+  'Information Technology',
+  'Legal Affairs',
+  'Logistics / Procurement',
+  'Management / Leadership',
+  'Medical / Health',
+  'Pensions / Insurance',
+  'Policy / Governance',
+  'Public Information / Comms',
+  'Other',
+];
+// Note: seeded work-experience durationYears values must match the form's
+// "Years" dropdown (0.5/1/2/5/10/20/99) or the <select> renders blank on resume.
+
 // ── Spec types ───────────────────────────────────────────────────────────────
 interface LangSpec { language: string; proficiency: ProficiencyLevel }
 interface UnExpSpec { agency: string; positionTitle: string; grade: string; areaOfExpertise: string; durationYears: string }
@@ -161,8 +185,11 @@ function pick<T>(arr: T[], i: number): T {
 // Languages: native (mother tongue) + English + a rotating third (UN languages),
 // so the language-coverage chart shows English high with a realistic long tail.
 function buildLanguages(country: { nat: string; native: string }, i: number): LangSpec[] {
-  const langs: LangSpec[] = [{ language: country.native, proficiency: ProficiencyLevel.mother_tongue }];
-  if (country.native !== 'English') {
+  // The form only allows the 6 UN working languages, so map a non-UN native
+  // tongue (e.g. Portuguese, Hindi) to a deterministic UN language for display.
+  const mother = UN_LANGUAGES.includes(country.native) ? country.native : pick(UN_LANGUAGES, i);
+  const langs: LangSpec[] = [{ language: mother, proficiency: ProficiencyLevel.mother_tongue }];
+  if (mother !== 'English') {
     langs.push({ language: 'English', proficiency: ProficiencyLevel.proficient });
   } else {
     langs.push({ language: 'French', proficiency: ProficiencyLevel.proficient });
@@ -201,14 +228,14 @@ function buildExpertise(i: number): ExpSpec[] {
 // UN experience: 1–2 positions, the first carrying the applicant's headline grade.
 function buildUnExp(i: number): UnExpSpec[] {
   const grade = pick(GRADE_POOL, i * 3 + 1);
-  const area = pick(FIXED_EXPERTISE_AREAS, i + 2).label;
+  const area = pick(AREAS_OF_EXPERTISE, i + 2);
   const positions: UnExpSpec[] = [
     {
       agency: pick(AGENCIES, i),
       positionTitle: pick(['Senior Adviser', 'Chief of Section', 'Programme Director', 'Country Representative', 'Head of Unit'], i),
       grade,
       areaOfExpertise: area,
-      durationYears: pick(['8.0', '10.0', '12.5', '15.0', '18.0', '20.0'], i),
+      durationYears: pick(['10.0', '20.0', '20.0', '10.0', '5.0', '20.0'], i),
     },
   ];
   if (i % 2 === 0) {
@@ -216,8 +243,8 @@ function buildUnExp(i: number): UnExpSpec[] {
       agency: pick(AGENCIES, i + 4),
       positionTitle: pick(['Programme Officer', 'Field Coordinator', 'Technical Specialist'], i),
       grade: pick(['P-3', 'P-4', 'P-5'], i),
-      areaOfExpertise: pick(FIXED_EXPERTISE_AREAS, i + 5).label,
-      durationYears: pick(['4.0', '5.0', '6.0', '7.0'], i),
+      areaOfExpertise: pick(AREAS_OF_EXPERTISE, i + 5),
+      durationYears: pick(['2.0', '5.0', '5.0', '10.0'], i),
     });
   }
   return positions;
@@ -354,13 +381,13 @@ function nestedData(spec: ApplicantSpec) {
     durationYears: new Prisma.Decimal(e.durationYears),
   }));
   const nonUnExperiences: Prisma.ApplicationNonUnExperienceCreateWithoutApplicationInput[] = [
-    { sortOrder: 1, organization: 'National Planning Commission', positionTitle: 'Policy Advisor', areaOfExpertise: 'Public Policy', durationYears: new Prisma.Decimal('4.0') },
+    { sortOrder: 1, organization: 'National Planning Commission', positionTitle: 'Policy Advisor', areaOfExpertise: 'Policy / Governance', durationYears: new Prisma.Decimal('5.0') },
   ];
   const faficsExperiences: Prisma.ApplicationFaficsExperienceCreateWithoutApplicationInput[] = [
-    { sortOrder: 1, positionHeld: 'Committee Member', areaOfContribution: 'Pension Advocacy', durationYears: new Prisma.Decimal('3.0') },
+    { sortOrder: 1, positionHeld: 'Committee Member', areaOfContribution: 'Pensions / Insurance', durationYears: new Prisma.Decimal('5.0') },
   ];
   const localExperiences: Prisma.ApplicationLocalExperienceCreateWithoutApplicationInput[] = [
-    { sortOrder: 1, positionHeld: 'Treasurer', areaOfContribution: 'Local Association Finance', durationYears: new Prisma.Decimal('99.0') },
+    { sortOrder: 1, positionHeld: 'Treasurer', areaOfContribution: 'Finance / Budget', durationYears: new Prisma.Decimal('99.0') },
   ];
   const expertise: Prisma.ApplicationExpertiseCreateWithoutApplicationInput[] = spec.expertise.map((e, idx) => ({
     sortOrder: idx + 1,
@@ -485,7 +512,7 @@ async function main() {
     // Live deterministic president token for the SUBMITTED app
     if (spec.status === ApplicationStatus.submitted) {
       const tokenHash = crypto.createHash('sha256').update(PRESIDENT_TOKEN).digest('hex');
-      await prisma.magicToken.create({ data: { token: PRESIDENT_TOKEN, tokenHash, purpose: TokenPurpose.president_review, applicationId: application.id, recipientEmail: assoc.presidentEmail, expiresAt: daysFromNow(14) } });
+      await prisma.magicToken.create({ data: { tokenHash, purpose: TokenPurpose.president_review, applicationId: application.id, recipientEmail: assoc.presidentEmail, expiresAt: daysFromNow(14) } });
       await prisma.notificationLog.create({ data: { applicationId: application.id, recipientEmail: assoc.presidentEmail, notificationType: NotificationType.president_review_request, providerMessageId: `seed-pres-${referenceNumber}`, sentAt: ts.submittedAt ?? now } });
       livePresidentTokenUrl = `${WEB_URL}/endorse/${PRESIDENT_TOKEN}`;
     }

@@ -179,14 +179,14 @@ model Application {
   firstName         String   @db.VarChar(100)  @map("first_name")
   middleName        String?  @db.VarChar(100)  @map("middle_name")
   lastName          String   @db.VarChar(100)  @map("last_name")
-  dateOfBirth       DateTime @db.Date          @map("date_of_birth")
+  dateOfBirth       DateTime? @db.Date         @map("date_of_birth")
   nationality       String   @db.VarChar(100)
   secondNationality String?  @db.VarChar(100)  @map("second_nationality")
   gender            String   @db.VarChar(50)
   phone             String   @db.VarChar(50)
   whatsapp          String?  @db.VarChar(50)
   email             String   @db.VarChar(255)
-  separationDate    DateTime @db.Date          @map("separation_date")
+  separationDate    DateTime? @db.Date         @map("separation_date")
 
   // Association snapshot (captured at submission)
   associationName         String  @db.VarChar(255)  @map("association_name")
@@ -378,7 +378,6 @@ model ApplicationExpertise {
 
 model MagicToken {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  token          String       @unique @db.VarChar(255)
   tokenHash      String       @unique @db.VarChar(255)  @map("token_hash")
   purpose        TokenPurpose
   applicationId  String?      @db.Uuid                  @map("application_id")

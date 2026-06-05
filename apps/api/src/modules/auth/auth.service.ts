@@ -9,6 +9,11 @@ import { User } from '@prisma/client';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
+  // A real bcrypt hash compared against when no user/password exists, so that
+  // a missing account takes the same time as a wrong password. Without this,
+  // response timing reveals which emails are registered (user enumeration).
+  private readonly dummyHash = bcrypt.hashSync('timing-equalizer', 12);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -24,6 +29,8 @@ export class AuthService {
     });
 
     if (!user || !user.passwordHash || !user.isActive) {
+      // Perform a throwaway comparison to equalize timing with the valid path.
+      await bcrypt.compare(password, this.dummyHash);
       return null;
     }
 
