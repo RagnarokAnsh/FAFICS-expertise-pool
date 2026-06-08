@@ -29,7 +29,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto">
       <div className="mb-6">
         <Link href="/admin/applications" className="text-[13px] font-semibold text-gold hover:text-gold-hover hover:underline inline-flex items-center gap-1">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -44,7 +44,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
         <div className="flex-1 xl:w-2/3">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h1 className="font-serif text-[28px] font-bold text-navy">{[app.firstName, app.middleName, app.lastName].filter(Boolean).join(' ')}</h1>
+              <h1 className="font-serif text-[22px] sm:text-[28px] font-bold text-navy">{[app.firstName, app.middleName, app.lastName].filter(Boolean).join(' ')}</h1>
               <p className="text-text-mid font-mono text-[14px]">{app.referenceNumber}</p>
             </div>
             <div className="xl:hidden">

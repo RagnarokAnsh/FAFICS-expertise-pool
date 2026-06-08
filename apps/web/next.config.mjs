@@ -9,15 +9,6 @@ const nextConfig = {
     // Required for Next.js 14 to load instrumentation.ts (server-side Sentry)
     instrumentationHook: true,
   },
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/apply',
-        permanent: true,
-      },
-    ];
-  },
 };
 
 export default withSentryConfig(nextConfig, {

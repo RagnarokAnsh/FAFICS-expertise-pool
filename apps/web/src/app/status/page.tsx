@@ -16,6 +16,14 @@ function maskEmail(email: string) {
   return `${local[0]}***@${domain}`;
 }
 
+/** Approved profiles are valid for 3 years from the approval date. */
+function computeExpiry(approvedAt: string | null | undefined): string {
+  if (!approvedAt) return '—';
+  const expiry = new Date(approvedAt);
+  expiry.setFullYear(expiry.getFullYear() + 3);
+  return expiry.toLocaleDateString();
+}
+
 /* ─── types ─── */
 interface StatusFormData {
   referenceNumber: string;
@@ -213,7 +221,7 @@ export default function StatusPage() {
                   )}
                   {statusResult.status === 'approved' && (
                     <p className="mt-4 text-text-mid leading-relaxed">
-                      Your application has been approved. Your profile is active in the FAFICS Expertise Pool until {statusResult.expiresAt ? new Date(statusResult.expiresAt).toLocaleDateString() : '—'}.
+                      Your application has been approved. Your profile is active in the FAFICS Expertise Pool until {computeExpiry(statusResult.approvedAt)}.
                     </p>
                   )}
                   {statusResult.status === 'rejected' && (

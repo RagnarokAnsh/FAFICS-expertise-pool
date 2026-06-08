@@ -34,7 +34,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 mb-8">
         <Card title="Personal Information">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {renderField("Reference Number", application.referenceNumber)}
             {renderField("Submitted At", application.submittedAt ? new Date(application.submittedAt).toLocaleDateString() : '-')}
             {renderField("Full Name", [application.firstName, application.middleName, application.lastName].filter(Boolean).join(' '))}
@@ -49,7 +49,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
         </Card>
 
         <Card title="Association Details">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {renderField("Association Name", application.associationName)}
             {renderField("Association Country", application.associationCountry)}
             {renderField("General Email", application.associationGeneralEmail)}
@@ -63,7 +63,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
       <Card title="Education">
         {application.educations.length > 0 ? (
-          <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[420px] text-left border-collapse">
             <thead>
               <tr className="border-b border-border">
                 <th className="py-2 text-[12px] font-semibold text-navy uppercase">Degree Name</th>
@@ -78,7 +78,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
           <p className="text-sm text-text-light">No education details provided.</p>
         )}
@@ -86,7 +86,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
       <Card title="Languages">
         {application.languages.length > 0 ? (
-          <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[420px] text-left border-collapse">
             <thead>
               <tr className="border-b border-border">
                 <th className="py-2 text-[12px] font-semibold text-navy uppercase">Language</th>
@@ -101,7 +101,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
           <p className="text-sm text-text-light">No language details provided.</p>
         )}
@@ -109,7 +109,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
       <Card title="UN Experience">
         {application.unExperiences.length > 0 ? (
-          <table className="w-full text-left border-collapse mb-4">
+          <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
                 <th className="py-2 text-[12px] font-semibold text-navy uppercase">Agency</th>
@@ -130,7 +130,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
           <p className="text-sm text-text-light mb-4">No UN experience provided.</p>
         )}
@@ -143,7 +143,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
       <Card title="Non-UN Experience">
         {application.nonUnExperiences.length > 0 ? (
-          <table className="w-full text-left border-collapse mb-4">
+          <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
                 <th className="py-2 text-[12px] font-semibold text-navy uppercase">Organization</th>
@@ -162,7 +162,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
           <p className="text-sm text-text-light mb-4">No Non-UN experience provided.</p>
         )}
@@ -175,7 +175,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
       <Card title="FAFICS Experience">
         {application.faficsExperiences.length > 0 ? (
-          <table className="w-full text-left border-collapse mb-4">
+          <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
                 <th className="py-2 text-[12px] font-semibold text-navy uppercase">Position Held</th>
@@ -192,7 +192,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
           <p className="text-sm text-text-light mb-4">No FAFICS experience provided.</p>
         )}
@@ -205,7 +205,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
       <Card title="Local Association Experience">
         {application.localExperiences.length > 0 ? (
-          <table className="w-full text-left border-collapse mb-4">
+          <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
                 <th className="py-2 text-[12px] font-semibold text-navy uppercase">Position Held</th>
@@ -222,7 +222,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
           <p className="text-sm text-text-light mb-4">No local association experience provided.</p>
         )}
@@ -234,29 +234,37 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </Card>
 
       <Card title="Expertise Assessment">
-        <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[360px] text-left border-collapse">
           <thead>
             <tr className="border-b border-border">
               <th className="py-2 text-[12px] font-semibold text-navy uppercase">Area</th>
               <th className="py-2 text-[12px] font-semibold text-navy uppercase">Level</th>
-              <th className="py-2 text-[12px] font-semibold text-navy uppercase">Preferred?</th>
             </tr>
           </thead>
           <tbody>
             {application.expertise.map((exp: any, idx: number) => (
               <tr key={idx} className="border-b border-border last:border-0">
                 <td className="py-3 text-[14px] text-text-mid">
-                  {exp.areaLabel}
+                  <span className="inline-flex flex-wrap items-center gap-2">
+                    {exp.areaLabel}
+                    {exp.isPreferred && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gold-light px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gold">
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L10 14.77l-5.2 2.73.99-5.79-4.21-4.1 5.82-.85L10 1.5z" />
+                        </svg>
+                        Preferred
+                      </span>
+                    )}
+                  </span>
                   {exp.isCustom && exp.otherDescription && (
                     <span className="block text-[12px] text-text-light mt-0.5">{exp.otherDescription}</span>
                   )}
                 </td>
                 <td className="py-3 text-[14px] text-text-mid capitalize">{exp.expertiseLevel || '-'}</td>
-                <td className="py-3 text-[14px] text-text-mid">{exp.isPreferred ? 'Yes' : 'No'}</td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </Card>
 
       {!isAdminView && token && (

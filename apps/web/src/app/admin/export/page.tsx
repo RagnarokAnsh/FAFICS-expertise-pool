@@ -23,7 +23,7 @@ export default function AdminExportPage() {
   };
 
   return (
-    <div className="p-8 max-w-[800px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[800px] mx-auto">
       <div className="mb-8">
         <p className="text-text-mid">Download the current FAFICS Expertise Pool data.</p>
       </div>

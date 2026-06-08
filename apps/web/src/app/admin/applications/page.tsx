@@ -44,7 +44,7 @@ export default function AdminApplicationsPage() {
   };
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto">
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <p className="text-text-mid">Manage and review submissions to the Expertise Pool.</p>

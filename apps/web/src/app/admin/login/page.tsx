@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import Cookies from 'js-cookie';
 import { adminApi } from '@/lib/api/admin.api';
-import { Button } from '@/components/ui/Button';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -32,56 +33,89 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-off-white px-4">
-      <div className="max-w-[400px] w-full bg-white rounded-lg shadow-sm border border-border overflow-hidden">
-        <div className="bg-navy p-6 flex flex-col items-center">
-          <div className="w-[50px] h-[50px] border-2 border-gold rounded-full flex items-center justify-center mb-3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#C8973A" strokeWidth="1.5" className="w-6 h-6">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-              <path d="M2 12h20"/>
-            </svg>
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-navy via-navy to-[#0a1a30] px-4 py-10 overflow-hidden">
+      {/* Decorative gold glow */}
+      <div className="pointer-events-none absolute -top-32 -right-32 h-80 w-80 rounded-full bg-gold/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-24 h-80 w-80 rounded-full bg-gold/[0.06] blur-3xl" />
+
+      <div className="relative w-full max-w-[420px]">
+        {/* Brand */}
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-[72px] w-[72px] items-center justify-center">
+            <Image src="/logo.png" alt="FAFICS" width={72} height={72} className="h-full w-full object-contain" priority />
           </div>
-          <h1 className="font-serif text-[22px] font-bold text-white tracking-[0.02em]">Officer Login</h1>
+          <h1 className="font-serif text-[26px] font-bold text-white tracking-[0.02em]">Officer Login</h1>
+          <p className="mt-1 text-[13px] text-white/55">FAFICS Expertise Pool — staff access</p>
         </div>
 
-        <form onSubmit={handleLogin} className="p-8">
-          {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded mb-6 border border-red-100">
-              {error}
+        {/* Card */}
+        <div className="rounded-theme border border-white/10 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div className="h-1 bg-gold" />
+          <form onSubmit={handleLogin} className="p-8">
+            {error && (
+              <div className="mb-6 flex items-start gap-2 rounded-lg border border-danger/20 bg-danger/5 p-3 text-[13px] text-danger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 h-4 w-4 shrink-0">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4M12 16h.01" />
+                </svg>
+                {error}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.04em] text-text-mid">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                autoFocus
+                placeholder="you@fafics.org"
+                className="h-[44px] w-full rounded-lg border-[1.5px] border-border px-3.5 text-[14px] text-text transition-colors placeholder:text-text-muted focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/15"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-          )}
 
-          <div className="mb-4">
-            <label className="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5">
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              className="w-full border border-border rounded h-[42px] px-3 text-[14px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+            <div className="mb-6">
+              <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.04em] text-text-mid">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                className="h-[44px] w-full rounded-lg border-[1.5px] border-border px-3.5 text-[14px] text-text transition-colors placeholder:text-text-muted focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/15"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
 
-          <div className="mb-6">
-            <label className="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              className="w-full border border-border rounded h-[42px] px-3 text-[14px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex h-[46px] w-full items-center justify-center gap-2 rounded-lg bg-navy text-[14px] font-semibold text-white transition-all hover:bg-navy-mid hover:shadow-[0_4px_14px_rgba(13,34,64,0.35)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Signing in…
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+        </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </Button>
-        </form>
+        <div className="mt-6 text-center">
+          <Link href="/" className="text-[13px] text-white/50 transition-colors hover:text-white/80">
+            ← Back to home
+          </Link>
+        </div>
       </div>
     </div>
   );

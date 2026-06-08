@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="p-8 max-w-[1000px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1000px] mx-auto">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-text-mid">Manage officer and admin access to the dashboard.</p>
@@ -63,7 +63,8 @@ export default function AdminUsersPage() {
         {isLoading ? (
           <div className="p-8 text-center text-text-light">Loading users...</div>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-border">
                 <th className="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Email</th>
@@ -93,6 +94,7 @@ export default function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

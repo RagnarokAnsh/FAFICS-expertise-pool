@@ -46,7 +46,7 @@ export default function AdminExpiringPage() {
   const allIds = applications.map((a: any) => a.id);
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto">
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <p className="text-text-mid">Profiles expiring within the next 90 days.</p>
@@ -71,7 +71,8 @@ export default function AdminExpiringPage() {
         </div>
       ) : (
         <div className="bg-white border border-border rounded-lg overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-border">
                 <th className="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Name</th>
@@ -112,6 +113,7 @@ export default function AdminExpiringPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

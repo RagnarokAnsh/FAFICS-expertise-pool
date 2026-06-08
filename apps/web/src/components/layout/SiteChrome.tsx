@@ -1,7 +1,14 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+
+const NAV_LINKS = [
+  { href: '/apply', label: 'Apply' },
+  { href: '/status', label: 'Check Status' },
+];
 
 /**
  * Public site header + footer. The admin section has its own shell
@@ -16,28 +23,43 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname?.startsWith(href);
+
   return (
     <>
       <header className="bg-navy sticky top-0 z-[100] shadow-[0_2px_20px_rgba(0,0,0,0.25)]">
-        <div className="max-w-[1020px] mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-[46px] h-[46px] border-2 border-gold rounded-full flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#C8973A" strokeWidth="1.5" className="w-6 h-6">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                <path d="M2 12h20" />
-              </svg>
+        <div className="max-w-[1020px] mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-3.5 shrink-0">
+            <div className="w-[46px] h-[46px] flex items-center justify-center shrink-0">
+              <Image src="/logo.png" alt="FAFICS" width={46} height={46} className="w-full h-full object-contain" priority />
             </div>
-            <div>
-              <div className="font-serif text-[15px] font-bold text-white tracking-[0.02em]">FAFICS</div>
-              <div className="text-[11px] text-white/55 tracking-[0.05em] uppercase mt-[1px] hidden md:block">
-                Federation of Associations of Former International Civil Servants
-              </div>
+            <div className="text-[11px] text-white/55 tracking-[0.05em] uppercase hidden md:block max-w-[280px] leading-snug">
+              Federation of Associations of Former International Civil Servants
             </div>
-          </div>
-          <div className="text-[12px] text-gold font-medium tracking-[0.04em] uppercase border border-gold/35 px-3 py-1 rounded-full">
-            Expertise Pool
-          </div>
+          </Link>
+
+          <nav className="flex items-center gap-1 sm:gap-2">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-2.5 sm:px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors ${
+                  isActive(link.href)
+                    ? 'text-gold'
+                    : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link
+              href="/admin/login"
+              className="ml-1 sm:ml-2 px-3 py-1.5 text-[12px] font-medium text-gold/90 border border-gold/35 rounded-full hover:bg-gold/10 transition-colors whitespace-nowrap"
+            >
+              Officer Login
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -46,7 +68,13 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       </div>
 
       <footer className="bg-navy px-8 py-[18px] text-center mt-10 mt-auto">
-        <p className="text-[12px] text-white/40">© {new Date().getFullYear()} FAFICS. All rights reserved.</p>
+        <p className="text-[12px] text-white/40">
+          © {new Date().getFullYear()} FAFICS. All rights reserved.
+          <span className="mx-2 text-white/20">·</span>
+          <Link href="/admin/login" className="text-white/40 hover:text-white/70 transition-colors">
+            Officer Login
+          </Link>
+        </p>
       </footer>
     </>
   );

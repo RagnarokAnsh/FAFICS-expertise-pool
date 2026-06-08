@@ -120,7 +120,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
   }
 
   return (
-    <>
+    <div className="w-full">
       {resumePrompt && (
         <div className="fixed inset-0 z-[130] bg-black/50 flex items-center justify-center px-4">
           <div className="bg-white rounded-theme shadow-theme max-w-[460px] w-full p-8 text-center">
@@ -251,6 +251,6 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
           </div>
         )}
       </main>
-    </>
+    </div>
   );
 }

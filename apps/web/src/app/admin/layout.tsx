@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import Cookies from 'js-cookie';
 import { useQuery } from '@tanstack/react-query';
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider';
@@ -49,15 +50,20 @@ function PendingBadge() {
   );
 }
 
-function Sidebar({ role, pathname, onLogout }: { role: string | null; pathname: string; onLogout: () => void }) {
+function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null; pathname: string; onLogout: () => void; onNavigate?: () => void }) {
   return (
-    <aside className="sticky top-0 flex h-screen w-[236px] shrink-0 flex-col overflow-y-auto bg-navy">
-      <div className="border-b border-white/10 px-5 py-[18px]">
-        <div className="font-serif text-[14px] font-bold text-gold">FAFICS</div>
-        <div className="mt-0.5 text-[10px] uppercase tracking-[0.06em] text-white/40">Officer Dashboard</div>
+    <aside className="flex h-full w-[236px] shrink-0 flex-col overflow-y-auto bg-navy lg:sticky lg:top-0 lg:h-screen">
+      <div className="flex items-center gap-2.5 border-b border-white/10 px-5 py-[14px]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+          <Image src="/logo.png" alt="FAFICS" width={36} height={36} className="h-full w-full object-contain" />
+        </div>
+        <div>
+          <div className="font-serif text-[14px] font-bold text-gold leading-none">FAFICS</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.06em] text-white/40">Officer Dashboard</div>
+        </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4">
+      <nav className="flex-1 px-3 py-4" onClick={onNavigate}>
         {NAV_SECTIONS.map((section) => {
           return (
             <div key={section.label}>
@@ -122,6 +128,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isMounted, setIsMounted] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [today, setToday] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     // The JWT is an HttpOnly cookie JS can't read; gate the UI on the readable
@@ -160,12 +172,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <ReactQueryProvider>
       <div className="flex min-h-screen bg-off-white">
-        <Sidebar role={role} pathname={pathname} onLogout={handleLogout} />
+        {/* Desktop sidebar (static) */}
+        <div className="hidden lg:flex">
+          <Sidebar role={role} pathname={pathname} onLogout={handleLogout} />
+        </div>
+
+        {/* Mobile drawer + backdrop */}
+        <div className={`fixed inset-0 z-[120] lg:hidden ${mobileNavOpen ? '' : 'pointer-events-none'}`}>
+          <div
+            className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${mobileNavOpen ? 'opacity-100' : 'opacity-0'}`}
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <div
+            className={`absolute left-0 top-0 h-full transition-transform duration-200 ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          >
+            <Sidebar role={role} pathname={pathname} onLogout={handleLogout} onNavigate={() => setMobileNavOpen(false)} />
+          </div>
+        </div>
+
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-40 flex h-[62px] items-center justify-between border-b border-border bg-white px-6">
-            <div>
-              <h1 className="font-serif text-[24px] font-bold text-navy">{title}</h1>
-            </div>
+          <header className="sticky top-0 z-40 flex h-[62px] items-center gap-3 border-b border-border bg-white px-4 sm:px-6">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+              className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-navy transition-colors hover:bg-off-white lg:hidden"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h1 className="truncate font-serif text-[19px] font-bold text-navy sm:text-[24px]">{title}</h1>
           </header>
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
