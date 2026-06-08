@@ -32,10 +32,16 @@ export class MailService {
     if (this.isProd) {
       this.resend = new Resend(this.configService.get<string>('mail.resendApiKey'));
     } else {
+      const smtpPort = this.configService.get<number>('mail.smtpPort', 587);
       this.transporter = nodemailer.createTransport({
-        host: this.configService.get<string>('mail.smtpHost', 'localhost'),
-        port: this.configService.get<number>('mail.smtpPort', 1025),
-        ignoreTLS: true,
+        host: this.configService.get<string>('mail.smtpHost', 'smtp.gmail.com'),
+        port: smtpPort,
+        secure: smtpPort === 465, // 465 = implicit TLS; 587 = STARTTLS
+        requireTLS: smtpPort === 587,
+        auth: {
+          user: this.configService.get<string>('mail.smtpUser'),
+          pass: this.configService.get<string>('mail.smtpPass'),
+        },
       });
     }
   }
