@@ -6,11 +6,9 @@ This project is a Turborepo monorepo:
 - **`apps/web`** — Next.js 14 frontend (port `3000`). Built **locally**, then shipped to the server.
 - **`packages/shared`** — shared TS types/enums (`@fafics/shared`), built before the apps.
 
-The frontend production build is memory-heavy, so it is built off-server (e.g. a laptop) and shipped as a self-contained `standalone` bundle. The API is built and run on the t3.micro server.
-
 ---
 
-## A. NestJS API — on the t3.micro server
+## A. NestJS API — server
 
 ```bash
 npm install

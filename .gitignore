@@ -26,6 +26,9 @@ apps/api/prisma/generated/
 # IDE
 .vscode/
 .idea/
+
+# Claude Code local tooling (not part of the application)
+.claude/
 *.swp
 *.swo
 *~
