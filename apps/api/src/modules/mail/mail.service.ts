@@ -27,11 +27,18 @@ export class MailService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    // Use Resend only when a real API key is configured; otherwise fall back to
-    // SMTP (Gmail in production, Mailhog locally). `re_test` is the Joi default
-    // placeholder, so it counts as "no real key" and routes through SMTP.
+    // Use Resend only when a REAL API key is configured; otherwise fall back to
+    // SMTP (Gmail in production, Mailhog locally). The Joi default (`re_test`)
+    // and the `.env.example` placeholder (`re_xxxxxxxxxxxx`) must count as "no
+    // real key" — otherwise a copied example silently routes every send to
+    // Resend and fails with "API key is invalid". A real key starts with `re_`
+    // and never contains the `xxxx` placeholder run.
     const resendApiKey = this.configService.get<string>('mail.resendApiKey');
-    this.useResend = !!resendApiKey && resendApiKey !== 're_test';
+    this.useResend =
+      !!resendApiKey &&
+      resendApiKey.startsWith('re_') &&
+      resendApiKey !== 're_test' &&
+      !resendApiKey.includes('xxxx');
 
     if (this.useResend) {
       this.resend = new Resend(resendApiKey);
