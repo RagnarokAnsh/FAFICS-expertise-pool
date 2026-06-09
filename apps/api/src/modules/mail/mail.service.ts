@@ -21,16 +21,20 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter!: nodemailer.Transporter;
   private resend!: Resend;
-  private isProd: boolean;
+  private useResend: boolean;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.isProd = this.configService.get<string>('NODE_ENV') === 'production';
-    
-    if (this.isProd) {
-      this.resend = new Resend(this.configService.get<string>('mail.resendApiKey'));
+    // Use Resend only when a real API key is configured; otherwise fall back to
+    // SMTP (Gmail in production, Mailhog locally). `re_test` is the Joi default
+    // placeholder, so it counts as "no real key" and routes through SMTP.
+    const resendApiKey = this.configService.get<string>('mail.resendApiKey');
+    this.useResend = !!resendApiKey && resendApiKey !== 're_test';
+
+    if (this.useResend) {
+      this.resend = new Resend(resendApiKey);
     } else {
       const smtpPort = this.configService.get<number>('mail.smtpPort', 587);
       this.transporter = nodemailer.createTransport({
@@ -49,7 +53,7 @@ export class MailService {
   private async sendEmail(to: string, subject: string, html: string): Promise<{ messageId: string }> {
     const from = this.configService.get<string>('mail.fromEmail', 'noreply@fafics.org');
 
-    if (this.isProd) {
+    if (this.useResend) {
       const result = await this.resend.emails.send({
         from,
         to,

@@ -9,6 +9,12 @@ dist/
 out/
 build/
 
+# Compiled output must never be committed from packages/shared/src — it belongs
+# in dist/. These guard against a stray in-place `tsc` run polluting the source.
+packages/shared/src/**/*.js
+packages/shared/src/**/*.d.ts
+packages/shared/src/**/*.js.map
+
 # Environment
 .env
 .env.local

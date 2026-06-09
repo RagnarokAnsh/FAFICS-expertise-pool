@@ -18,7 +18,7 @@ export const metadata = {
 // ---------------------------------------------------------------------------
 // Landing hub — currently disabled (not the default export). Re-enable by
 // swapping this in for HomePage above.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line no-unused-vars
 function LandingHub() {
   return (
     <div className="min-h-screen bg-off-white flex flex-col">

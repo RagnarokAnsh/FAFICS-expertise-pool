@@ -37,13 +37,9 @@ npx prisma studio                      # Open Prisma Studio GUI
 npx prisma generate                    # Regenerate Prisma Client after schema changes
 ```
 
-### Infrastructure (Docker)
-```bash
-docker compose up -d     # Start Postgres (5432) and Mailhog (1025/8025)
-docker compose down      # Stop containers (data persists in named volumes)
-```
+### Infrastructure
 
-**Important:** Docker only runs the infrastructure (Postgres, Mailhog), not the NestJS API. The API runs on the host via `npm run start:dev` because it depends on the `@fafics/shared` workspace package.
+The app needs a reachable **PostgreSQL 16+** database — set `DATABASE_URL` accordingly. There is no Docker setup; run Postgres via a local install or a managed/remote instance. For local email inspection, optionally run a standalone [Mailhog](https://github.com/mailhog/MailHog) and point `SMTP_HOST`/`SMTP_PORT` at it.
 
 ### Web (`apps/web`)
 ```bash
@@ -142,8 +138,9 @@ Copy `.env.example` to `.env` at the repo root. Key variables:
 ### Swagger
 Available at `http://localhost:3001/api/docs` when the API is running.
 
-### Email Capture (Local Dev)
-Mailhog catches all outgoing email at `http://localhost:8025`. The API falls back to Nodemailer pointing at `localhost:1025` when `RESEND_API_KEY` is unset.
+### Email Delivery
+
+The API uses Resend only when a real `RESEND_API_KEY` is set (the Joi default `re_test` counts as "not set"); otherwise it sends via the SMTP settings (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`) — Gmail in production. For local dev you can run a standalone Mailhog and set `SMTP_HOST=localhost` / `SMTP_PORT=1025` to capture mail at `http://localhost:8025`.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

@@ -1,6 +1,6 @@
 // =============================================================================
 // FAFICS EXPERTISE POOL — Prisma Schema  v2.0
-// Stack: NestJS · Next.js · PostgreSQL · Prisma · BullMQ + Redis · Resend
+// Stack: NestJS · Next.js · PostgreSQL · Prisma · SMTP (Gmail) / Resend
 //
 // Changes from v1:
 //   - Removed pension_number
@@ -96,7 +96,9 @@ enum NotificationType {
   @@map("notification_type")
 }
 
-// BullMQ job names — use as the `name` argument in queue.add().
+// Legacy enum, retained only for DB compatibility. The queue/BullMQ system was
+// removed — emails are now sent directly via NotificationService and the daily
+// maintenance job runs on a NestJS @Cron schedule. Not used by application code.
 enum QueueJobType {
   send_email               // Resend transactional email
   send_president_link      // Generate token + dispatch endorsement email

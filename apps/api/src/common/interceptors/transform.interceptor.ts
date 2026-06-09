@@ -19,7 +19,7 @@ export interface TransformedResponse<T> {
 
 /**
  * Wraps all successful responses in a standardized envelope: { data, meta }.
- * Health endpoint is excluded to avoid breaking Docker healthcheck expectations.
+ * Health endpoint is excluded so uptime/load-balancer probes get raw JSON.
  */
 @Injectable()
 export class TransformInterceptor<T>
@@ -31,7 +31,7 @@ export class TransformInterceptor<T>
   ): Observable<TransformedResponse<T>> {
     const request = context.switchToHttp().getRequest<{ url: string }>();
 
-    // Skip transformation for health endpoint — Docker expects raw JSON
+    // Skip transformation for health endpoint — probes expect raw JSON
     if (request.url.includes('/health')) {
       return next.handle() as Observable<TransformedResponse<T>>;
     }

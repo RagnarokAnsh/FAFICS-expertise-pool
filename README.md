@@ -6,8 +6,8 @@ Secure web application for managing the FAFICS volunteer expert roster — repla
 
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Docker Engine 26+ with Compose v2)
 - [Node.js 20+](https://nodejs.org/) and npm 10+
+- A [PostgreSQL 16+](https://www.postgresql.org/) database (local install or a managed/remote instance)
 
 ### 1. Clone & configure
 
@@ -23,16 +23,16 @@ cp .env.example .env
 npm install
 ```
 
-### 3. Start infrastructure (Postgres, Redis, Mailhog)
+### 3. Provide a PostgreSQL database
 
-```bash
-docker compose up -d
-```
+Make sure a PostgreSQL 16+ instance is running and reachable, then set `DATABASE_URL`
+in your `.env` to point at it (the default in `.env.example` assumes Postgres on
+`localhost:5432`).
 
-This starts:
-- **PostgreSQL 16** on port `5432`
-- **Redis 7** on port `6379`
-- **Mailhog** SMTP on port `1025`, Web UI at [http://localhost:8025](http://localhost:8025)
+Email in local dev is sent via the SMTP settings in `.env` (Gmail by default). To
+inspect mail locally instead of sending real email, run a standalone
+[Mailhog](https://github.com/mailhog/MailHog) and set `SMTP_HOST=localhost` /
+`SMTP_PORT=1025`.
 
 ### 4. Run database migration
 
@@ -54,7 +54,6 @@ The API starts at [http://localhost:3001](http://localhost:3001).
 
 - **Health check:** [http://localhost:3001/api/health](http://localhost:3001/api/health)
 - **Swagger docs:** [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
-- **Mailhog UI:** [http://localhost:8025](http://localhost:8025)
 
 ## Monorepo Structure
 
@@ -65,7 +64,6 @@ fafics-expertise-pool/
 │   └── web/              ← Next.js frontend (port 3000) — Phase 3
 ├── packages/
 │   └── shared/           ← Shared TypeScript enums & types
-├── docker-compose.yml    ← Local development infrastructure
 ├── turbo.json            ← Turborepo build orchestration
 └── package.json          ← Root workspace config
 ```

@@ -8,29 +8,12 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
-import * as Sentry from '@sentry/node';
 
 /**
  * Bootstrap the NestJS application.
  * Configures: Helmet, CORS, global pipes/filters/interceptors, Swagger, port.
  */
 async function bootstrap(): Promise<void> {
-  // ── Sentry (error monitoring only) ────────────────────────────────
-  // Performance tracing and profiling are Sentry's billable features, so they
-  // are disabled (sample rates = 0) to avoid any usage cost. Only error events
-  // — which sit comfortably in the free tier — are captured, and Sentry only
-  // initialises when SENTRY_DSN_API is set, so local/dev runs send nothing.
-  // Must init BEFORE NestFactory.create() so early module errors are caught.
-  if (process.env.SENTRY_DSN_API) {
-    Sentry.init({
-      dsn: process.env.SENTRY_DSN_API,
-      tracesSampleRate: 0,
-      profilesSampleRate: 0,
-      debug: false,
-    });
-  }
-
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
@@ -70,7 +53,6 @@ async function bootstrap(): Promise<void> {
 
   // ── Global interceptors ────────────────────────────────────────────
   app.useGlobalInterceptors(
-    new SentryInterceptor(),
     new LoggingInterceptor(),
     new TransformInterceptor(),
   );

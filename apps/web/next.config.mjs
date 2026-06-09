@@ -1,24 +1,19 @@
-import { withSentryConfig } from '@sentry/nextjs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Self-contained build output (apps/web/.next/standalone) so the frontend can
+  // be built off-server and shipped as a minimal runnable bundle.
+  output: 'standalone',
+  // Trace from the monorepo root so the @fafics/shared workspace package is
+  // included in the standalone output.
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
   },
-  experimental: {
-    // Required for Next.js 14 to load instrumentation.ts (server-side Sentry)
-    instrumentationHook: true,
-  },
 };
 
-export default withSentryConfig(nextConfig, {
-  // Show Sentry build output so config errors aren't hidden
-  silent: process.env.NODE_ENV === 'production',
-  org: process.env.SENTRY_ORG || "fafics",
-  project: process.env.SENTRY_PROJECT_WEB || "fafics-web",
-  // Skip source map upload if no auth token is present (dev mode)
-  ...(process.env.SENTRY_AUTH_TOKEN ? {} : {
-    disableServerWebpackPlugin: true,
-    disableClientWebpackPlugin: true,
-  }),
-});
+export default nextConfig;
