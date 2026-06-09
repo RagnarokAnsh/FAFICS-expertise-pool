@@ -83,3 +83,62 @@ To test against the server API from your laptop, make sure the server's `WEB_BAS
 
 - **Database:** provide a reachable PostgreSQL 16+ instance and point `DATABASE_URL` at it. On first deploy run `npx prisma migrate deploy` then `npx prisma db seed` (see section A).
 - **Email:** delivery goes through Gmail SMTP (leave `RESEND_API_KEY` unset). For local mail inspection during development, optionally run a standalone [Mailhog](https://github.com/mailhog/MailHog) and set `SMTP_HOST=localhost` / `SMTP_PORT=1025`.
+
+---
+
+## D. Behind a reverse proxy at a sub-path (e.g. `http://HOST/fafics`)
+
+This is the recommended production topology: one origin, nginx in front, API and
+frontend on the same host. Because the API is then **same-origin** with the
+frontend, there is **no CORS** to fight.
+
+**1. Build the frontend with the sub-path and a same-origin API URL.** Both are
+inlined at build time:
+
+```bash
+# example for host 43.204.47.253 served under /fafics
+export NEXT_PUBLIC_BASE_PATH=/fafics                       # PowerShell: $env:NEXT_PUBLIC_BASE_PATH="/fafics"
+export NEXT_PUBLIC_API_URL=http://43.204.47.253/fafics/api # PowerShell: $env:NEXT_PUBLIC_API_URL="..."
+npm run build
+```
+
+Then copy `static` + `public` into the standalone output (section B) and run it
+(`node apps/web/server.js`, listens on port 3000).
+
+**2. nginx — proxy both under the sub-path** (the API location must come first):
+
+```nginx
+# API → NestJS on :3001  (strips /fafics, forwards /api/*)
+location /fafics/api/ {
+    proxy_pass http://localhost:3001/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# Frontend → Next standalone on :3000  (keeps the /fafics prefix)
+location /fafics/ {
+    proxy_pass http://localhost:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+**3. API `.env`:** set `WEB_BASE_URL=http://43.204.47.253/fafics` so the magic-link
+emails (endorsement / draft-resume) point at the correct sub-path. Restart the API.
+
+## Common gotchas (what breaks a sub-path deploy)
+
+- **Login shows a CORS error / requests go to `localhost:3001`** → the frontend was
+  built without `NEXT_PUBLIC_API_URL`, so it fell back to the localhost default.
+  Rebuild with the real value; it cannot be changed after the build.
+- **Logo / styles 404** → `standalone` doesn't bundle `public/` or `.next/static`;
+  copy both into the standalone folder (section B), and make sure
+  `NEXT_PUBLIC_BASE_PATH` was set so asset URLs carry the `/fafics` prefix.
+- **Pages 404 under the sub-path** → `NEXT_PUBLIC_BASE_PATH` was not set at build, or
+  nginx strips the `/fafics` prefix before proxying to the Next server (it must keep
+  it — note `proxy_pass http://localhost:3000` with no trailing path).
+- **Always use the server's IP/domain, never `localhost`,** in the two build-time URLs
+  and in `WEB_BASE_URL` — `localhost` only resolves correctly when browsing from the
+  server itself.
