@@ -7,7 +7,20 @@ export const UN_GRADES = [
 ];
 
 export const FAFICS_ROLES = [
-  "President", "Vice-President", "Secretary", "Treasurer", "Committee Chair", "Committee Member", "Other"
+  "President", "Vice-President", "Secretary", "Treasurer", "Committee Chair", "Committee Member", "Working Group Member", "Delegate", "Other"
+];
+
+// FAFICS standing committees / working groups. Researched from public FAFICS
+// council documents (fafics.org) — PENDING confirmation of the authoritative
+// internal list from the client. Used for the FAFICS "Area of Contribution"
+// multi-select (Step 3) and the position/committee preference (Step 4).
+export const FAFICS_COMMITTEES = [
+  "Standing Committee on Pension Issues",
+  "Standing Committee on After-Service Health Insurance & Long-term Care (ASHIL)",
+  "Standing Committee on Membership",
+  "Standing Committee on Communications",
+  "Working Group (ad hoc / technical)",
+  "Other",
 ];
 
 export const AREAS_OF_EXPERTISE = [

@@ -118,7 +118,9 @@ export function ProfileModal({ applicationId, onClose }: { applicationId: string
 
               <Block title="Self-Assessment">
                 <div className="flex flex-col gap-1.5">
-                  {app.expertise?.map((e: any) => (
+                  {app.expertise
+                    ?.filter((e: any) => e.expertiseLevel || e.isPreferred || (e.isCustom && e.otherDescription))
+                    .map((e: any) => (
                     <div key={e.id} className="flex items-center gap-2">
                       <span className="flex-1 text-[12px] text-text">{e.areaLabel}</span>
                       {e.expertiseLevel && (
@@ -129,8 +131,26 @@ export function ProfileModal({ applicationId, onClose }: { applicationId: string
                       {e.isPreferred && <span className="text-[13px] text-gold" title="Preferred area">★</span>}
                     </div>
                   ))}
+                  {!app.expertise?.some((e: any) => e.expertiseLevel || e.isPreferred || (e.isCustom && e.otherDescription)) && (
+                    <span className="text-[12px] text-text-muted">No expertise areas rated.</span>
+                  )}
                 </div>
               </Block>
+
+              {(app.preferredCommittees?.length > 0 || app.positionPreferenceRationale) && (
+                <Block title="Position / Committee Preference" className="mt-4">
+                  {app.preferredCommittees?.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {app.preferredCommittees.map((c: string) => (
+                        <span key={c} className="rounded-[10px] bg-navy-light px-2 py-0.5 text-[11px] font-medium text-navy-mid">{c}</span>
+                      ))}
+                    </div>
+                  )}
+                  {app.positionPreferenceRationale && (
+                    <p className="text-[12.5px] leading-snug text-text">{app.positionPreferenceRationale}</p>
+                  )}
+                </Block>
+              )}
 
               {app.status === 'approved' && (
                 <div className="mt-3 rounded-lg border border-[#c0dd97] bg-[#eaf3de] px-3.5 py-2.5 text-[12px] text-success">

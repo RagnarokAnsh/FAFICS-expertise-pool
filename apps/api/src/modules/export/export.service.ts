@@ -224,6 +224,8 @@ export class ExportService {
       ['Endorsed At', app.endorsedAt ? this.formatDate(app.endorsedAt) : 'N/A'],
       ['Approved At', app.approvedAt ? this.formatDate(app.approvedAt) : 'N/A'],
       ['Expires At', app.expiresAt ? this.formatDate(app.expiresAt) : 'N/A'],
+      ['Preferred Committees', app.preferredCommittees?.join('; ') || ''],
+      ['Preference Rationale', app.positionPreferenceRationale || ''],
       ['President Notes', app.presidentNotes || ''],
       ['Secretary Notes', app.secretaryNotes || ''],
     ];

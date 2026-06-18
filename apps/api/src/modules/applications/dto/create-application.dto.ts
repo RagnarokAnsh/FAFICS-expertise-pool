@@ -100,4 +100,18 @@ export class CreateApplicationDto {
   @IsOptional()
   @IsString()
   localExperienceSummary?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Preferred FAFICS positions / standing committees',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredCommittees?: string[];
+
+  @ApiPropertyOptional({ description: 'Rationale for the position/committee preference' })
+  @IsOptional()
+  @IsString()
+  positionPreferenceRationale?: string;
 }

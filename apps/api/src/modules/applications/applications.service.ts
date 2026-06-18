@@ -309,6 +309,10 @@ export class ApplicationsService {
       if (dto.faficsExperienceSummary !== undefined) updateData.faficsExperienceSummary = dto.faficsExperienceSummary;
       if (dto.localExperienceSummary !== undefined) updateData.localExperienceSummary = dto.localExperienceSummary;
 
+      // Position / committee preference
+      if (dto.preferredCommittees !== undefined) updateData.preferredCommittees = dto.preferredCommittees;
+      if (dto.positionPreferenceRationale !== undefined) updateData.positionPreferenceRationale = dto.positionPreferenceRationale;
+
       // Update the application row
       await tx.application.update({ where: { id }, data: updateData });
 
@@ -750,6 +754,8 @@ export class ApplicationsService {
       nonUnExperienceSummary: rest.nonUnExperienceSummary,
       faficsExperienceSummary: rest.faficsExperienceSummary,
       localExperienceSummary: rest.localExperienceSummary,
+      preferredCommittees: rest.preferredCommittees,
+      positionPreferenceRationale: rest.positionPreferenceRationale,
     };
   }
 

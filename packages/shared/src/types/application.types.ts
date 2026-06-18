@@ -58,6 +58,10 @@ export interface ApplicationDetail {
   faficsExperienceSummary: string | null;
   localExperienceSummary: string | null;
 
+  // Position / committee preference
+  preferredCommittees: string[];
+  positionPreferenceRationale: string | null;
+
   // Review notes
   presidentNotes: string | null;
   secretaryNotes: string | null;

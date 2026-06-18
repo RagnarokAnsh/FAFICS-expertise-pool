@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFormContext, useFieldArray } from 'react-hook-form';
+import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
 import { Card } from '../../ui/Card';
 import { Input, Select } from '../../ui/Field';
 import { Button } from '../../ui/Button';
@@ -32,6 +32,9 @@ export function Step2Education({ onNext, onBack }: StepProps) {
     name: "languages",
   });
 
+  // Track selected languages so a row can't offer one already chosen elsewhere.
+  const watchedLangs = useWatch({ control, name: 'languages' });
+
   // Ensure at least one row exists on mount if empty
   React.useEffect(() => {
     if (eduFields.length === 0) {
@@ -54,11 +57,11 @@ export function Step2Education({ onNext, onBack }: StepProps) {
       <div className="mb-7">
         <h2 className="font-serif text-[22px] font-bold text-navy mb-1">Education & Languages</h2>
         <p className="text-[13.5px] text-text-mid leading-relaxed">
-          List your highest academic qualifications and working languages. To add a qualification, press the <strong>+ Add Qualification</strong> button.
+          List your academic qualifications (college degree and higher) and working languages. To add a qualification, press the <strong>+ Add Qualification</strong> button.
         </p>
       </div>
 
-      <Card title="Educational Qualifications (Highest Degree)">
+      <Card title="Educational Qualifications (College Degree and Higher)">
         {errors.educations?.root?.message && (
           <p className="text-danger text-sm mb-3">{errors.educations.root.message}</p>
         )}
@@ -107,15 +110,27 @@ export function Step2Education({ onNext, onBack }: StepProps) {
           items={langFields}
           onAdd={() => appendLang({ language: '', proficiency: 'working_level', sortOrder: langFields.length + 1 })}
           addLabel="Add Language"
-          renderRow={(field, index, _onRemove) => (
+          renderRow={(field, index, _onRemove) => {
+            // Languages picked in other rows — unavailable to avoid duplicates.
+            const usedElsewhere = (watchedLangs ?? [])
+              .map((l, i) => (i !== index ? l?.language : null))
+              .filter((l): l is string => !!l);
+            return (
             <>
-              <Select 
-                hasError={!!errors.languages?.[index]?.language}
-                {...register(`languages.${index}.language`)}
-              >
-                <option value="">Select language...</option>
-                {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
-              </Select>
+              <div className="flex flex-col gap-1">
+                <Select
+                  hasError={!!errors.languages?.[index]?.language}
+                  {...register(`languages.${index}.language`)}
+                >
+                  <option value="" hidden>Select language...</option>
+                  {LANGUAGES.map(l => (
+                    <option key={l} value={l} disabled={usedElsewhere.includes(l)}>{l}</option>
+                  ))}
+                </Select>
+                {errors.languages?.[index]?.language?.message && (
+                  <span className="text-[11.5px] text-danger">{errors.languages[index]?.language?.message}</span>
+                )}
+              </div>
               <div className="flex gap-2">
                 <Select 
                   className="flex-1"
@@ -130,7 +145,8 @@ export function Step2Education({ onNext, onBack }: StepProps) {
                 )}
               </div>
             </>
-          )}
+            );
+          }}
         />
       </Card>
 

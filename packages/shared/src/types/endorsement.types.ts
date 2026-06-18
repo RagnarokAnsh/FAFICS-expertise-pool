@@ -43,5 +43,7 @@ export interface EndorsementView {
   nonUnExperienceSummary: string | null;
   faficsExperienceSummary: string | null;
   localExperienceSummary: string | null;
+  preferredCommittees: string[];
+  positionPreferenceRationale: string | null;
   submittedAt: string | null;
 }

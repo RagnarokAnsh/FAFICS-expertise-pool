@@ -118,6 +118,8 @@ export class EndorsementService {
       nonUnExperienceSummary: application.nonUnExperienceSummary,
       faficsExperienceSummary: application.faficsExperienceSummary,
       localExperienceSummary: application.localExperienceSummary,
+      preferredCommittees: application.preferredCommittees,
+      positionPreferenceRationale: application.positionPreferenceRationale,
       submittedAt: application.submittedAt ? application.submittedAt.toISOString() : null,
     };
   }

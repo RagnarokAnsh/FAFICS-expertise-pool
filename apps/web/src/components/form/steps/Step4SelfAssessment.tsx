@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
+import { useFormContext, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { Card } from '../../ui/Card';
-import { Input } from '../../ui/Field';
+import { Input, TextArea } from '../../ui/Field';
 import { Button } from '../../ui/Button';
+import { MultiSelect } from '../../ui/MultiSelect';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
 import { FIXED_EXPERTISE_AREAS } from '../../../lib/constants/expertise';
+import { FAFICS_COMMITTEES } from '../../../lib/constants/work';
 
 interface StepProps {
   onNext: () => void;
@@ -30,7 +32,7 @@ export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
     if (initialized.current) return;
     initialized.current = true;
 
-    // Reconcile any saved expertise with the canonical 11 fixed areas so the
+    // Reconcile any saved expertise with the canonical fixed areas so the
     // matrix is ALWAYS rendered in full (per the form structure), with saved
     // levels/preferences overlaid by areaKey and custom "Other" rows kept last.
     const current = getValues('expertise') || [];
@@ -144,20 +146,54 @@ export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
         )}
 
         <div className="mt-4">
-          <Button 
-            type="button" 
-            variant="add" 
-            onClick={() => append({ 
-              areaKey: `custom_${fields.length}`, 
-              areaLabel: '', 
-              isPreferred: false, 
+          <Button
+            type="button"
+            variant="add"
+            onClick={() => append({
+              areaKey: `custom_${fields.length}`,
+              areaLabel: '',
+              isPreferred: false,
               isCustom: true,
-              sortOrder: fields.length + 1 
+              sortOrder: fields.length + 1
             })}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M12 5v14M5 12h14"/></svg>
             Add Other Area
           </Button>
+        </div>
+      </Card>
+
+      <Card title="Position / Committee Preference (Optional)">
+        <p className="text-[13px] text-text-mid leading-relaxed mb-4">
+          If you wish to be considered for a particular FAFICS position or standing committee, indicate your preference(s) below and briefly describe the rationale and what you can offer. This helps committee chairs identify suitable members from the pool.
+        </p>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-[5px]">
+            <label className="text-[12px] font-semibold text-text tracking-[0.02em] uppercase">
+              Preferred Position(s) / Committee(s)
+            </label>
+            <Controller
+              control={control}
+              name="preferredCommittees"
+              render={({ field }) => (
+                <MultiSelect
+                  options={FAFICS_COMMITTEES}
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  placeholder="Select committee(s)…"
+                />
+              )}
+            />
+          </div>
+          <div className="flex flex-col gap-[5px]">
+            <label className="text-[12px] font-semibold text-text tracking-[0.02em] uppercase">
+              Rationale / What You Offer
+            </label>
+            <TextArea
+              placeholder="Briefly explain why you are interested and what relevant skills or experience you bring…"
+              {...register('positionPreferenceRationale')}
+            />
+          </div>
         </div>
       </Card>
 

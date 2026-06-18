@@ -172,6 +172,10 @@ export class AdminService {
       faficsExperienceSummary: app.faficsExperienceSummary,
       localExperienceSummary: app.localExperienceSummary,
 
+      // Position / committee preference
+      preferredCommittees: app.preferredCommittees,
+      positionPreferenceRationale: app.positionPreferenceRationale,
+
       // Review notes
       presidentNotes: app.presidentNotes,
       secretaryNotes: app.secretaryNotes,

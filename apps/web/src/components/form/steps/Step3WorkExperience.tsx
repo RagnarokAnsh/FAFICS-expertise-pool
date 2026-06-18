@@ -1,11 +1,17 @@
 import React from 'react';
-import { useFormContext, useFieldArray } from 'react-hook-form';
+import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import { Card } from '../../ui/Card';
 import { Input, Select, TextArea } from '../../ui/Field';
 import { Button } from '../../ui/Button';
 import { DynamicRowList } from '../../ui/DynamicRowList';
+import { MultiSelect } from '../../ui/MultiSelect';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
-import { UN_AGENCIES, UN_GRADES, FAFICS_ROLES, AREAS_OF_EXPERTISE } from '../../../lib/constants/work';
+import { UN_AGENCIES, UN_GRADES, FAFICS_ROLES, FAFICS_COMMITTEES, AREAS_OF_EXPERTISE } from '../../../lib/constants/work';
+
+// FAFICS "Area of Contribution" stores multiple committees as a delimited
+// string in the existing single column. '; ' is safe — committee names contain
+// no semicolons.
+const COMMITTEE_SEP = '; ';
 
 interface StepProps {
   onNext: () => void;
@@ -67,21 +73,21 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
           renderRow={(field, index, _onRemove) => (
             <>
               <Select hasError={!!errors.unExperiences?.[index]?.agency} {...register(`unExperiences.${index}.agency`)}>
-                <option value="">Agency...</option>
+                <option value="" hidden>Agency...</option>
                 {UN_AGENCIES.map(a => <option key={a} value={a}>{a}</option>)}
               </Select>
               <Input placeholder="Position Title" hasError={!!errors.unExperiences?.[index]?.positionTitle} {...register(`unExperiences.${index}.positionTitle`)} />
               <Select hasError={!!errors.unExperiences?.[index]?.grade} {...register(`unExperiences.${index}.grade`)}>
-                <option value="">Grade</option>
+                <option value="" hidden>Grade</option>
                 {UN_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
               </Select>
               <Select hasError={!!errors.unExperiences?.[index]?.areaOfExpertise} {...register(`unExperiences.${index}.areaOfExpertise`)}>
-                <option value="">Area...</option>
+                <option value="" hidden>Area...</option>
                 {AREAS_OF_EXPERTISE.map(a => <option key={a} value={a}>{a}</option>)}
               </Select>
               <div className="flex gap-2">
                 <Select className="flex-1" hasError={!!errors.unExperiences?.[index]?.durationYears} {...register(`unExperiences.${index}.durationYears`, { setValueAs: (v: string) => v === '' ? undefined : parseFloat(v) })}>
-                  <option value="">Years</option>
+                  <option value="" hidden>Years</option>
                   {DURATIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                 </Select>
                 {unFields.length > 1 && <Button type="button" variant="remove" onClick={() => removeUn(index)}>×</Button>}
@@ -115,12 +121,12 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
               <Input placeholder="Organization" {...register(`nonUnExperiences.${index}.organization`)} />
               <Input placeholder="Position Title" {...register(`nonUnExperiences.${index}.positionTitle`)} />
               <Select {...register(`nonUnExperiences.${index}.areaOfExpertise`)}>
-                <option value="">Area...</option>
+                <option value="" hidden>Area...</option>
                 {AREAS_OF_EXPERTISE.map(a => <option key={a} value={a}>{a}</option>)}
               </Select>
               <div className="flex gap-2">
                 <Select className="flex-1" {...register(`nonUnExperiences.${index}.durationYears`, { setValueAs: (v: string) => v === '' ? undefined : parseFloat(v) })}>
-                  <option value="">Years</option>
+                  <option value="" hidden>Years</option>
                   {DURATIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                 </Select>
                 <Button type="button" variant="remove" onClick={() => removeNonUn(index)}>×</Button>
@@ -151,16 +157,24 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
           renderRow={(field, index, _onRemove) => (
             <>
               <Select {...register(`faficsExperiences.${index}.positionHeld`)}>
-                <option value="">Position...</option>
+                <option value="" hidden>Position...</option>
                 {FAFICS_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </Select>
-              <Select {...register(`faficsExperiences.${index}.areaOfContribution`)}>
-                <option value="">Area...</option>
-                {AREAS_OF_EXPERTISE.map(a => <option key={a} value={a}>{a}</option>)}
-              </Select>
+              <Controller
+                control={control}
+                name={`faficsExperiences.${index}.areaOfContribution`}
+                render={({ field }) => (
+                  <MultiSelect
+                    options={FAFICS_COMMITTEES}
+                    value={field.value ? field.value.split(COMMITTEE_SEP).filter(Boolean) : []}
+                    onChange={(vals) => field.onChange(vals.join(COMMITTEE_SEP))}
+                    placeholder="Committee(s)…"
+                  />
+                )}
+              />
               <div className="flex gap-2">
                 <Select className="flex-1" {...register(`faficsExperiences.${index}.durationYears`, { setValueAs: (v: string) => v === '' ? undefined : parseFloat(v) })}>
-                  <option value="">Years</option>
+                  <option value="" hidden>Years</option>
                   {DURATIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                 </Select>
                 <Button type="button" variant="remove" onClick={() => removeFafics(index)}>×</Button>
@@ -192,12 +206,12 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
             <>
               <Input placeholder="Position Held" {...register(`localExperiences.${index}.positionHeld`)} />
               <Select {...register(`localExperiences.${index}.areaOfContribution`)}>
-                <option value="">Area...</option>
+                <option value="" hidden>Area...</option>
                 {AREAS_OF_EXPERTISE.map(a => <option key={a} value={a}>{a}</option>)}
               </Select>
               <div className="flex gap-2">
                 <Select className="flex-1" {...register(`localExperiences.${index}.durationYears`, { setValueAs: (v: string) => v === '' ? undefined : parseFloat(v) })}>
-                  <option value="">Years</option>
+                  <option value="" hidden>Years</option>
                   {DURATIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
                 </Select>
                 <Button type="button" variant="remove" onClick={() => removeLocal(index)}>×</Button>

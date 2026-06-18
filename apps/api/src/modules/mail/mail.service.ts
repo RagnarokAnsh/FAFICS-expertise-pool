@@ -109,6 +109,7 @@ export class MailService {
       associationName: app.associationName,
       submissionDate: app.submittedAt!,
       magicLinkUrl,
+      preferredCommittees: app.preferredCommittees,
     });
     return this.sendEmail(app.presidentEmail, subject, html);
   }
@@ -206,6 +207,7 @@ export class MailService {
       expiryDate: app.expiresAt!,
       expertAreas,
       preferredAreas,
+      preferredCommittees: app.preferredCommittees,
     });
     return this.sendEmail(app.email, subject, html);
   }

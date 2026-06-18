@@ -205,6 +205,11 @@ model Application {
   faficsExperienceSummary String? @map("fafics_experience_summary")
   localExperienceSummary  String? @map("local_experience_summary")
 
+  // Position / committee preference (optional, client feedback) — lets an
+  // applicant signal interest so committee chairs can find them in the pool.
+  preferredCommittees          String[] @default([]) @map("preferred_committees")
+  positionPreferenceRationale  String?              @map("position_preference_rationale")
+
   // Consent
   consentData     Boolean   @default(false) @map("consent_data")
   consentAccurate Boolean   @default(false) @map("consent_accurate")
@@ -349,7 +354,7 @@ model ApplicationLocalExperience {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPERTISE SELF-ASSESSMENT
 // No @@unique on (applicationId, areaKey) — a partial unique index in SQL
-// handles the 11 fixed areas. isCustom rows are always create, never upsert.
+// handles the fixed areas. isCustom rows are always create, never upsert.
 // ─────────────────────────────────────────────────────────────────────────────
 
 model ApplicationExpertise {

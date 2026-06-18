@@ -234,38 +234,68 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </Card>
 
       <Card title="Expertise Assessment">
-        <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[360px] text-left border-collapse">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="py-2 text-[12px] font-semibold text-navy uppercase">Area</th>
-              <th className="py-2 text-[12px] font-semibold text-navy uppercase">Level</th>
-            </tr>
-          </thead>
-          <tbody>
-            {application.expertise.map((exp: any, idx: number) => (
-              <tr key={idx} className="border-b border-border last:border-0">
-                <td className="py-3 text-[14px] text-text-mid">
-                  <span className="inline-flex flex-wrap items-center gap-2">
-                    {exp.areaLabel}
-                    {exp.isPreferred && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-gold-light px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gold">
-                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L10 14.77l-5.2 2.73.99-5.79-4.21-4.1 5.82-.85L10 1.5z" />
-                        </svg>
-                        Preferred
+        {(() => {
+          // Only show areas the applicant actually rated, marked preferred, or
+          // added as a custom area — unrated fixed areas are persisted as a full
+          // matrix but carry no information on a read-only review screen.
+          const rated = application.expertise.filter(
+            (exp: any) => exp.expertiseLevel || exp.isPreferred || (exp.isCustom && exp.otherDescription),
+          );
+          if (rated.length === 0) {
+            return <p className="text-sm text-text-light">No expertise areas rated.</p>;
+          }
+          return (
+            <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[360px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="py-2 text-[12px] font-semibold text-navy uppercase">Area</th>
+                  <th className="py-2 text-[12px] font-semibold text-navy uppercase">Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rated.map((exp: any, idx: number) => (
+                  <tr key={idx} className="border-b border-border last:border-0">
+                    <td className="py-3 text-[14px] text-text-mid">
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        {exp.areaLabel}
+                        {exp.isPreferred && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gold-light px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gold">
+                            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L10 14.77l-5.2 2.73.99-5.79-4.21-4.1 5.82-.85L10 1.5z" />
+                            </svg>
+                            Preferred
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                  {exp.isCustom && exp.otherDescription && (
-                    <span className="block text-[12px] text-text-light mt-0.5">{exp.otherDescription}</span>
-                  )}
-                </td>
-                <td className="py-3 text-[14px] text-text-mid capitalize">{exp.expertiseLevel || '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
+                      {exp.isCustom && exp.otherDescription && (
+                        <span className="block text-[12px] text-text-light mt-0.5">{exp.otherDescription}</span>
+                      )}
+                    </td>
+                    <td className="py-3 text-[14px] text-text-mid capitalize">{exp.expertiseLevel || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+          );
+        })()}
       </Card>
+
+      {(application.preferredCommittees?.length > 0 || application.positionPreferenceRationale) && (
+        <Card title="Position / Committee Preference">
+          {application.preferredCommittees?.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {application.preferredCommittees.map((c: string, idx: number) => (
+                <span key={idx} className="inline-flex items-center rounded-full bg-navy-light px-3 py-1 text-[12.5px] font-medium text-navy-mid">{c}</span>
+              ))}
+            </div>
+          )}
+          {application.positionPreferenceRationale && (
+            <div className="bg-gray-50 p-4 rounded text-sm text-text-mid italic">
+              "{application.positionPreferenceRationale}"
+            </div>
+          )}
+        </Card>
+      )}
 
       {!isAdminView && token && (
         <div className="mt-12">

@@ -202,6 +202,10 @@ export const expertiseSchema = z.object({
 
 export const step4Schema = z.object({
   expertise: z.array(expertiseSchema).min(1, 'Please assess your expertise'),
+  // Optional position/committee preference (client feedback). Lets an applicant
+  // signal interest so committee chairs can find them in the pool.
+  preferredCommittees: z.array(z.string()).optional().default([]),
+  positionPreferenceRationale: z.string().nullish(),
 });
 
 export const step5Schema = z.object({
@@ -213,5 +217,28 @@ export const step5Schema = z.object({
   }),
 });
 
-export const applicationSchema = z.object({}).merge(step1Schema).merge(step2Schema).merge(step3Schema).merge(step4Schema).merge(step5Schema);
+export const applicationSchema = z
+  .object({})
+  .merge(step1Schema)
+  .merge(step2Schema)
+  .merge(step3Schema)
+  .merge(step4Schema)
+  .merge(step5Schema)
+  .superRefine((data, ctx) => {
+    // A language may only be listed once.
+    const seen = new Map<string, number>();
+    (data.languages ?? []).forEach((lang, idx) => {
+      const key = lang.language?.trim().toLowerCase();
+      if (!key) return;
+      if (seen.has(key)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['languages', idx, 'language'],
+          message: 'This language is already selected',
+        });
+      } else {
+        seen.set(key, idx);
+      }
+    });
+  });
 export type ApplicationData = z.infer<typeof applicationSchema>;
