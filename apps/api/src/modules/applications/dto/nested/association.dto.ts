@@ -8,7 +8,8 @@ const EmptyToUndefined = () =>
 
 /**
  * Association details captured at submission time.
- * President email and phone are mandatory — used for the endorsement magic link.
+ * President email is required (used for the endorsement magic link); president
+ * phone is optional (client feedback).
  */
 export class AssociationDto {
   @ApiPropertyOptional({ example: '00000000-0000-0000-0000-000000000001' })
@@ -38,9 +39,10 @@ export class AssociationDto {
   @IsOptional()
   presidentEmail?: string;
 
-  @ApiProperty({ example: '+41 22 917 5678' })
-  @IsString()
+  @ApiPropertyOptional({ example: '+41 22 917 5678' })
+  @EmptyToUndefined()
   @IsOptional()
+  @IsString()
   presidentPhone?: string;
 
   @ApiPropertyOptional({ example: 'John Smith' })

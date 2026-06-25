@@ -118,7 +118,13 @@ export const associationSchema = z.object({
   associationCountry: z.string().min(1, 'Association Country is required'),
   associationGeneralEmail: z.union([z.string().email('Invalid email'), z.literal('')]).nullish(),
   presidentEmail: z.string().min(1, 'President Email is required').email('Invalid email'),
-  presidentPhone: phoneNumber('President Phone'),
+  // Optional (client feedback): the president's phone may be hard to obtain, so
+  // it is no longer mandatory. Still validated as a phone number when provided.
+  presidentPhone: z
+    .string()
+    .nullish()
+    .refine((v) => !v || /^\+\d/.test(v.trim()), { message: 'Select a country code' })
+    .refine((v) => !v || v.replace(/\D/g, '').length >= 8, { message: 'Enter a valid phone number' }),
   associateMemberName: z.string().nullish(),
   associateMemberCountry: z.string().nullish(),
 });
@@ -167,6 +173,8 @@ export const nonUnExperienceSchema = z.object({
 export const faficsExperienceSchema = z.object({
   positionHeld: z.string().min(1, 'Position Held is required'),
   areaOfContribution: z.string().nullish(),
+  // Free text shown when "Other" is selected in the committee multi-select.
+  areaOfContributionOther: z.string().nullish(),
   durationYears: z.number().nullish(),
   sortOrder: z.number().default(1),
 });
@@ -205,7 +213,11 @@ export const step4Schema = z.object({
   // Optional position/committee preference (client feedback). Lets an applicant
   // signal interest so committee chairs can find them in the pool.
   preferredCommittees: z.array(z.string()).optional().default([]),
+  // Free text shown when "Other" is selected in the preference multi-select.
+  preferredCommitteesOther: z.string().nullish(),
   positionPreferenceRationale: z.string().nullish(),
+  // Core competencies — applicant selects up to 5 (client feedback).
+  competencies: z.array(z.string()).optional().default([]),
 });
 
 export const step5Schema = z.object({

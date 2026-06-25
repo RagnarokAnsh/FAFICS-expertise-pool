@@ -6,7 +6,7 @@ import { Button } from '../../ui/Button';
 import { DynamicRowList } from '../../ui/DynamicRowList';
 import { MultiSelect } from '../../ui/MultiSelect';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
-import { UN_AGENCIES, UN_GRADES, FAFICS_ROLES, FAFICS_COMMITTEES, AREAS_OF_EXPERTISE } from '../../../lib/constants/work';
+import { UN_AGENCIES, UN_GRADES, FAFICS_ROLES, FAFICS_COMMITTEES, COMMITTEE_OTHER, AREAS_OF_EXPERTISE } from '../../../lib/constants/work';
 
 // FAFICS "Area of Contribution" stores multiple committees as a delimited
 // string in the existing single column. '; ' is safe — committee names contain
@@ -29,7 +29,7 @@ const DURATIONS = [
 ];
 
 export function Step3WorkExperience({ onNext, onBack }: StepProps) {
-  const { register, control, formState: { errors }, trigger } = useFormContext<ApplicationData>();
+  const { register, control, setValue, formState: { errors }, trigger } = useFormContext<ApplicationData>();
   
   const { fields: unFields, append: appendUn, remove: removeUn } = useFieldArray({ control, name: "unExperiences" });
   const { fields: nonUnFields, append: appendNonUn, remove: removeNonUn } = useFieldArray({ control, name: "nonUnExperiences" });
@@ -163,14 +163,33 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
               <Controller
                 control={control}
                 name={`faficsExperiences.${index}.areaOfContribution`}
-                render={({ field }) => (
-                  <MultiSelect
-                    options={FAFICS_COMMITTEES}
-                    value={field.value ? field.value.split(COMMITTEE_SEP).filter(Boolean) : []}
-                    onChange={(vals) => field.onChange(vals.join(COMMITTEE_SEP))}
-                    placeholder="Committee(s)…"
-                  />
-                )}
+                render={({ field }) => {
+                  const selected = field.value ? field.value.split(COMMITTEE_SEP).filter(Boolean) : [];
+                  const showOther = selected.includes(COMMITTEE_OTHER);
+                  return (
+                    <div className="flex flex-col gap-1.5">
+                      <MultiSelect
+                        options={FAFICS_COMMITTEES}
+                        value={selected}
+                        onChange={(vals) => {
+                          field.onChange(vals.join(COMMITTEE_SEP));
+                          // Clear the companion free text when "Other" is removed
+                          // so a stale value can't linger and re-surface on review.
+                          if (!vals.includes(COMMITTEE_OTHER)) {
+                            setValue(`faficsExperiences.${index}.areaOfContributionOther`, '');
+                          }
+                        }}
+                        placeholder="Committee(s)…"
+                      />
+                      {showOther && (
+                        <Input
+                          placeholder="Please specify other committee / contribution…"
+                          {...register(`faficsExperiences.${index}.areaOfContributionOther`)}
+                        />
+                      )}
+                    </div>
+                  );
+                }}
               />
               <div className="flex gap-2">
                 <Select className="flex-1" {...register(`faficsExperiences.${index}.durationYears`, { setValueAs: (v: string) => v === '' ? undefined : parseFloat(v) })}>

@@ -174,7 +174,11 @@ export class AdminService {
 
       // Position / committee preference
       preferredCommittees: app.preferredCommittees,
+      preferredCommitteesOther: app.preferredCommitteesOther,
       positionPreferenceRationale: app.positionPreferenceRationale,
+
+      // Core competencies
+      competencies: app.competencies,
 
       // Review notes
       presidentNotes: app.presidentNotes,
@@ -229,6 +233,7 @@ export class AdminService {
         sortOrder: e.sortOrder,
         positionHeld: e.positionHeld,
         areaOfContribution: e.areaOfContribution,
+        areaOfContributionOther: e.areaOfContributionOther,
         durationYears: e.durationYears ? Number(e.durationYears) : null,
       })),
       localExperiences: app.localExperiences.map((e) => ({

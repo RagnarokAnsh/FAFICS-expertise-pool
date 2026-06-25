@@ -208,7 +208,12 @@ model Application {
   // Position / committee preference (optional, client feedback) — lets an
   // applicant signal interest so committee chairs can find them in the pool.
   preferredCommittees          String[] @default([]) @map("preferred_committees")
+  // Free text when "Other" is chosen in the preference multi-select.
+  preferredCommitteesOther     String?              @map("preferred_committees_other")
   positionPreferenceRationale  String?              @map("position_preference_rationale")
+
+  // Top-5 core competencies (client feedback).
+  competencies                 String[] @default([]) @map("competencies")
 
   // Consent
   consentData     Boolean   @default(false) @map("consent_data")
@@ -328,7 +333,11 @@ model ApplicationFaficsExperience {
   applicationId      String   @db.Uuid                  @map("application_id")
   sortOrder          Int      @default(1) @db.SmallInt  @map("sort_order")
   positionHeld       String   @db.VarChar(255)           @map("position_held")
-  areaOfContribution String?  @db.VarChar(100)           @map("area_of_contribution")
+  // Holds one or more committees joined with '; ' (multi-select) — widened to
+  // Text since flattened FAFICS committee names can exceed 100 chars.
+  areaOfContribution String?                             @map("area_of_contribution")
+  // Free text when "Other" is chosen in the committee multi-select.
+  areaOfContributionOther String?                        @map("area_of_contribution_other")
   durationYears      Decimal? @db.Decimal(4, 1)          @map("duration_years")
   createdAt          DateTime @default(now())            @map("created_at") @db.Timestamptz()
 

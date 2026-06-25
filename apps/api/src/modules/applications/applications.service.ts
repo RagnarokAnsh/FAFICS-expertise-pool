@@ -311,7 +311,9 @@ export class ApplicationsService {
 
       // Position / committee preference
       if (dto.preferredCommittees !== undefined) updateData.preferredCommittees = dto.preferredCommittees;
+      if (dto.preferredCommitteesOther !== undefined) updateData.preferredCommitteesOther = dto.preferredCommitteesOther;
       if (dto.positionPreferenceRationale !== undefined) updateData.positionPreferenceRationale = dto.positionPreferenceRationale;
+      if (dto.competencies !== undefined) updateData.competencies = dto.competencies;
 
       // Update the application row
       await tx.application.update({ where: { id }, data: updateData });
@@ -377,6 +379,7 @@ export class ApplicationsService {
             applicationId: id,
             positionHeld: f.positionHeld ?? '',
             areaOfContribution: f.areaOfContribution ?? '',
+            areaOfContributionOther: f.areaOfContributionOther ?? null,
             durationYears: f.durationYears != null ? new Prisma.Decimal(f.durationYears) : null,
             sortOrder: f.sortOrder ?? i + 1,
           })),
@@ -472,9 +475,9 @@ export class ApplicationsService {
         'Date of birth and separation date are required.',
       );
     }
-    if (!application.presidentEmail || !application.presidentPhone) {
+    if (!application.presidentEmail) {
       throw new BadRequestException(
-        'Association president email and phone are required.',
+        'Association president email is required.',
       );
     }
     if (application.educations.length === 0) {
@@ -755,7 +758,9 @@ export class ApplicationsService {
       faficsExperienceSummary: rest.faficsExperienceSummary,
       localExperienceSummary: rest.localExperienceSummary,
       preferredCommittees: rest.preferredCommittees,
+      preferredCommitteesOther: rest.preferredCommitteesOther,
       positionPreferenceRationale: rest.positionPreferenceRationale,
+      competencies: rest.competencies,
     };
   }
 

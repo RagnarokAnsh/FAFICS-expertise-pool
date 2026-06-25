@@ -94,6 +94,7 @@ export class EndorsementService {
         sortOrder: e.sortOrder,
         positionHeld: e.positionHeld,
         areaOfContribution: e.areaOfContribution,
+        areaOfContributionOther: e.areaOfContributionOther,
         durationYears: e.durationYears ? Number(e.durationYears) : null,
       })),
       localExperiences: application.localExperiences.map(e => ({
@@ -119,7 +120,9 @@ export class EndorsementService {
       faficsExperienceSummary: application.faficsExperienceSummary,
       localExperienceSummary: application.localExperienceSummary,
       preferredCommittees: application.preferredCommittees,
+      preferredCommitteesOther: application.preferredCommitteesOther,
       positionPreferenceRationale: application.positionPreferenceRationale,
+      competencies: application.competencies,
       submittedAt: application.submittedAt ? application.submittedAt.toISOString() : null,
     };
   }

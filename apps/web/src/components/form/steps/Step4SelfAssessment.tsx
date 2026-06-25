@@ -6,7 +6,7 @@ import { Button } from '../../ui/Button';
 import { MultiSelect } from '../../ui/MultiSelect';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
 import { FIXED_EXPERTISE_AREAS } from '../../../lib/constants/expertise';
-import { FAFICS_COMMITTEES } from '../../../lib/constants/work';
+import { FAFICS_COMMITTEES, COMMITTEE_OTHER, COMPETENCIES, MAX_COMPETENCIES } from '../../../lib/constants/work';
 
 interface StepProps {
   onNext: () => void;
@@ -14,7 +14,7 @@ interface StepProps {
 }
 
 export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
-  const { register, control, formState: { errors }, trigger, getValues } = useFormContext<ApplicationData>();
+  const { register, control, setValue, formState: { errors }, trigger, getValues } = useFormContext<ApplicationData>();
   
   const { fields, append, remove, replace } = useFieldArray({
     control,
@@ -163,6 +163,25 @@ export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
         </div>
       </Card>
 
+      <Card title="Competencies — Top 5 Core Strengths">
+        <p className="text-[13px] text-text-mid leading-relaxed mb-4">
+          Select up to <strong>five</strong> competencies that represent your core strengths.
+        </p>
+        <Controller
+          control={control}
+          name="competencies"
+          render={({ field }) => (
+            <MultiSelect
+              options={COMPETENCIES}
+              value={field.value ?? []}
+              onChange={field.onChange}
+              max={MAX_COMPETENCIES}
+              placeholder="Select your core strengths…"
+            />
+          )}
+        />
+      </Card>
+
       <Card title="Position / Committee Preference (Optional)">
         <p className="text-[13px] text-text-mid leading-relaxed mb-4">
           If you wish to be considered for a particular FAFICS position or standing committee, indicate your preference(s) below and briefly describe the rationale and what you can offer. This helps committee chairs identify suitable members from the pool.
@@ -175,14 +194,32 @@ export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
             <Controller
               control={control}
               name="preferredCommittees"
-              render={({ field }) => (
-                <MultiSelect
-                  options={FAFICS_COMMITTEES}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  placeholder="Select committee(s)…"
-                />
-              )}
+              render={({ field }) => {
+                const selected = field.value ?? [];
+                const showOther = selected.includes(COMMITTEE_OTHER);
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <MultiSelect
+                      options={FAFICS_COMMITTEES}
+                      value={selected}
+                      onChange={(vals) => {
+                        field.onChange(vals);
+                        // Clear the companion free text when "Other" is removed.
+                        if (!vals.includes(COMMITTEE_OTHER)) {
+                          setValue('preferredCommitteesOther', '');
+                        }
+                      }}
+                      placeholder="Select committee(s)…"
+                    />
+                    {showOther && (
+                      <Input
+                        placeholder="Please specify other position / committee…"
+                        {...register('preferredCommitteesOther')}
+                      />
+                    )}
+                  </div>
+                );
+              }}
             />
           </div>
           <div className="flex flex-col gap-[5px]">

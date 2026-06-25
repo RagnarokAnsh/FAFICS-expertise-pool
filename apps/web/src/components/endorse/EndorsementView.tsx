@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { EndorseActions } from './EndorseActions';
+import { COMMITTEE_OTHER } from '../../lib/constants/work';
 
 interface EndorsementViewProps {
   application: any;
@@ -187,7 +188,26 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
               {application.faficsExperiences.map((exp: any, idx: number) => (
                 <tr key={idx} className="border-b border-border last:border-0">
                   <td className="py-3 text-[14px] text-text-mid">{exp.positionHeld}</td>
-                  <td className="py-3 text-[14px] text-text-mid">{exp.areaOfContribution || '-'}</td>
+                  <td className="py-3 text-[14px] text-text-mid">
+                    {(() => {
+                      // Drop the "Other" sentinel; show the specified free text instead.
+                      const parts = (exp.areaOfContribution || '')
+                        .split('; ')
+                        .filter((c: string) => c && c !== COMMITTEE_OTHER);
+                      if (exp.areaOfContributionOther) parts.push(exp.areaOfContributionOther);
+                      if (parts.length === 0) return '-';
+                      return (
+                        <ul className="flex flex-col gap-1">
+                          {parts.map((c: string, i: number) => (
+                            <li key={i} className="flex items-start gap-1.5">
+                              <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-navy-mid" />
+                              <span>{c}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    })()}
+                  </td>
                   <td className="py-3 text-[14px] text-text-mid">{exp.durationYears || '-'}</td>
                 </tr>
               ))}
@@ -280,22 +300,38 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
         })()}
       </Card>
 
-      {(application.preferredCommittees?.length > 0 || application.positionPreferenceRationale) && (
-        <Card title="Position / Committee Preference">
-          {application.preferredCommittees?.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {application.preferredCommittees.map((c: string, idx: number) => (
-                <span key={idx} className="inline-flex items-center rounded-full bg-navy-light px-3 py-1 text-[12.5px] font-medium text-navy-mid">{c}</span>
-              ))}
-            </div>
-          )}
-          {application.positionPreferenceRationale && (
-            <div className="bg-gray-50 p-4 rounded text-sm text-text-mid italic">
-              "{application.positionPreferenceRationale}"
-            </div>
-          )}
+      {application.competencies?.length > 0 && (
+        <Card title="Core Competencies">
+          <div className="flex flex-wrap gap-2">
+            {application.competencies.map((c: string, idx: number) => (
+              <span key={idx} className="inline-flex items-center rounded-full bg-gold-light px-3 py-1 text-[12.5px] font-medium text-gold">{c}</span>
+            ))}
+          </div>
         </Card>
       )}
+
+      {(() => {
+        // Drop the "Other" sentinel; show the specified free text instead.
+        const committees = (application.preferredCommittees ?? []).filter((c: string) => c !== COMMITTEE_OTHER);
+        if (application.preferredCommitteesOther) committees.push(application.preferredCommitteesOther);
+        if (committees.length === 0 && !application.positionPreferenceRationale) return null;
+        return (
+          <Card title="Position / Committee Preference">
+            {committees.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {committees.map((c: string, idx: number) => (
+                  <span key={idx} className="inline-flex items-center rounded-full bg-navy-light px-3 py-1 text-[12.5px] font-medium text-navy-mid">{c}</span>
+                ))}
+              </div>
+            )}
+            {application.positionPreferenceRationale && (
+              <div className="bg-gray-50 p-4 rounded text-sm text-text-mid italic">
+                "{application.positionPreferenceRationale}"
+              </div>
+            )}
+          </Card>
+        );
+      })()}
 
       {!isAdminView && token && (
         <div className="mt-12">

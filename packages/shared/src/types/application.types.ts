@@ -60,7 +60,11 @@ export interface ApplicationDetail {
 
   // Position / committee preference
   preferredCommittees: string[];
+  preferredCommitteesOther: string | null;
   positionPreferenceRationale: string | null;
+
+  // Core competencies (top 5)
+  competencies: string[];
 
   // Review notes
   presidentNotes: string | null;
@@ -129,6 +133,7 @@ export interface FaficsExperienceRow {
   sortOrder: number;
   positionHeld: string;
   areaOfContribution: string | null;
+  areaOfContributionOther: string | null;
   durationYears: number | null;
 }
 

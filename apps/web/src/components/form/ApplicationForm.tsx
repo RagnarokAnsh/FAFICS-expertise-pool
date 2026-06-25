@@ -154,7 +154,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
         <div className="max-w-[1020px] mx-auto text-center">
           <div className="text-[12px] uppercase tracking-[0.1em] text-gold font-bold mb-3">Volunteer Application</div>
           <h1 className="font-serif text-[28px] md:text-[36px] font-bold mb-4 leading-tight">
-            Federation's Expertise Pool<br />Application Form
+          The FAFICS Expertise Pool
           </h1>
           <p className="text-[14px] md:text-[15px] text-white/80 max-w-[700px] leading-relaxed text-center mx-auto">
             For all former International Civil Servants wishing to volunteer their time and expertise for positions and functions within the Federation.

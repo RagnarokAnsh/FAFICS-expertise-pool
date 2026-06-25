@@ -57,20 +57,19 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
 
       <div className="bg-gold-light border-[1.5px] border-gold rounded-theme px-[26px] py-[22px] mb-7 mt-7">
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          <strong>FAFICS and the Expertise Pool</strong>
+          <strong>The FAFICS Expertise Pool</strong>
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
           Members of FAFICS Associations can participate in the work of FAFICS through service in:
         </p>
         <ul className="list-disc pl-5 mb-2.5 text-[13.5px] text-text leading-[1.8]">
-          <li>The elected positions of President, Vice-President, Secretary, Treasurer.</li>
           <li>FAFICS Standing Committees in the areas of Pensions, After Service Health and Life Insurance, Communications and Membership, including serving as Chairs/Co-Chairs of these Committees, who are nominated by the President and appointed by the Council; on the United Nations Pension Board as part of the FAFICS delegation or on one of the Pension Board’s subsidiary bodies/working groups.</li>
         </ul>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
           The FAFICS Rules of Procedure adopted by the FAFICS Council, established an Expertise Pool to serve as a repository of Association members interested in serving in these positions.
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          Selection for non-elected positions is managed through the Expertise Pool. If you would wish to serve in a non-elected position, please complete and submit the Expertise Pool Form through your Local Association President or designated official within your Association, for inclusion in the Expertise Pool.
+          Selection for these non-elected positions is managed through the Expertise Pool. If you would wish to serve in a non-elected position, please complete and submit the Expertise Pool Form through your Local Association President or designated official within your Association, for inclusion in the Expertise Pool.
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
           Individuals may remain in the Expertise Pool for a period of three years, after which they will be contacted to ascertain their continued interest and availability to serve in FAFICS.
@@ -215,7 +214,7 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
           <Field label="Email of Association President" required hint="Used to route your application for endorsement" error={errors.association?.presidentEmail?.message}>
             <Input type="email" placeholder="president@association.org" hasError={!!errors.association?.presidentEmail} {...register('association.presidentEmail')} />
           </Field>
-          <Field label="Phone of Association President" required hint="Select country code, then enter number" error={errors.association?.presidentPhone?.message}>
+          <Field label="Phone of Association President" hint="Optional — select country code, then enter number" error={errors.association?.presidentPhone?.message}>
             <Controller
               control={control}
               name="association.presidentPhone"

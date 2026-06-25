@@ -8,6 +8,8 @@ interface MultiSelectProps {
   placeholder?: string;
   hasError?: boolean;
   className?: string;
+  /** Optional cap on the number of selections (e.g. "top 5"). */
+  max?: number;
 }
 
 /**
@@ -25,7 +27,9 @@ export function MultiSelect({
   placeholder = 'Select…',
   hasError,
   className,
+  max,
 }: MultiSelectProps) {
+  const atMax = max != null && value.length >= max;
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const [coords, setCoords] = React.useState<{ top: number; left: number; width: number } | null>(null);
@@ -61,7 +65,9 @@ export function MultiSelect({
   }, [open, updateCoords]);
 
   const toggle = (opt: string) => {
-    onChange(value.includes(opt) ? value.filter((v) => v !== opt) : [...value, opt]);
+    const selected = value.includes(opt);
+    if (!selected && atMax) return; // cap reached — ignore further selections
+    onChange(selected ? value.filter((v) => v !== opt) : [...value, opt]);
   };
 
   const summary = value.length === 0 ? placeholder : value.length === 1 ? value[0] : `${value.length} selected`;
@@ -86,20 +92,30 @@ export function MultiSelect({
           style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, minWidth: 240 }}
           className="z-50 max-h-[240px] overflow-auto rounded-[7px] border border-border bg-white py-1 shadow-lg"
         >
-          {options.map((opt) => (
-            <label
-              key={opt}
-              className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-[13px] text-text hover:bg-navy-light"
-            >
-              <input
-                type="checkbox"
-                className="h-[15px] w-[15px] accent-navy"
-                checked={value.includes(opt)}
-                onChange={() => toggle(opt)}
-              />
-              <span>{opt}</span>
-            </label>
-          ))}
+          {max != null && (
+            <div className="px-3 py-1.5 text-[11px] text-text-muted border-b border-border">
+              {value.length}/{max} selected{atMax ? ' — limit reached' : ''}
+            </div>
+          )}
+          {options.map((opt) => {
+            const checked = value.includes(opt);
+            const disabled = !checked && atMax;
+            return (
+              <label
+                key={opt}
+                className={`flex items-center gap-2.5 px-3 py-2 text-[13px] ${disabled ? 'cursor-not-allowed text-text-muted opacity-60' : 'cursor-pointer text-text hover:bg-navy-light'}`}
+              >
+                <input
+                  type="checkbox"
+                  className="h-[15px] w-[15px] accent-navy"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => toggle(opt)}
+                />
+                <span>{opt}</span>
+              </label>
+            );
+          })}
         </div>,
         document.body,
       )}

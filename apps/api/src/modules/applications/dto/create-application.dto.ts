@@ -4,6 +4,7 @@ import {
   IsArray,
   IsOptional,
   IsString,
+  ArrayMaxSize,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PersonalInfoDto } from './nested/personal-info.dto';
@@ -110,8 +111,23 @@ export class CreateApplicationDto {
   @IsString({ each: true })
   preferredCommittees?: string[];
 
+  @ApiPropertyOptional({ description: 'Free text when "Other" preferred committee is selected' })
+  @IsOptional()
+  @IsString()
+  preferredCommitteesOther?: string;
+
   @ApiPropertyOptional({ description: 'Rationale for the position/committee preference' })
   @IsOptional()
   @IsString()
   positionPreferenceRationale?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Top-5 core competencies selected by the applicant',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  competencies?: string[];
 }

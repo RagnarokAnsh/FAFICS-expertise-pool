@@ -36,6 +36,15 @@ function combine(dial: string, national: string): string {
   return `${dial} ${national}`.trim();
 }
 
+/**
+ * Serialize for the form value, collapsing a dial-code-only value (a country
+ * picked but no number typed) to '' — so an optional phone left blank after
+ * selecting a country is treated as empty rather than an invalid "+NN".
+ */
+function serialize(dial: string, national: string): string {
+  return national.trim() ? combine(dial, national) : '';
+}
+
 interface MenuPos {
   top: number;
   left: number;
@@ -65,7 +74,7 @@ export function PhoneInput({
   // Re-sync internal state when the form value changes externally (e.g. resume / reset).
   useEffect(() => {
     const incoming = (value || '').trim();
-    if (incoming !== combine(dial, national)) {
+    if (incoming !== serialize(dial, national)) {
       const p = parsePhone(incoming);
       setDial(p.dial);
       setNational(p.national);
@@ -133,14 +142,14 @@ export function PhoneInput({
     setDial(d);
     setOpen(false);
     setQuery('');
-    onChange(combine(d, national));
+    onChange(serialize(d, national));
   };
 
   const handleNationalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Allow digits, spaces and common separators only.
     const cleaned = e.target.value.replace(/[^\d\s\-()]/g, '');
     setNational(cleaned);
-    onChange(combine(dial, cleaned));
+    onChange(serialize(dial, cleaned));
   };
 
   const menu =

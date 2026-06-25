@@ -224,7 +224,11 @@ export class ExportService {
       ['Endorsed At', app.endorsedAt ? this.formatDate(app.endorsedAt) : 'N/A'],
       ['Approved At', app.approvedAt ? this.formatDate(app.approvedAt) : 'N/A'],
       ['Expires At', app.expiresAt ? this.formatDate(app.expiresAt) : 'N/A'],
-      ['Preferred Committees', app.preferredCommittees?.join('; ') || ''],
+      ['Core Competencies', app.competencies?.join('; ') || ''],
+      ['Preferred Committees', [
+        ...(app.preferredCommittees ?? []).filter((c) => c !== 'Other'),
+        ...(app.preferredCommitteesOther ? [app.preferredCommitteesOther] : []),
+      ].join('; ')],
       ['Preference Rationale', app.positionPreferenceRationale || ''],
       ['President Notes', app.presidentNotes || ''],
       ['Secretary Notes', app.secretaryNotes || ''],
@@ -278,6 +282,23 @@ export class ExportService {
         ];
       });
       this.autoWidthColumns(unSheet);
+    }
+
+    // ── FAFICS Experience Sheet ───────────────────────────────────────
+    if (app.faficsExperiences.length > 0) {
+      const fxSheet = workbook.addWorksheet('FAFICS Experience');
+      this.addSectionHeader(fxSheet, 'FAFICS Experience', 4);
+      this.addHeaderRow(fxSheet, 3, ['#', 'Position Held', 'Area of Contribution', 'Duration (yrs)']);
+      app.faficsExperiences.forEach((e, idx) => {
+        const committees = (e.areaOfContribution || '')
+          .split('; ')
+          .filter((c) => c && c !== 'Other');
+        if (e.areaOfContributionOther) committees.push(e.areaOfContributionOther);
+        fxSheet.getRow(idx + 4).values = [
+          idx + 1, e.positionHeld, committees.join('; '), e.durationYears ? Number(e.durationYears) : '',
+        ];
+      });
+      this.autoWidthColumns(fxSheet);
     }
 
     // ── Expertise Sheet ───────────────────────────────────────────────

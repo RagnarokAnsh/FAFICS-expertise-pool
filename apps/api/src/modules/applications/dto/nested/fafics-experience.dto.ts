@@ -23,10 +23,18 @@ export class FaficsExperienceDto {
   @IsOptional()
   positionHeld?: string;
 
-  @ApiPropertyOptional({ example: 'Governance' })
+  @ApiPropertyOptional({ example: 'FAFICS Standing Committee on Membership; FAFICS Representation — Audit Committee' })
   @IsOptional()
   @IsString()
   areaOfContribution?: string;
+
+  @ApiPropertyOptional({
+    example: 'FAFICS Task Force on Digital Outreach',
+    description: 'Free text when "Other" is selected for the contribution',
+  })
+  @IsOptional()
+  @IsString()
+  areaOfContributionOther?: string;
 
   @ApiPropertyOptional({ example: 3.0 })
   @IsOptional()

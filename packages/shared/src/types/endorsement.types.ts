@@ -44,6 +44,8 @@ export interface EndorsementView {
   faficsExperienceSummary: string | null;
   localExperienceSummary: string | null;
   preferredCommittees: string[];
+  preferredCommitteesOther: string | null;
   positionPreferenceRationale: string | null;
+  competencies: string[];
   submittedAt: string | null;
 }

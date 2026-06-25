@@ -3,6 +3,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin.api';
+import { COMMITTEE_OTHER } from '@/lib/constants/work';
 
 function initials(first: string, last: string) {
   return `${first?.charAt(0) ?? ''}${last?.charAt(0) ?? ''}`.toUpperCase();
@@ -137,20 +138,36 @@ export function ProfileModal({ applicationId, onClose }: { applicationId: string
                 </div>
               </Block>
 
-              {(app.preferredCommittees?.length > 0 || app.positionPreferenceRationale) && (
-                <Block title="Position / Committee Preference" className="mt-4">
-                  {app.preferredCommittees?.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-1.5">
-                      {app.preferredCommittees.map((c: string) => (
-                        <span key={c} className="rounded-[10px] bg-navy-light px-2 py-0.5 text-[11px] font-medium text-navy-mid">{c}</span>
-                      ))}
-                    </div>
-                  )}
-                  {app.positionPreferenceRationale && (
-                    <p className="text-[12.5px] leading-snug text-text">{app.positionPreferenceRationale}</p>
-                  )}
+              {app.competencies?.length > 0 && (
+                <Block title="Core Competencies" className="mt-4">
+                  <div className="flex flex-wrap gap-1.5">
+                    {app.competencies.map((c: string) => (
+                      <span key={c} className="rounded-[10px] bg-gold-light px-2 py-0.5 text-[11px] font-medium text-gold">{c}</span>
+                    ))}
+                  </div>
                 </Block>
               )}
+
+              {(() => {
+                // Drop the "Other" sentinel and show the specified free text instead.
+                const committees = (app.preferredCommittees ?? []).filter((c: string) => c !== COMMITTEE_OTHER);
+                if (app.preferredCommitteesOther) committees.push(app.preferredCommitteesOther);
+                if (committees.length === 0 && !app.positionPreferenceRationale) return null;
+                return (
+                  <Block title="Position / Committee Preference" className="mt-4">
+                    {committees.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {committees.map((c: string) => (
+                          <span key={c} className="rounded-[10px] bg-navy-light px-2 py-0.5 text-[11px] font-medium text-navy-mid">{c}</span>
+                        ))}
+                      </div>
+                    )}
+                    {app.positionPreferenceRationale && (
+                      <p className="text-[12.5px] leading-snug text-text">{app.positionPreferenceRationale}</p>
+                    )}
+                  </Block>
+                );
+              })()}
 
               {app.status === 'approved' && (
                 <div className="mt-3 rounded-lg border border-[#c0dd97] bg-[#eaf3de] px-3.5 py-2.5 text-[12px] text-success">
