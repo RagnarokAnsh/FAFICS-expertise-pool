@@ -19,6 +19,8 @@ import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import mailConfig from './config/mail.config';
 import jwtConfig from './config/jwt.config';
+import supportConfig from './config/support.config';
+import { SupportModule } from './modules/support/support.module';
 
 /**
  * Root application module.
@@ -31,7 +33,7 @@ import jwtConfig from './config/jwt.config';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
-      load: [appConfig, databaseConfig, mailConfig, jwtConfig],
+      load: [appConfig, databaseConfig, mailConfig, jwtConfig, supportConfig],
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
@@ -84,6 +86,7 @@ import jwtConfig from './config/jwt.config';
     AuthModule,
     AdminModule,
     ExportModule,
+    SupportModule,
   ],
   providers: [
     // Apply rate limiting globally.
