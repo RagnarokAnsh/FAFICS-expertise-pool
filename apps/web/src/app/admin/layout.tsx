@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Cookies from 'js-cookie';
 import { useQuery } from '@tanstack/react-query';
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider';
+import { GetSupportButton } from '@ragnarokansh/cimp-connect/react';
 import { adminApi } from '@/lib/api/admin.api';
 
 const NAV_SECTIONS: {
@@ -111,17 +112,10 @@ function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null
 
       <div className="border-t border-white/10 px-5 py-3.5">
         <div className="mb-2 text-[11.5px] capitalize text-white/40">Signed in as {role ?? 'Officer'}</div>
-        <a
-          href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/support/handoff`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <GetSupportButton
+          handoffUrl={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/support/handoff`}
           className="mb-2 flex items-center gap-1.5 text-[12px] text-white/40 transition-colors hover:text-gold"
-        >
-          <svg className="h-[13px] w-[13px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Get Support
-        </a>
+        />
         <button onClick={onLogout} className="flex items-center gap-1.5 text-[12px] text-white/40 transition-colors hover:text-gold">
           <svg className="h-[13px] w-[13px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />

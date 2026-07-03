@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Module, UnauthorizedException } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -20,7 +20,9 @@ import databaseConfig from './config/database.config';
 import mailConfig from './config/mail.config';
 import jwtConfig from './config/jwt.config';
 import supportConfig from './config/support.config';
-import { SupportModule } from './modules/support/support.module';
+import { SupportModule } from '@ragnarokansh/cimp-connect/nestjs';
+import { PrismaService } from './prisma/prisma.service';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 /**
  * Root application module.
@@ -86,7 +88,33 @@ import { SupportModule } from './modules/support/support.module';
     AuthModule,
     AdminModule,
     ExportModule,
-    SupportModule,
+
+    // CIMP support hand-off (from @ragnarokansh/cimp-connect). The one
+    // app-specific piece is getUser: req.user only carries id/email/role, so
+    // the officer's display name is resolved from the database.
+    SupportModule.forRootAsync({
+      guard: JwtAuthGuard,
+      inject: [ConfigService, PrismaService],
+      useFactory: (config: ConfigService, prisma: PrismaService) => ({
+        platformKey: config.get<string>('support.platformKey') ?? '',
+        handoffSecret: config.get<string>('support.handoffSecret') ?? '',
+        baseUrl: config.get<string>('support.baseUrl') ?? '',
+        getUser: async (req: any) => {
+          const user = await prisma.user.findUnique({
+            where: { id: req.user.userId },
+            select: { id: true, email: true, firstName: true, lastName: true },
+          });
+          if (!user) throw new UnauthorizedException('User not found');
+          return {
+            id: user.id,
+            email: user.email,
+            name:
+              [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+              user.email,
+          };
+        },
+      }),
+    }),
   ],
   providers: [
     // Apply rate limiting globally.

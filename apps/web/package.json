@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@ragnarokansh/cimp-connect": "github:RagnarokAnsh/cimp-connect",
     "@tanstack/react-query": "^5.100.11",
     "@tanstack/react-query-devtools": "^5.100.11",
     "@types/js-cookie": "^3.0.6",
