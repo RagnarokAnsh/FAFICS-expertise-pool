@@ -5,9 +5,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin.api';
 import { Button } from '@/components/ui/Button';
 import { formatDate } from '@/lib/utils/date';
+import { useToast } from '@/components/ui/Toast';
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -24,11 +26,17 @@ export default function AdminUsersPage() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Custom validation — show toast instead of native browser tooltip
+    if (!email.trim() || !firstName.trim() || !lastName.trim() || !password.trim()) {
+      showToast('Please fill in all required fields.', 'error');
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
       await adminApi.createUser({ email, password, role, firstName, lastName });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      showToast('User created successfully.', 'success');
       setIsModalOpen(false);
       setEmail('');
       setFirstName('');
@@ -36,18 +44,24 @@ export default function AdminUsersPage() {
       setPassword('');
       setRole('admin');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create user.');
+      const msg = err.response?.data?.message || 'Failed to create user.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const REQUIRED_STAR = <span className="text-gold ml-0.5">*</span>;
+
+  /* … existing code … */
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
       await adminApi.updateRole(userId, newRole);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err) {
-      alert('Failed to update role.');
+      showToast('Failed to update role.', 'error');
     }
   };
 
@@ -105,14 +119,13 @@ export default function AdminUsersPage() {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-xl font-serif font-bold text-navy mb-4">Create New User</h3>
             
-            <form onSubmit={handleCreateUser}>
+            <form onSubmit={handleCreateUser} noValidate>
               {error && <div className="mb-4 text-red-500 text-sm">{error}</div>}
               
               <div className="mb-4">
-                <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Email</label>
+                <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Email {REQUIRED_STAR}</label>
                 <input
                   type="email"
-                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full border border-border rounded p-2 text-sm"
@@ -121,20 +134,18 @@ export default function AdminUsersPage() {
 
               <div className="flex gap-4 mb-4">
                 <div className="flex-1">
-                  <label className="block text-[11px] text-text-light font-medium uppercase mb-1">First Name</label>
+                  <label className="block text-[11px] text-text-light font-medium uppercase mb-1">First Name {REQUIRED_STAR}</label>
                   <input
                     type="text"
-                    required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     className="w-full border border-border rounded p-2 text-sm"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Last Name</label>
+                  <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Last Name {REQUIRED_STAR}</label>
                   <input
                     type="text"
-                    required
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     className="w-full border border-border rounded p-2 text-sm"
@@ -143,10 +154,9 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="mb-4">
-                <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Password</label>
+                <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Password {REQUIRED_STAR}</label>
                 <input
                   type="password"
-                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full border border-border rounded p-2 text-sm"
@@ -154,7 +164,7 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Role</label>
+                <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Role {REQUIRED_STAR}</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}

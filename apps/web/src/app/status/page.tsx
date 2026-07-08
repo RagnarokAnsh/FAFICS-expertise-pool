@@ -8,6 +8,7 @@ import { Field, Input } from '../../components/ui/Field';
 import { Button } from '../../components/ui/Button';
 import { formatDate } from '../../lib/utils/date';
 import Link from 'next/link';
+import { useToast } from '../../components/ui/Toast';
 
 /* ─── helpers ─── */
 function maskEmail(email: string) {
@@ -41,6 +42,7 @@ export default function StatusPage() {
   const [statusResult, setStatusResult] = useState<any>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const { showToast } = useToast();
   // edit-link state (for submitted apps returned with changes_requested)
   const [isSendingEditLink, setIsSendingEditLink] = useState(false);
   const [editLinkSent, setEditLinkSent] = useState(false);
@@ -91,7 +93,7 @@ export default function StatusPage() {
       await applicationsApi.requestEditLink(queryEmail, statusResult.referenceNumber);
       setEditLinkSent(true);
     } catch (error: any) {
-      alert('An error occurred. Please try again.');
+      showToast('An error occurred. Please try again.', 'error');
     } finally {
       setIsSendingEditLink(false);
     }

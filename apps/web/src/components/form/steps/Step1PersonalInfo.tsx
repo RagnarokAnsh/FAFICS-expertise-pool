@@ -83,7 +83,7 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
           <strong>The FAFICS Expertise Pool</strong>
         </p>
         <p className="text-[13.5px] text-text leading-[1.8] mb-2.5">
-          Members of FAFICS Associations can participate in the work of FAFICS through service in:
+         All former International Civil Servants who are Members of FAFICS Association can volunteer to participate in the work of FAFICS through service to:
         </p>
         <ul className="list-disc pl-5 mb-2.5 text-[13.5px] text-text leading-[1.8]">
           <li>FAFICS Standing Committees in the areas of Pensions, After Service Health and Life Insurance, Communications and Membership, including serving as Chairs/Co-Chairs of these Committees, who are nominated by the President and appointed by the Council; on the United Nations Pension Board as part of the FAFICS delegation or on one of the Pension Board’s subsidiary bodies/working groups.</li>
@@ -259,10 +259,7 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Associate Member in other Association" error={errors.association?.associateMemberName?.message}>
-            <Input placeholder="e.g. AFICS Geneva" hasError={!!errors.association?.associateMemberName} {...register('association.associateMemberName')} />
-          </Field>
-          <Field label="Country of other Association" error={errors.association?.associateMemberCountry?.message}>
+          <Field label="Country of other Association Membership" error={errors.association?.associateMemberCountry?.message}>
             <Controller
               control={control}
               name="association.associateMemberCountry"

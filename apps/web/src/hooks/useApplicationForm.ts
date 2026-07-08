@@ -5,6 +5,7 @@ import { applicationSchema, ApplicationData } from '../lib/schemas/application.s
 import { useAutoSave } from './useAutoSave';
 import { applicationsApi } from '../lib/api/applications.api';
 import { withBasePath } from '../lib/utils/base-path';
+import { useToast } from '../components/ui/Toast';
 
 /**
  * Sanitize form data before sending to the backend.
@@ -95,6 +96,8 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
   // instead of silently continuing. `fromStep1` = the user had just filled Step 1.
   const [resumePrompt, setResumePrompt] = useState<{ id: string; editToken: string; fromStep1: boolean } | null>(null);
 
+  const { showToast } = useToast();
+
   const form = useForm<ApplicationData>({
     resolver: zodResolver(applicationSchema as any) as any,
     defaultValues: initialData as DefaultValues<ApplicationData>,
@@ -179,12 +182,13 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
         if (error?.response?.status === 409) {
           // Active (submitted/approved) application already exists for this
           // individual + association — can't start another.
-          alert(
+          showToast(
             error.response?.data?.message ||
               'You already have an application for this association. Please track or edit it from the status page.',
+            'error'
           );
         } else {
-          alert('Failed to save draft. Please check your connection and try again.');
+          showToast('Failed to save draft. Please check your connection and try again.', 'error');
         }
         return;
       }
@@ -220,9 +224,10 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
             console.error('Failed to recreate draft:', err2);
             setSaveStatus('error');
             if (err2?.response?.status === 409) {
-              alert(
+              showToast(
                 err2.response?.data?.message ||
                   'You already have an application for this association. Please track or edit it from the status page.',
+                'error'
               );
             }
             return;

@@ -221,7 +221,7 @@ export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
                           setValue('preferredCommitteesOther', '');
                         }
                       }}
-                      placeholder="Select committee(s)…"
+                      placeholder="Select committee/working group…"
                     />
                     {showOther && (
                       <Input

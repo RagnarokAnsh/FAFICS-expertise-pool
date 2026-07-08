@@ -170,8 +170,8 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
       <Card title="C — FAFICS Experience">
         <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.5fr 1fr 120px' }}>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Contribution</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Duration (years)</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Contribution {REQUIRED_MARK}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Duration (years) {REQUIRED_MARK}</span>
         </div>
 
         <DynamicRowList
@@ -204,7 +204,7 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
                             setValue(`faficsExperiences.${index}.areaOfContributionOther`, '');
                           }
                         }}
-                        placeholder="Committee(s)…"
+                        placeholder="Committee/Working Group Member…"
                       />
                       {showOther && (
                         <Input

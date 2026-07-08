@@ -80,12 +80,13 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
     } catch (error: any) {
       console.error('Error submitting application:', error);
       if (error?.response?.status === 409) {
-        alert(
+        showToast(
           error.response?.data?.message ||
             'You already have an application for this association. Please track or edit it from the status page.',
+          'error'
         );
       } else {
-        alert('Failed to submit application. Please try again.');
+        showToast('Failed to submit application. Please try again.', 'error');
       }
     } finally {
       setIsSubmitting(false);
