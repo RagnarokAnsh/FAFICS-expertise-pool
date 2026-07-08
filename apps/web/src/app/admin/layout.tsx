@@ -69,9 +69,7 @@ function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null
         {NAV_SECTIONS.map((section) => {
           return (
             <div key={section.label}>
-              <div className="mb-1.5 mt-3.5 px-2 text-[9px] font-bold uppercase tracking-[0.1em] text-white/30">
-                {section.label}
-              </div>
+
               {section.links.map((link) => {
                 const active = pathname.startsWith(link.href);
                 return (
@@ -96,7 +94,7 @@ function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null
         })}
         {role === 'admin' && (
           <div>
-            <div className="mb-1.5 mt-3.5 px-2 text-[9px] font-bold uppercase tracking-[0.1em] text-white/30">Admin</div>
+
             <Link
               href="/admin/users"
               className={`mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
