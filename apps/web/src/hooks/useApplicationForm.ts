@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { applicationSchema, ApplicationData } from '../lib/schemas/application.schema';
 import { useAutoSave } from './useAutoSave';
 import { applicationsApi } from '../lib/api/applications.api';
+import { withBasePath } from '../lib/utils/base-path';
 
 /**
  * Sanitize form data before sending to the backend.
@@ -47,23 +48,39 @@ function extractStep1Data(data: any): { personal: any; association: any } {
   };
 }
 
+const hasText = (v?: string | null): boolean => !!v && v.trim() !== '';
+
+/**
+ * Resume at the first step that still needs input. Steps 2–4 auto-append empty
+ * rows on mount and the auto-save persists them (as `{ sortOrder }` husks), so a
+ * step only counts as filled when at least one of its rows has real content —
+ * otherwise a draft that completed just Step 1 would resume at Step 3+ and let
+ * the applicant skip validation for the steps in between.
+ */
 function computeInitialStep(data?: Partial<ApplicationData>): number {
   if (!data) return 1;
-  
+
   let step = 1;
-  if (data.personal?.firstName && data.association?.associationName) {
+  if (hasText(data.personal?.firstName) && hasText(data.association?.associationName)) {
     step = 2;
   }
-  if (step === 2 && data.educations && data.educations.length > 0 && data.languages && data.languages.length > 0) {
+  const step2Filled =
+    (data.educations ?? []).some((e) => hasText(e?.degreeName) && hasText(e?.institution)) &&
+    (data.languages ?? []).some((l) => hasText(l?.language));
+  if (step === 2 && step2Filled) {
     step = 3;
   }
-  if (step === 3 && data.unExperiences && data.unExperiences.length > 0) {
+  const step3Filled = (data.unExperiences ?? []).some(
+    (e) => hasText(e?.agency) && hasText(e?.positionTitle),
+  );
+  if (step === 3 && step3Filled) {
     step = 4;
   }
-  if (step === 4 && data.expertise && data.expertise.length > 0) {
+  const step4Filled = (data.expertise ?? []).some((e) => !!e?.expertiseLevel || !!e?.isPreferred);
+  if (step === 4 && step4Filled) {
     step = 5;
   }
-  
+
   return step;
 }
 
@@ -190,7 +207,7 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
             const res = await applicationsApi.createDraft(extractStep1Data(updatedData));
             if (res.resumed) {
               if (typeof window !== 'undefined') {
-                window.location.href = `/apply/resume/${res.editToken}`;
+                window.location.href = withBasePath(`/apply/resume/${res.editToken}`);
               }
               return;
             }
@@ -241,7 +258,7 @@ export function useApplicationForm(initialData?: Partial<ApplicationData>, initi
   // token-based resume page.
   const resumeExisting = useCallback(() => {
     if (resumePrompt && typeof window !== 'undefined') {
-      window.location.href = `/apply/resume/${resumePrompt.editToken}`;
+      window.location.href = withBasePath(`/apply/resume/${resumePrompt.editToken}`);
     }
   }, [resumePrompt]);
 

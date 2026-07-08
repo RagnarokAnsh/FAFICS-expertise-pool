@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { COUNTRY_DATA, flagEmoji } from '../../lib/constants/countries';
+import { MAX_PHONE_DIGITS } from '../../lib/schemas/application.schema';
 
 interface PhoneInputProps {
   /** Full phone string, e.g. "+91 98765 43210" */
@@ -43,6 +44,21 @@ function combine(dial: string, national: string): string {
  */
 function serialize(dial: string, national: string): string {
   return national.trim() ? combine(dial, national) : '';
+}
+
+/** Trim `national` so dial code + national number never exceeds MAX_PHONE_DIGITS digits. */
+function capNationalDigits(national: string, dial: string): string {
+  const budget = Math.max(0, MAX_PHONE_DIGITS - dial.replace(/\D/g, '').length);
+  let digits = 0;
+  let out = '';
+  for (const ch of national) {
+    if (/\d/.test(ch)) {
+      if (digits >= budget) break;
+      digits++;
+    }
+    out += ch;
+  }
+  return out;
 }
 
 interface MenuPos {
@@ -139,15 +155,17 @@ export function PhoneInput({
   }, [open]);
 
   const pickDial = (d: string) => {
+    const capped = capNationalDigits(national, d);
     setDial(d);
+    setNational(capped);
     setOpen(false);
     setQuery('');
-    onChange(serialize(d, national));
+    onChange(serialize(d, capped));
   };
 
   const handleNationalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow digits, spaces and common separators only.
-    const cleaned = e.target.value.replace(/[^\d\s\-()]/g, '');
+    // Allow digits, spaces and common separators only, capped at 15 digits total.
+    const cleaned = capNationalDigits(e.target.value.replace(/[^\d\s\-()]/g, ''), dial);
     setNational(cleaned);
     onChange(serialize(dial, cleaned));
   };

@@ -5,7 +5,13 @@ import { Field, Input, Select } from '../../ui/Field';
 import { SearchableSelect, SearchableOption } from '../../ui/SearchableSelect';
 import { PhoneInput } from '../../ui/PhoneInput';
 import { Button } from '../../ui/Button';
-import { ApplicationData } from '../../../lib/schemas/application.schema';
+import { useToast } from '../../ui/Toast';
+import {
+  ApplicationData,
+  emailsMatchPresident,
+  PRESIDENT_EMAIL_MESSAGE,
+} from '../../../lib/schemas/application.schema';
+import { firstErrorMessage } from '../../../lib/utils/form-errors';
 import { COUNTRY_DATA, NATIONALITIES, flagEmoji } from '../../../lib/constants/countries';
 
 interface StepProps {
@@ -30,7 +36,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 export function Step1PersonalInfo({ onNext }: StepProps) {
-  const { register, control, formState: { errors }, trigger } = useFormContext<ApplicationData>();
+  const methods = useFormContext<ApplicationData>();
+  const { register, control, formState: { errors }, trigger, getValues, setError } = methods;
+  const { showToast } = useToast();
 
   // Calendar bounds: applicants must be at least 18, and no older than 120.
   const now = new Date();
@@ -41,9 +49,24 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
   const handleNext = async () => {
     // Validate Step 1 fields before proceeding
     const isValid = await trigger(['personal', 'association']);
-    if (isValid) {
-      onNext();
+    if (!isValid) {
+      showToast(
+        firstErrorMessage(methods.formState.errors) ??
+          'Please fill in all required fields highlighted below.',
+        'error',
+      );
+      return;
     }
+    // Cross-field check: the endorsement can't be routed to the applicant
+    // themselves. Checked here because the schema-level rule only runs once the
+    // whole form parses (i.e. at final submit).
+    const { personal, association } = getValues();
+    if (emailsMatchPresident(personal?.email, association?.presidentEmail)) {
+      setError('association.presidentEmail', { type: 'custom', message: PRESIDENT_EMAIL_MESSAGE });
+      showToast(PRESIDENT_EMAIL_MESSAGE, 'error');
+      return;
+    }
+    onNext();
   };
 
   return (
@@ -122,7 +145,7 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
-                  placeholder="None / not applicable"
+                  placeholder="Select second nationality…"
                   hasError={!!errors.personal?.secondNationality}
                 />
               )}

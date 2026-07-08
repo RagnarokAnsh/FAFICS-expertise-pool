@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
-import { useQuery } from '@tanstack/react-query';
+// import { useQuery } from '@tanstack/react-query'; // Only used by PendingBadge — hidden per client feedback
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider';
 import { adminApi } from '@/lib/api/admin.api';
 
@@ -25,8 +25,9 @@ const NAV_SECTIONS: {
     label: 'Insights',
     links: [
       { href: '/admin/expiring', label: 'Expiring Profiles', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-      { href: '/admin/reports', label: 'Reports & Analytics', icon: 'M18 20V10M12 20V4M6 20v-6' },
-      { href: '/admin/export', label: 'Export', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
+      // Hidden per client feedback — re-enable when ready
+      // { href: '/admin/reports', label: 'Reports & Analytics', icon: 'M18 20V10M12 20V4M6 20v-6' },
+      // { href: '/admin/export', label: 'Export', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
     ],
   },
 ];
@@ -41,14 +42,15 @@ const TITLES: { match: string; title: string }[] = [
   { match: '/admin/users', title: 'User Management' },
 ];
 
-function PendingBadge() {
-  const { data } = useQuery({ queryKey: ['admin-stats'], queryFn: adminApi.getStats, refetchInterval: 60000 });
-  const count = data?.pendingEndorsement ?? 0;
-  if (!count) return null;
-  return (
-    <span className="ml-auto rounded-[10px] bg-gold px-1.5 py-0.5 text-[10px] font-bold text-white">{count}</span>
-  );
-}
+// Hidden per client feedback — re-enable when ready (count badge next to sidebar items)
+// function PendingBadge() {
+//   const { data } = useQuery({ queryKey: ['admin-stats'], queryFn: adminApi.getStats, refetchInterval: 60000 });
+//   const count = data?.pendingEndorsement ?? 0;
+//   if (!count) return null;
+//   return (
+//     <span className="ml-auto rounded-[10px] bg-gold px-1.5 py-0.5 text-[10px] font-bold text-white">{count}</span>
+//   );
+// }
 
 function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null; pathname: string; onLogout: () => void; onNavigate?: () => void }) {
   return (
@@ -84,7 +86,8 @@ function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null
                       <path strokeLinecap="round" strokeLinejoin="round" d={link.icon} />
                     </svg>
                     <span className="truncate">{link.label}</span>
-                    {link.badge === 'pending' && <PendingBadge />}
+                    {/* Hidden per client feedback — re-enable when ready */}
+                    {/* {link.badge === 'pending' && <PendingBadge />} */}
                   </Link>
                 );
               })}

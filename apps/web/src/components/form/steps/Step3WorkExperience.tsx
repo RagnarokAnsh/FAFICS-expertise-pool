@@ -5,7 +5,9 @@ import { Input, Select, TextArea } from '../../ui/Field';
 import { Button } from '../../ui/Button';
 import { DynamicRowList } from '../../ui/DynamicRowList';
 import { MultiSelect } from '../../ui/MultiSelect';
-import { ApplicationData } from '../../../lib/schemas/application.schema';
+import { useToast } from '../../ui/Toast';
+import { ApplicationData, experienceExceedsAge } from '../../../lib/schemas/application.schema';
+import { firstErrorMessage } from '../../../lib/utils/form-errors';
 import { UN_AGENCIES, UN_GRADES, FAFICS_ROLES, FAFICS_COMMITTEES, COMMITTEE_OTHER, AREAS_OF_EXPERTISE } from '../../../lib/constants/work';
 
 // FAFICS "Area of Contribution" stores multiple committees as a delimited
@@ -28,8 +30,12 @@ const DURATIONS = [
   { value: 99.0, label: '20+ years' },
 ];
 
+const REQUIRED_MARK = <span className="text-gold">*</span>;
+
 export function Step3WorkExperience({ onNext, onBack }: StepProps) {
-  const { register, control, setValue, formState: { errors }, trigger } = useFormContext<ApplicationData>();
+  const methods = useFormContext<ApplicationData>();
+  const { register, control, setValue, formState: { errors }, trigger, getValues, setError } = methods;
+  const { showToast } = useToast();
   
   const { fields: unFields, append: appendUn, remove: removeUn } = useFieldArray({ control, name: "unExperiences" });
   const { fields: nonUnFields, append: appendNonUn, remove: removeNonUn } = useFieldArray({ control, name: "nonUnExperiences" });
@@ -42,7 +48,23 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
 
   const handleNext = async () => {
     const isValid = await trigger(['unExperiences', 'nonUnExperiences', 'faficsExperiences', 'localExperiences', 'unExperienceSummary', 'nonUnExperienceSummary', 'faficsExperienceSummary', 'localExperienceSummary']);
-    if (isValid) onNext();
+    if (!isValid) {
+      showToast(
+        firstErrorMessage(methods.formState.errors) ??
+          'Please fill in all required fields highlighted below.',
+        'error',
+      );
+      return;
+    }
+    // Total experience can't exceed the applicant's age. Checked here because
+    // the schema-level rule only runs once the whole form parses (final submit).
+    const ageError = experienceExceedsAge(getValues());
+    if (ageError) {
+      setError('unExperiences.root' as any, { type: 'custom', message: ageError });
+      showToast(ageError, 'error');
+      return;
+    }
+    onNext();
   };
 
   return (
@@ -58,16 +80,17 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
         {errors.unExperiences?.root?.message && (
           <p className="text-danger text-sm mb-3">{errors.unExperiences.root.message}</p>
         )}
-        <div className="hidden lg:grid gap-2.5 pb-1 px-11" style={{ gridTemplateColumns: '1.2fr 1.4fr 80px 1fr 100px' }}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Agency</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held</span>
+        <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.2fr 1.4fr 80px 1fr 100px' }}>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Agency {REQUIRED_MARK}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Grade</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Expertise</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Years</span>
         </div>
-        
+
         <DynamicRowList
           items={unFields}
+          gridTemplateColumns="1.2fr 1.4fr 80px 1fr 100px"
           onAdd={() => appendUn({ agency: '', positionTitle: '', sortOrder: unFields.length + 1 })}
           addLabel="Add Position"
           renderRow={(field, index, _onRemove) => (
@@ -105,21 +128,22 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
       </Card>
 
       <Card title="B — Non-UN Experience">
-        <div className="hidden lg:grid gap-2.5 pb-1 px-11" style={{ gridTemplateColumns: '1.2fr 1.4fr 1fr 100px' }}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Organization</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held</span>
+        <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.2fr 1.4fr 1fr 100px' }}>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Organization {REQUIRED_MARK}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Expertise</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Years</span>
         </div>
-        
+
         <DynamicRowList
           items={nonUnFields}
+          gridTemplateColumns="1.2fr 1.4fr 1fr 100px"
           onAdd={() => appendNonUn({ organization: '', positionTitle: '', sortOrder: nonUnFields.length + 1 })}
           addLabel="Add Position"
           renderRow={(field, index, _onRemove) => (
             <>
-              <Input placeholder="Organization" {...register(`nonUnExperiences.${index}.organization`)} />
-              <Input placeholder="Position Title" {...register(`nonUnExperiences.${index}.positionTitle`)} />
+              <Input placeholder="Organization" hasError={!!errors.nonUnExperiences?.[index]?.organization} {...register(`nonUnExperiences.${index}.organization`)} />
+              <Input placeholder="Position Title" hasError={!!errors.nonUnExperiences?.[index]?.positionTitle} {...register(`nonUnExperiences.${index}.positionTitle`)} />
               <Select {...register(`nonUnExperiences.${index}.areaOfExpertise`)}>
                 <option value="" hidden>Area...</option>
                 {AREAS_OF_EXPERTISE.map(a => <option key={a} value={a}>{a}</option>)}
@@ -144,19 +168,20 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
       </Card>
 
       <Card title="C — FAFICS Experience">
-        <div className="hidden lg:grid gap-2.5 pb-1 px-11" style={{ gridTemplateColumns: '1.5fr 1fr 120px' }}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held</span>
+        <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.5fr 1fr 120px' }}>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Contribution</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Duration (years)</span>
         </div>
-        
+
         <DynamicRowList
           items={faficsFields}
+          gridTemplateColumns="1.5fr 1fr 120px"
           onAdd={() => appendFafics({ positionHeld: '', sortOrder: faficsFields.length + 1 })}
           addLabel="Add Position"
           renderRow={(field, index, _onRemove) => (
             <>
-              <Select {...register(`faficsExperiences.${index}.positionHeld`)}>
+              <Select hasError={!!errors.faficsExperiences?.[index]?.positionHeld} {...register(`faficsExperiences.${index}.positionHeld`)}>
                 <option value="" hidden>Position...</option>
                 {FAFICS_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </Select>
@@ -211,19 +236,20 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
       </Card>
 
       <Card title="D — Local Association Experience">
-        <div className="hidden lg:grid gap-2.5 pb-1 px-11" style={{ gridTemplateColumns: '1.5fr 1fr 120px' }}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held</span>
+        <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.5fr 1fr 120px' }}>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Contribution</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Duration (years)</span>
         </div>
-        
+
         <DynamicRowList
           items={localFields}
+          gridTemplateColumns="1.5fr 1fr 120px"
           onAdd={() => appendLocal({ positionHeld: '', sortOrder: localFields.length + 1 })}
           addLabel="Add Position"
           renderRow={(field, index, _onRemove) => (
             <>
-              <Input placeholder="Position Held" {...register(`localExperiences.${index}.positionHeld`)} />
+              <Input placeholder="Position Held" hasError={!!errors.localExperiences?.[index]?.positionHeld} {...register(`localExperiences.${index}.positionHeld`)} />
               <Select {...register(`localExperiences.${index}.areaOfContribution`)}>
                 <option value="" hidden>Area...</option>
                 {AREAS_OF_EXPERTISE.map(a => <option key={a} value={a}>{a}</option>)}

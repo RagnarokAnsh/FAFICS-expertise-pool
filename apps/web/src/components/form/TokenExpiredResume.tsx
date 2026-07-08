@@ -13,7 +13,7 @@ export function TokenExpiredResume() {
           </div>
           <h2 className="font-serif text-[28px] font-bold text-navy mb-4">This editing link has expired</h2>
           <p className="text-[15px] text-text-mid mb-8">
-            Editing links are valid for 3 hours and can only be used once. To continue editing your application, request a new link.
+            For security, editing links are only valid for a limited time. To continue editing your application, request a new link.
           </p>
           <Link href="/status">
             <Button variant="primary">Go to Status Page</Button>

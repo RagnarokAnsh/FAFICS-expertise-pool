@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { formatDateTime } from '@/lib/utils/date';
 
 interface AuditLog {
   id: string;
@@ -41,12 +42,12 @@ export function AuditTimeline({ logs }: AuditTimelineProps) {
         <div key={log.id} className="mb-6 ml-6 relative">
           <div className={`absolute -left-[31px] top-1 w-[14px] h-[14px] rounded-full border-2 border-white shadow-sm ${getColor(log.action)}`} />
           <div className="bg-white border border-border p-3 rounded shadow-sm text-sm">
-            <div className="flex justify-between items-start mb-1">
-              <span className="font-semibold text-navy capitalize">{log.action.replace(/[._]/g, ' ')}</span>
-              <span className="text-xs text-text-light">{new Date(log.createdAt).toLocaleString()}</span>
+            <div className="flex justify-between items-start gap-2 mb-1">
+              <span className="font-semibold text-navy capitalize break-words min-w-0">{log.action.replace(/[._]/g, ' ')}</span>
+              <span className="text-xs text-text-light whitespace-nowrap shrink-0">{formatDateTime(log.createdAt)}</span>
             </div>
-            <div className="text-text-mid text-[13px] mb-2">
-              By: {log.actorEmail} ({log.actorRole})
+            <div className="text-text-mid text-[13px] mb-2 break-words">
+              By: <span className="break-all">{log.actorEmail}</span> ({log.actorRole})
             </div>
             {log.metadata && Object.keys(log.metadata).length > 0 && (
               <div>

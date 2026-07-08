@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { EndorseActions } from './EndorseActions';
 import { COMMITTEE_OTHER } from '../../lib/constants/work';
+import { formatDate } from '../../lib/utils/date';
 
 interface EndorsementViewProps {
   application: any;
@@ -9,12 +10,35 @@ interface EndorsementViewProps {
   isAdminView?: boolean;
 }
 
+const hasText = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
+
 export function EndorsementView({ application, token, isAdminView }: EndorsementViewProps) {
   const renderField = (label: string, value: string | null | undefined) => (
-    <div className="mb-4">
+    <div className="mb-4 min-w-0">
       <div className="text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1">{label}</div>
-      <div className="text-[14px] text-navy font-medium">{value || '-'}</div>
+      {/* Long unbroken values (emails) must wrap, not clip at the card edge. */}
+      <div className="text-[14px] text-navy font-medium break-words [overflow-wrap:anywhere]">{value || '-'}</div>
     </div>
+  );
+
+  // Drafts (and older submissions that skipped step validation) can contain
+  // partially-filled rows — e.g. a language row with a proficiency but no
+  // language name. Hide husks so the review never shows blank entries.
+  const educations = (application.educations ?? []).filter(
+    (e: any) => hasText(e?.degreeName) || hasText(e?.institution),
+  );
+  const languages = (application.languages ?? []).filter((l: any) => hasText(l?.language));
+  const unExperiences = (application.unExperiences ?? []).filter(
+    (e: any) => hasText(e?.agency) || hasText(e?.positionTitle),
+  );
+  const nonUnExperiences = (application.nonUnExperiences ?? []).filter(
+    (e: any) => hasText(e?.organization) || hasText(e?.positionTitle),
+  );
+  const faficsExperiences = (application.faficsExperiences ?? []).filter((e: any) =>
+    hasText(e?.positionHeld),
+  );
+  const localExperiences = (application.localExperiences ?? []).filter((e: any) =>
+    hasText(e?.positionHeld),
   );
 
   return (
@@ -37,13 +61,13 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
         <Card title="Personal Information">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {renderField("Reference Number", application.referenceNumber)}
-            {renderField("Submitted At", application.submittedAt ? new Date(application.submittedAt).toLocaleDateString() : '-')}
+            {renderField("Submitted At", application.submittedAt ? formatDate(application.submittedAt) : '-')}
             {renderField("Full Name", [application.firstName, application.middleName, application.lastName].filter(Boolean).join(' '))}
             {renderField("Email", application.email)}
             {renderField("Gender", application.gender)}
             {renderField("Phone", application.phone)}
-            {renderField("Date of Birth", application.dateOfBirth)}
-            {renderField("Separation Date", application.separationDate)}
+            {renderField("Date of Birth", application.dateOfBirth ? formatDate(application.dateOfBirth) : '-')}
+            {renderField("Separation Date", application.separationDate ? formatDate(application.separationDate) : '-')}
             {renderField("Nationality", application.nationality)}
             {renderField("Second Nationality", application.secondNationality)}
           </div>
@@ -63,7 +87,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </div>
 
       <Card title="Education">
-        {application.educations.length > 0 ? (
+        {educations.length > 0 ? (
           <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[420px] text-left border-collapse">
             <thead>
               <tr className="border-b border-border">
@@ -72,10 +96,10 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
               </tr>
             </thead>
             <tbody>
-              {application.educations.map((edu: any, idx: number) => (
+              {educations.map((edu: any, idx: number) => (
                 <tr key={idx} className="border-b border-border last:border-0">
-                  <td className="py-3 text-[14px] text-text-mid">{edu.degreeName}</td>
-                  <td className="py-3 text-[14px] text-text-mid">{edu.institution}</td>
+                  <td className="py-3 text-[14px] text-text-mid">{edu.degreeName || '-'}</td>
+                  <td className="py-3 text-[14px] text-text-mid">{edu.institution || '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -86,7 +110,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </Card>
 
       <Card title="Languages">
-        {application.languages.length > 0 ? (
+        {languages.length > 0 ? (
           <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[420px] text-left border-collapse">
             <thead>
               <tr className="border-b border-border">
@@ -95,10 +119,10 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
               </tr>
             </thead>
             <tbody>
-              {application.languages.map((lang: any, idx: number) => (
+              {languages.map((lang: any, idx: number) => (
                 <tr key={idx} className="border-b border-border last:border-0">
                   <td className="py-3 text-[14px] text-text-mid">{lang.language}</td>
-                  <td className="py-3 text-[14px] text-text-mid capitalize">{lang.proficiency.replace('_', ' ')}</td>
+                  <td className="py-3 text-[14px] text-text-mid capitalize">{lang.proficiency ? lang.proficiency.replace('_', ' ') : '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -109,7 +133,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </Card>
 
       <Card title="UN Experience">
-        {application.unExperiences.length > 0 ? (
+        {unExperiences.length > 0 ? (
           <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
@@ -121,7 +145,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
               </tr>
             </thead>
             <tbody>
-              {application.unExperiences.map((exp: any, idx: number) => (
+              {unExperiences.map((exp: any, idx: number) => (
                 <tr key={idx} className="border-b border-border last:border-0">
                   <td className="py-3 text-[14px] text-text-mid">{exp.agency}</td>
                   <td className="py-3 text-[14px] text-text-mid">{exp.positionTitle}</td>
@@ -143,7 +167,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </Card>
 
       <Card title="Non-UN Experience">
-        {application.nonUnExperiences.length > 0 ? (
+        {nonUnExperiences.length > 0 ? (
           <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
@@ -154,7 +178,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
               </tr>
             </thead>
             <tbody>
-              {application.nonUnExperiences.map((exp: any, idx: number) => (
+              {nonUnExperiences.map((exp: any, idx: number) => (
                 <tr key={idx} className="border-b border-border last:border-0">
                   <td className="py-3 text-[14px] text-text-mid">{exp.organization}</td>
                   <td className="py-3 text-[14px] text-text-mid">{exp.positionTitle}</td>
@@ -175,7 +199,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </Card>
 
       <Card title="FAFICS Experience">
-        {application.faficsExperiences.length > 0 ? (
+        {faficsExperiences.length > 0 ? (
           <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
@@ -185,7 +209,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
               </tr>
             </thead>
             <tbody>
-              {application.faficsExperiences.map((exp: any, idx: number) => (
+              {faficsExperiences.map((exp: any, idx: number) => (
                 <tr key={idx} className="border-b border-border last:border-0">
                   <td className="py-3 text-[14px] text-text-mid">{exp.positionHeld}</td>
                   <td className="py-3 text-[14px] text-text-mid">
@@ -224,7 +248,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
       </Card>
 
       <Card title="Local Association Experience">
-        {application.localExperiences.length > 0 ? (
+        {localExperiences.length > 0 ? (
           <div className="overflow-x-auto -mx-1 px-1"><table className="w-full min-w-[520px] text-left border-collapse mb-4">
             <thead>
               <tr className="border-b border-border">
@@ -234,7 +258,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
               </tr>
             </thead>
             <tbody>
-              {application.localExperiences.map((exp: any, idx: number) => (
+              {localExperiences.map((exp: any, idx: number) => (
                 <tr key={idx} className="border-b border-border last:border-0">
                   <td className="py-3 text-[14px] text-text-mid">{exp.positionHeld}</td>
                   <td className="py-3 text-[14px] text-text-mid">{exp.areaOfContribution || '-'}</td>
@@ -258,7 +282,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
           // Only show areas the applicant actually rated, marked preferred, or
           // added as a custom area — unrated fixed areas are persisted as a full
           // matrix but carry no information on a read-only review screen.
-          const rated = application.expertise.filter(
+          const rated = (application.expertise ?? []).filter(
             (exp: any) => exp.expertiseLevel || exp.isPreferred || (exp.isCustom && exp.otherDescription),
           );
           if (rated.length === 0) {

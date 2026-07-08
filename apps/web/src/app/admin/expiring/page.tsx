@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin.api';
 import { Button } from '@/components/ui/Button';
+import { formatDate } from '@/lib/utils/date';
 
 export default function AdminExpiringPage() {
   const queryClient = useQueryClient();
@@ -92,8 +93,8 @@ export default function AdminExpiringPage() {
                     <td className="py-3 px-4 text-[14px] text-navy font-semibold">{[app.firstName, app.lastName].filter(Boolean).join(' ')}</td>
                     <td className="py-3 px-4 text-[14px] text-text-mid">{app.associationName}</td>
                     <td className="py-3 px-4 text-[14px] text-text-mid">{app.associationCountry}</td>
-                    <td className="py-3 px-4 text-[14px] text-text-light">{new Date(app.approvedAt).toLocaleDateString()}</td>
-                    <td className="py-3 px-4 text-[14px] text-navy font-medium">{new Date(app.expiresAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-[14px] text-text-light">{formatDate(app.approvedAt)}</td>
+                    <td className="py-3 px-4 text-[14px] text-navy font-medium">{formatDate(app.expiresAt)}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-block px-2.5 py-1 rounded-md text-[12px] font-bold ${getDaysLeftColor(daysLeft)}`}>
                         {daysLeft} days

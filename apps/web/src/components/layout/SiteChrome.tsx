@@ -23,8 +23,12 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // "/" counts as the Apply tab; each other tab matches its route prefix.
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname?.startsWith(href);
+    href === '/apply'
+      ? pathname === '/' || pathname?.startsWith('/apply')
+      : pathname?.startsWith(href);
+  const isOfficerActive = pathname?.startsWith('/admin');
 
   return (
     <>
@@ -44,9 +48,10 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-2.5 sm:px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors ${
+                aria-current={isActive(link.href) ? 'page' : undefined}
+                className={`relative px-2.5 sm:px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors ${
                   isActive(link.href)
-                    ? 'text-gold'
+                    ? 'text-gold font-semibold after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:h-[2px] after:rounded-full after:bg-gold'
                     : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
@@ -55,7 +60,12 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             ))}
             <Link
               href="/admin/login"
-              className="ml-1 sm:ml-2 px-3 py-1.5 text-[12px] font-medium text-gold/90 border border-gold/35 rounded-full hover:bg-gold/10 transition-colors whitespace-nowrap"
+              aria-current={isOfficerActive ? 'page' : undefined}
+              className={`ml-1 sm:ml-2 px-3 py-1.5 text-[12px] font-medium border rounded-full transition-colors whitespace-nowrap ${
+                isOfficerActive
+                  ? 'text-navy bg-gold border-gold font-semibold'
+                  : 'text-gold/90 border-gold/35 hover:bg-gold/10'
+              }`}
             >
               Officer Login
             </Link>

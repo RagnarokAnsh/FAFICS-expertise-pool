@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { Button } from '../../ui/Button';
+import { useToast } from '../../ui/Toast';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
 import { Card } from '../../ui/Card';
 
@@ -14,6 +15,7 @@ interface StepProps {
 export function Step5ConsentSubmit({ onNext, onBack, goToStep, isSubmitting }: StepProps) {
   const { register, getValues, formState: { errors }, trigger } = useFormContext<ApplicationData>();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const values = getValues();
 
@@ -24,6 +26,7 @@ export function Step5ConsentSubmit({ onNext, onBack, goToStep, isSubmitting }: S
       onNext({ consentData: true, consentAccurate: true });
     } else {
       setSubmitError('Please check all consent boxes before submitting.');
+      showToast('Please check all consent boxes before submitting.', 'error');
     }
   };
 

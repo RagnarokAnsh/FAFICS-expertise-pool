@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { StatusBadge } from './ui';
+import { formatDate } from '@/lib/utils/date';
 
 interface ApplicationSummary {
   id: string;
@@ -28,7 +29,7 @@ function getInitials(firstName: string, lastName: string) {
 
 function expiryLabel(expiresAt: string | null) {
   if (!expiresAt) return null;
-  return `Expires ${new Date(expiresAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`;
+  return `Expires ${formatDate(expiresAt)}`;
 }
 
 export function RosterGrid({ applications, onSelect }: Props) {

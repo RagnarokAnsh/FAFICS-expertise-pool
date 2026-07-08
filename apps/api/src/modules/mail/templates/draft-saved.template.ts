@@ -3,11 +3,13 @@ import { buildEmailHtml } from './base.template';
 export interface DraftSavedTemplateParams {
   applicantName: string;
   resumeUrl: string;
+  statusUrl: string;
 }
 
 export const draftSavedTemplate = ({
   applicantName,
   resumeUrl,
+  statusUrl,
 }: DraftSavedTemplateParams) => {
   const subject = 'FAFICS Expertise Pool — Your application has been saved';
 
@@ -27,10 +29,9 @@ export const draftSavedTemplate = ({
     </div>
 
     <p style="font-size: 13px; color: #8892aa; background-color: #f8f9fa; padding: 14px; border-radius: 6px;">
-      This link is valid for 30 days. For security, it can only be used once —
-      after opening it, a new link will be needed if you close the browser before
-      submitting. You can always request a new link from the
-      <a href="${resumeUrl.split('/apply/')[0]}/status" style="color: #0D2240; text-decoration: underline;">status page</a>.
+      This link is valid for 30 days and can be reused until you submit your
+      application. If it expires, you can request a new link from the
+      <a href="${statusUrl}" style="color: #0D2240; text-decoration: underline;">status page</a>.
     </p>
 
     <p style="font-size: 13px; color: #8892aa; margin-top: 24px;">

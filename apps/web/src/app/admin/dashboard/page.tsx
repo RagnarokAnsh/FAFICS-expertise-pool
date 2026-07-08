@@ -7,14 +7,10 @@ import { StatCard } from '@/components/admin/StatCard';
 import { ReportCard, StatusBadge, ICONS } from '@/components/admin/ui';
 import { ExpertiseBarChart } from '@/components/admin/charts/ExpertiseBarChart';
 import { LanguageBarChart } from '@/components/admin/charts/LanguageBarChart';
+import { formatDate } from '@/lib/utils/date';
 
 function initials(first: string, last: string) {
   return `${first?.charAt(0) ?? ''}${last?.charAt(0) ?? ''}`.toUpperCase();
-}
-
-function fmtDate(iso: string | null) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function activityLine(app: any): string {
@@ -107,7 +103,7 @@ export default function AdminDashboard() {
                   <div className="truncate text-[11.5px] text-text-muted">{activityLine(app)}</div>
                 </div>
                 <div className="hidden text-[11px] text-text-muted sm:block">
-                  {fmtDate(app.approvedAt ?? app.submittedAt ?? null)}
+                  {formatDate(app.approvedAt ?? app.submittedAt ?? null)}
                 </div>
                 <StatusBadge status={app.status} />
               </div>

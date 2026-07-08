@@ -9,6 +9,7 @@ import { ActionButtons } from '@/components/admin/ActionButtons';
 import { AuditTimeline } from '@/components/admin/AuditTimeline';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { formatDate } from '@/lib/utils/date';
 
 interface PageProps {
   params: { id: string };
@@ -55,21 +56,21 @@ export default function ApplicationDetailPage({ params }: PageProps) {
           {app.presidentNotes && (
             <div className="mb-6 border border-gold bg-gold/10 p-5 rounded-lg">
               <h3 className="text-[12px] font-semibold text-navy uppercase mb-2">President's Comments</h3>
-              <p className="text-[14px] text-navy italic">"{app.presidentNotes}"</p>
+              <p className="text-[14px] text-navy italic break-words">"{app.presidentNotes}"</p>
             </div>
           )}
 
           {app.secretaryNotes && (
             <div className="mb-6 border border-navy bg-navy/5 p-5 rounded-lg">
               <h3 className="text-[12px] font-semibold text-navy uppercase mb-2">Secretary's / Internal Notes</h3>
-              <p className="text-[14px] text-navy italic">"{app.secretaryNotes}"</p>
+              <p className="text-[14px] text-navy italic break-words">"{app.secretaryNotes}"</p>
             </div>
           )}
           
           {app.internalNotes && (
              <div className="mb-6 border border-navy bg-navy/5 p-5 rounded-lg">
              <h3 className="text-[12px] font-semibold text-navy uppercase mb-2">Internal Notes</h3>
-             <p className="text-[14px] text-navy italic">"{app.internalNotes}"</p>
+             <p className="text-[14px] text-navy italic break-words">"{app.internalNotes}"</p>
            </div>
           )}
 
@@ -88,7 +89,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
               <div className="mb-6">
                 <span className="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1">Expiration</span>
                 <div className="text-[14px] text-navy font-semibold">
-                  {app.expiresAt ? new Date(app.expiresAt).toLocaleDateString() : 'N/A'}
+                  {app.expiresAt ? formatDate(app.expiresAt) : 'N/A'}
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ import { applicationsApi } from '../../lib/api/applications.api';
 import { Card } from '../../components/ui/Card';
 import { Field, Input } from '../../components/ui/Field';
 import { Button } from '../../components/ui/Button';
+import { formatDate } from '../../lib/utils/date';
 import Link from 'next/link';
 
 /* ─── helpers ─── */
@@ -21,7 +22,7 @@ function computeExpiry(approvedAt: string | null | undefined): string {
   if (!approvedAt) return '—';
   const expiry = new Date(approvedAt);
   expiry.setFullYear(expiry.getFullYear() + 3);
-  return expiry.toLocaleDateString();
+  return formatDate(expiry);
 }
 
 /* ─── types ─── */
@@ -195,18 +196,18 @@ export default function StatusPage() {
                 <div className="text-left bg-off-white rounded-lg p-4 text-[13.5px] border border-border mt-4">
                   <div className="grid grid-cols-[120px_1fr] gap-2 mb-2">
                     <span className="text-text-muted font-medium">Submitted:</span>
-                    <span className="text-text font-semibold">{statusResult.submittedAt ? new Date(statusResult.submittedAt).toLocaleDateString() : '—'}</span>
+                    <span className="text-text font-semibold">{formatDate(statusResult.submittedAt)}</span>
                   </div>
                   {statusResult.endorsedAt && (
                     <div className="grid grid-cols-[120px_1fr] gap-2 mb-2">
                       <span className="text-text-muted font-medium">Endorsed:</span>
-                      <span className="text-text font-semibold">{new Date(statusResult.endorsedAt).toLocaleDateString()}</span>
+                      <span className="text-text font-semibold">{formatDate(statusResult.endorsedAt)}</span>
                     </div>
                   )}
                   {statusResult.approvedAt && (
                     <div className="grid grid-cols-[120px_1fr] gap-2 mb-2">
                       <span className="text-text-muted font-medium">Approved:</span>
-                      <span className="text-text font-semibold">{new Date(statusResult.approvedAt).toLocaleDateString()}</span>
+                      <span className="text-text font-semibold">{formatDate(statusResult.approvedAt)}</span>
                     </div>
                   )}
                   {statusResult.status === 'submitted' && (

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import { withBasePath } from '../utils/base-path';
 
 export const adminApiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
@@ -19,7 +20,7 @@ adminApiClient.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       Cookies.remove('fafics_role');
       if (!window.location.pathname.includes('/admin/login')) {
-        window.location.href = '/admin/login';
+        window.location.href = withBasePath('/admin/login');
       }
     }
     return Promise.reject(error);

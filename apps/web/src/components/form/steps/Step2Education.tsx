@@ -3,8 +3,10 @@ import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
 import { Card } from '../../ui/Card';
 import { Input, Select } from '../../ui/Field';
 import { Button } from '../../ui/Button';
+import { useToast } from '../../ui/Toast';
 import { DynamicRowList } from '../../ui/DynamicRowList';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
+import { firstErrorMessage } from '../../../lib/utils/form-errors';
 
 interface StepProps {
   onNext: () => void;
@@ -20,7 +22,9 @@ const PROFICIENCIES = [
 ];
 
 export function Step2Education({ onNext, onBack }: StepProps) {
-  const { register, control, formState: { errors }, trigger } = useFormContext<ApplicationData>();
+  const methods = useFormContext<ApplicationData>();
+  const { register, control, formState: { errors }, trigger } = methods;
+  const { showToast } = useToast();
   
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({
     control,
@@ -41,15 +45,23 @@ export function Step2Education({ onNext, onBack }: StepProps) {
       appendEdu({ degreeName: '', institution: '', sortOrder: 1 });
     }
     if (langFields.length === 0) {
-      appendLang({ language: '', proficiency: 'working_level', sortOrder: 1 });
+      // Proficiency intentionally starts EMPTY so the placeholder shows and the
+      // applicant makes an explicit choice (QA: default was "Working-level").
+      appendLang({ language: '', proficiency: '', sortOrder: 1 } as any);
     }
   }, []);
 
   const handleNext = async () => {
     const isValid = await trigger(['educations', 'languages']);
-    if (isValid) {
-      onNext();
+    if (!isValid) {
+      showToast(
+        firstErrorMessage(methods.formState.errors) ??
+          'Please fill in all required fields highlighted below.',
+        'error',
+      );
+      return;
     }
+    onNext();
   };
 
   return (
@@ -65,13 +77,14 @@ export function Step2Education({ onNext, onBack }: StepProps) {
         {errors.educations?.root?.message && (
           <p className="text-danger text-sm mb-3">{errors.educations.root.message}</p>
         )}
-        <div className="hidden lg:grid gap-2.5 pb-1 px-11" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Degree / Qualification</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Institution</span>
+        <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Degree / Qualification <span className="text-gold">*</span></span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Institution <span className="text-gold">*</span></span>
         </div>
-        
+
         <DynamicRowList
           items={eduFields}
+          gridTemplateColumns="1fr 1fr"
           onAdd={() => appendEdu({ degreeName: '', institution: '', sortOrder: eduFields.length + 1 })}
           addLabel="Add Qualification"
           renderRow={(field, index, _onRemove) => (
@@ -101,14 +114,15 @@ export function Step2Education({ onNext, onBack }: StepProps) {
         {errors.languages?.root?.message && (
           <p className="text-danger text-sm mb-3">{errors.languages.root.message}</p>
         )}
-        <div className="hidden lg:grid gap-2.5 pb-1 px-11" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Language</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Level of Proficiency</span>
+        <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Language <span className="text-gold">*</span></span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Level of Proficiency <span className="text-gold">*</span></span>
         </div>
-        
+
         <DynamicRowList
           items={langFields}
-          onAdd={() => appendLang({ language: '', proficiency: 'working_level', sortOrder: langFields.length + 1 })}
+          gridTemplateColumns="1fr 1fr"
+          onAdd={() => appendLang({ language: '', proficiency: '', sortOrder: langFields.length + 1 } as any)}
           addLabel="Add Language"
           renderRow={(field, index, _onRemove) => {
             // Languages picked in other rows — unavailable to avoid duplicates.
@@ -131,17 +145,22 @@ export function Step2Education({ onNext, onBack }: StepProps) {
                   <span className="text-[11.5px] text-danger">{errors.languages[index]?.language?.message}</span>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Select 
-                  className="flex-1"
-                  hasError={!!errors.languages?.[index]?.proficiency}
-                  {...register(`languages.${index}.proficiency`)}
-                >
-                  <option value="">Select level...</option>
-                  {PROFICIENCIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </Select>
-                {langFields.length > 1 && (
-                  <Button type="button" variant="remove" onClick={() => removeLang(index)}>×</Button>
+              <div className="flex flex-col gap-1">
+                <div className="flex gap-2">
+                  <Select
+                    className="flex-1"
+                    hasError={!!errors.languages?.[index]?.proficiency}
+                    {...register(`languages.${index}.proficiency`)}
+                  >
+                    <option value="" hidden>Select level...</option>
+                    {PROFICIENCIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </Select>
+                  {langFields.length > 1 && (
+                    <Button type="button" variant="remove" onClick={() => removeLang(index)}>×</Button>
+                  )}
+                </div>
+                {errors.languages?.[index]?.proficiency?.message && (
+                  <span className="text-[11.5px] text-danger">Proficiency Level is required</span>
                 )}
               </div>
             </>

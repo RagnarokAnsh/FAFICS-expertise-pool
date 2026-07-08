@@ -5,6 +5,9 @@ import { FormProvider, SubmitHandler } from 'react-hook-form';
 import { useApplicationForm, sanitizeForApi } from '../../hooks/useApplicationForm';
 import { applicationsApi } from '../../lib/api/applications.api';
 import { ApplicationData } from '../../lib/schemas/application.schema';
+import { firstErrorMessage } from '../../lib/utils/form-errors';
+import { withBasePath } from '../../lib/utils/base-path';
+import { useToast } from '../ui/Toast';
 import { FormProgress } from './FormProgress';
 import { Step1PersonalInfo } from './steps/Step1PersonalInfo';
 import { Step2Education } from './steps/Step2Education';
@@ -29,6 +32,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   /* ── Draft creation toast ── */
   const [showDraftToast, setShowDraftToast] = useState(false);
@@ -62,7 +66,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
         if (createResponse.resumed) {
           // An existing editable application was found — send the user to review
           // it before submitting rather than duplicating.
-          window.location.href = `/apply/resume/${createResponse.editToken}`;
+          window.location.href = withBasePath(`/apply/resume/${createResponse.editToken}`);
           return;
         }
         const submitResponse = await applicationsApi.submitApplication(
@@ -110,7 +114,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
           </p>
           <button 
             className="px-6 py-3 bg-navy text-white text-[14px] font-semibold rounded-lg hover:bg-navy-mid transition-colors"
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.href = withBasePath('/')}
           >
             Return to Home
           </button>
@@ -184,10 +188,18 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
             {currentStep === 3 && <Step3WorkExperience onNext={handleNext} onBack={handleBack} />}
             {currentStep === 4 && <Step4SelfAssessment onNext={handleNext} onBack={handleBack} />}
             {currentStep === 5 && (
-              <Step5ConsentSubmit 
+              <Step5ConsentSubmit
                 onNext={(data) => {
-                  form.handleSubmit(onSubmitForm as any)();
-                }} 
+                  // The full schema runs at submit; surface any failure instead
+                  // of letting the button silently do nothing.
+                  form.handleSubmit(onSubmitForm as any, (submitErrors) => {
+                    showToast(
+                      firstErrorMessage(submitErrors) ??
+                        'Some information is missing or invalid. Please review the highlighted steps.',
+                      'error',
+                    );
+                  })();
+                }}
                 onBack={handleBack} 
                 goToStep={goToStep}
                 isSubmitting={isSubmitting}

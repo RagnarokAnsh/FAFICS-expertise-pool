@@ -90,7 +90,10 @@ export class MailService {
   }
 
   private getWebBaseUrl(): string {
-    return this.configService.get<string>('app.webBaseUrl') || this.configService.get<string>('WEB_BASE_URL') || 'http://localhost:3000';
+    const base = this.configService.get<string>('app.webBaseUrl') || this.configService.get<string>('WEB_BASE_URL') || 'http://localhost:3000';
+    // Links are built by concatenation — a trailing slash would produce
+    // "http://host//path" in every email.
+    return base.replace(/\/+$/, '');
   }
 
   async sendSubmissionConfirmation(applicationId: string): Promise<{ messageId: string }> {
@@ -258,6 +261,7 @@ export class MailService {
     const { subject, html } = draftSavedTemplate({
       applicantName: `${app.firstName} ${app.lastName}`,
       resumeUrl,
+      statusUrl: `${this.getWebBaseUrl()}/status`,
     });
     return this.sendEmail(app.email, subject, html);
   }

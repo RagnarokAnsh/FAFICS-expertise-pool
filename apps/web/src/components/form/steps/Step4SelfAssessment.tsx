@@ -4,7 +4,9 @@ import { Card } from '../../ui/Card';
 import { Input, TextArea } from '../../ui/Field';
 import { Button } from '../../ui/Button';
 import { MultiSelect } from '../../ui/MultiSelect';
+import { useToast } from '../../ui/Toast';
 import { ApplicationData } from '../../../lib/schemas/application.schema';
+import { firstErrorMessage } from '../../../lib/utils/form-errors';
 import { FIXED_EXPERTISE_AREAS } from '../../../lib/constants/expertise';
 import { FAFICS_COMMITTEES, COMMITTEE_OTHER, COMPETENCIES, MAX_COMPETENCIES } from '../../../lib/constants/work';
 
@@ -14,7 +16,9 @@ interface StepProps {
 }
 
 export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
-  const { register, control, setValue, formState: { errors }, trigger, getValues } = useFormContext<ApplicationData>();
+  const methods = useFormContext<ApplicationData>();
+  const { register, control, setValue, formState: { errors }, trigger, getValues } = methods;
+  const { showToast } = useToast();
   
   const { fields, append, remove, replace } = useFieldArray({
     control,
@@ -59,7 +63,15 @@ export function Step4SelfAssessment({ onNext, onBack }: StepProps) {
 
   const handleNext = async () => {
     const isValid = await trigger('expertise');
-    if (isValid) onNext();
+    if (!isValid) {
+      showToast(
+        firstErrorMessage(methods.formState.errors) ??
+          'Please complete your self-assessment before continuing.',
+        'error',
+      );
+      return;
+    }
+    onNext();
   };
 
   const selectedPreferencesCount = expertiseWatch?.filter(e => e.isPreferred)?.length || 0;

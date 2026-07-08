@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin.api';
 import { Button } from '@/components/ui/Button';
+import { formatDate } from '@/lib/utils/date';
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
@@ -12,7 +13,7 @@ export default function AdminUsersPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('secretary');
+  const [role, setRole] = useState('admin');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +34,7 @@ export default function AdminUsersPage() {
       setFirstName('');
       setLastName('');
       setPassword('');
-      setRole('secretary');
+      setRole('admin');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create user.');
     } finally {
@@ -78,15 +79,16 @@ export default function AdminUsersPage() {
                 <tr key={user.id} className="border-b border-border last:border-0 hover:bg-gray-50">
                   <td className="py-3 px-4 text-[14px] text-navy font-medium">{user.email}</td>
                   <td className="py-3 px-4 text-[14px] text-text-mid capitalize">{user.role}</td>
-                  <td className="py-3 px-4 text-[14px] text-text-light">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td className="py-3 px-4 text-[14px] text-text-light">{formatDate(user.createdAt)}</td>
                   <td className="py-3 px-4">
                     <select
                       value={user.role}
                       onChange={(e) => handleRoleChange(user.id, e.target.value)}
                       className="border border-border rounded px-2 py-1 text-sm bg-white"
                     >
-                      <option value="secretary">Secretary</option>
-                      <option value="committee">Committee</option>
+                      {/* Hidden per client feedback — re-enable when ready */}
+                      {/* <option value="secretary">Secretary</option> */}
+                      {/* <option value="committee">Committee</option> */}
                       <option value="admin">Admin</option>
                     </select>
                   </td>
@@ -158,8 +160,9 @@ export default function AdminUsersPage() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full border border-border rounded p-2 text-sm bg-white"
                 >
-                  <option value="secretary">Secretary (Read/Write Applications)</option>
-                  <option value="committee">Committee (Read Only)</option>
+                  {/* Hidden per client feedback — re-enable when ready */}
+                  {/* <option value="secretary">Secretary (Read/Write Applications)</option> */}
+                  {/* <option value="committee">Committee (Read Only)</option> */}
                   <option value="admin">Admin (Full Access)</option>
                 </select>
               </div>

@@ -21,8 +21,10 @@ export function FormProgress({ currentStep, highestStep, goToStep }: FormProgres
         {STEPS.map((step, index) => {
           const isActive = currentStep === step.id;
           const isDone = step.id <= highestStep && step.id !== currentStep;
-          
-          let itemClass = "flex-1 min-w-[140px] md:min-w-0 flex items-center gap-2.5 p-[14px_12px] cursor-pointer border-b-[3px] border-transparent transition-all duration-200 relative";
+          const isClickable = isDone || isActive;
+
+          // Locked / not-yet-reached tabs aren't clickable — show a disabled cursor.
+          let itemClass = `flex-1 min-w-[140px] md:min-w-0 flex items-center gap-2.5 p-[14px_12px] ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'} border-b-[3px] border-transparent transition-all duration-200 relative`;
           if (isActive) itemClass += " !border-navy";
           if (isDone) itemClass += " !border-gold";
 
@@ -39,7 +41,7 @@ export function FormProgress({ currentStep, highestStep, goToStep }: FormProgres
               key={step.id} 
               className={itemClass}
               onClick={() => {
-                if (isDone || isActive) {
+                if (isClickable) {
                   goToStep(step.id);
                 }
               }}

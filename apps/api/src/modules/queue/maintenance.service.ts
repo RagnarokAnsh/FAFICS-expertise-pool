@@ -27,7 +27,10 @@ export class MaintenanceService {
   private async reissueExpiredPresidentLinks(): Promise<void> {
     const now = new Date();
     const ttlMs = this.configService.get<number>('PRESIDENT_LINK_TTL_MS', 14 * 24 * 60 * 60 * 1000);
-    const webBaseUrl = this.configService.get<string>('WEB_BASE_URL', 'http://localhost:3000');
+    const webBaseUrl = this.configService.get<string>(
+      'app.webBaseUrl',
+      this.configService.get<string>('WEB_BASE_URL', 'http://localhost:3000'),
+    );
 
     const expiredTokens = await this.prisma.magicToken.findMany({
       where: {

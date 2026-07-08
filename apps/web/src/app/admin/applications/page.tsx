@@ -1,9 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin.api';
 import { ApplicationTable } from '@/components/admin/ApplicationTable';
+
+// Human-readable labels for each status, plus the dashboard-stats key that
+// holds its count so the dropdown only lists statuses that actually occur.
+const STATUS_OPTIONS: { value: string; label: string; statKey: string }[] = [
+  { value: 'draft', label: 'Draft', statKey: 'drafts' },
+  { value: 'submitted', label: 'Submitted (Pending President)', statKey: 'pendingEndorsement' },
+  { value: 'endorsed', label: 'Endorsed (Pending Review)', statKey: 'pendingReview' },
+  { value: 'under_review', label: 'Under Review', statKey: 'underReview' },
+  { value: 'changes_requested', label: 'Changes Requested', statKey: 'changesRequested' },
+  { value: 'approved', label: 'Approved (Active in Pool)', statKey: 'activeInPool' },
+  { value: 'rejected', label: 'Rejected', statKey: 'rejected' },
+  { value: 'expired', label: 'Expired', statKey: 'expired' },
+];
 
 export default function AdminApplicationsPage() {
   const [page, setPage] = useState(1);
@@ -24,7 +37,7 @@ export default function AdminApplicationsPage() {
     setPage(1);
   }, [debouncedSearch, status, country]);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ['applications', { page, limit, search: debouncedSearch, status, country }],
     queryFn: () => adminApi.listApplications({ page, limit, search: debouncedSearch, status, country }),
   });
@@ -35,6 +48,29 @@ export default function AdminApplicationsPage() {
     queryFn: () => adminApi.getDistinctCountries(),
     staleTime: 5 * 60 * 1000, // cache for 5 minutes
   });
+
+  // Per-status counts drive the status filter dropdown: only statuses that
+  // actually occur in the data are offered.
+  const { data: stats, refetch: refetchStats } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: adminApi.getStats,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const statusOptions = useMemo(() => {
+    const loadedStatuses = new Set((data?.data || []).map((app: any) => app.status));
+    return STATUS_OPTIONS.filter(
+      (opt) =>
+        Number(stats?.[opt.statKey] ?? 0) > 0 ||
+        loadedStatuses.has(opt.value) ||
+        opt.value === status, // never drop the currently selected status
+    );
+  }, [stats, data, status]);
+
+  const handleRefresh = () => {
+    refetch();
+    refetchStats();
+  };
 
   const clearFilters = () => {
     setSearch('');
@@ -53,7 +89,7 @@ export default function AdminApplicationsPage() {
 
       <div className="bg-white p-4 rounded-lg shadow-sm border border-border flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
-          <label className="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5">Search Name / Ref</label>
+          <label className="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5">Search Name / Reference No.</label>
           <input 
             type="text" 
             placeholder="Search..." 
@@ -67,16 +103,12 @@ export default function AdminApplicationsPage() {
           <select 
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full border border-border rounded h-[38px] px-3 text-[13px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy bg-white"
+            className="w-full border border-border rounded h-[38px] px-3 text-[13px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy bg-white truncate"
           >
             <option value="">All Statuses</option>
-            <option value="submitted">Submitted (Pending President)</option>
-            <option value="endorsed">Endorsed (Pending Review)</option>
-            <option value="under_review">Under Review</option>
-            <option value="changes_requested">Changes Requested</option>
-            <option value="approved">Approved (Active in Pool)</option>
-            <option value="rejected">Rejected</option>
-            <option value="expired">Expired</option>
+            {statusOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
         <div className="w-[180px]">
@@ -106,13 +138,15 @@ export default function AdminApplicationsPage() {
         </div>
       )}
 
-      <ApplicationTable 
-        data={data?.data || []} 
-        isLoading={isLoading} 
-        page={page} 
-        total={data?.total || 0} 
+      <ApplicationTable
+        data={data?.data || []}
+        isLoading={isLoading}
+        page={page}
+        total={data?.total || 0}
         limit={limit}
         onPageChange={setPage}
+        onRefresh={handleRefresh}
+        isRefreshing={isFetching}
       />
     </div>
   );

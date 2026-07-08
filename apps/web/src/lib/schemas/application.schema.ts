@@ -32,6 +32,9 @@ function parseDate(value: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+/** E.164 caps a full international number (dial code + number) at 15 digits. */
+export const MAX_PHONE_DIGITS = 15;
+
 /** A phone number must carry an international dial code and enough digits. */
 const phoneNumber = (label: string) =>
   z
@@ -42,6 +45,9 @@ const phoneNumber = (label: string) =>
     })
     .refine((v) => (v.replace(/\D/g, '').length >= 8), {
       message: 'Enter a valid phone number',
+    })
+    .refine((v) => v.replace(/\D/g, '').length <= MAX_PHONE_DIGITS, {
+      message: `Phone number cannot exceed ${MAX_PHONE_DIGITS} digits`,
     });
 
 export const personalInfoSchema = z
@@ -60,6 +66,9 @@ export const personalInfoSchema = z
       .refine((v) => !v || /^\+\d/.test(v.trim()), { message: 'Select a country code' })
       .refine((v) => !v || v.replace(/\D/g, '').length >= 8, {
         message: 'Enter a valid phone number',
+      })
+      .refine((v) => !v || v.replace(/\D/g, '').length <= MAX_PHONE_DIGITS, {
+        message: `Phone number cannot exceed ${MAX_PHONE_DIGITS} digits`,
       }),
     email: z.string().min(1, 'Email is required').email('Invalid email address'),
     separationDate: z.string().min(1, 'Date of Separation is required'),
@@ -124,7 +133,10 @@ export const associationSchema = z.object({
     .string()
     .nullish()
     .refine((v) => !v || /^\+\d/.test(v.trim()), { message: 'Select a country code' })
-    .refine((v) => !v || v.replace(/\D/g, '').length >= 8, { message: 'Enter a valid phone number' }),
+    .refine((v) => !v || v.replace(/\D/g, '').length >= 8, { message: 'Enter a valid phone number' })
+    .refine((v) => !v || v.replace(/\D/g, '').length <= MAX_PHONE_DIGITS, {
+      message: `Phone number cannot exceed ${MAX_PHONE_DIGITS} digits`,
+    }),
   associateMemberName: z.string().nullish(),
   associateMemberCountry: z.string().nullish(),
 });
@@ -153,12 +165,19 @@ export const step2Schema = z.object({
   languages: z.array(languageSchema).min(1, 'At least one working language is required'),
 });
 
+// durationYears is a Postgres Decimal(4,1); the API serializes it to JSON as a
+// STRING (e.g. "2"). Coerce so a resumed value validates on the first submit —
+// without this, z.number() rejects the string until the Step 3 <Select>
+// remounts and its setValueAs re-coerces it. nullish() short-circuits
+// null/undefined before coercion, so empty rows stay empty (never become 0).
+const durationYears = z.coerce.number().nullish();
+
 export const unExperienceSchema = z.object({
   agency: z.string().min(1, 'Agency is required'),
   positionTitle: z.string().min(1, 'Position Title is required'),
   grade: z.string().nullish(),
   areaOfExpertise: z.string().nullish(),
-  durationYears: z.number().nullish(),
+  durationYears,
   sortOrder: z.number().default(1),
 });
 
@@ -166,7 +185,7 @@ export const nonUnExperienceSchema = z.object({
   organization: z.string().min(1, 'Organization is required'),
   positionTitle: z.string().min(1, 'Position Title is required'),
   areaOfExpertise: z.string().nullish(),
-  durationYears: z.number().nullish(),
+  durationYears,
   sortOrder: z.number().default(1),
 });
 
@@ -175,14 +194,14 @@ export const faficsExperienceSchema = z.object({
   areaOfContribution: z.string().nullish(),
   // Free text shown when "Other" is selected in the committee multi-select.
   areaOfContributionOther: z.string().nullish(),
-  durationYears: z.number().nullish(),
+  durationYears,
   sortOrder: z.number().default(1),
 });
 
 export const localExperienceSchema = z.object({
   positionHeld: z.string().min(1, 'Position Held is required'),
   areaOfContribution: z.string().nullish(),
-  durationYears: z.number().nullish(),
+  durationYears,
   sortOrder: z.number().default(1),
 });
 
@@ -229,6 +248,69 @@ export const step5Schema = z.object({
   }),
 });
 
+/** True when the applicant's email and the president's email are the same address. */
+export function emailsMatchPresident(email?: string | null, presidentEmail?: string | null): boolean {
+  const a = (email ?? '').trim().toLowerCase();
+  const b = (presidentEmail ?? '').trim().toLowerCase();
+  return !!a && !!b && a === b;
+}
+
+export const PRESIDENT_EMAIL_MESSAGE =
+  "The President's email must be different from your own email address";
+
+// Duration buckets store their UPPER bound (99 = "20+ years" sentinel). Sum each
+// bucket's minimum plausible years so overlapping/parallel roles aren't
+// over-counted when comparing total experience against the applicant's age.
+const BUCKET_MIN_YEARS: Record<string, number> = {
+  '0.5': 0.5,
+  '1': 1,
+  '2': 2,
+  '5': 3,
+  '10': 6,
+  '20': 11,
+  '99': 20,
+};
+
+type ExperienceLike = { durationYears?: number | null };
+
+/**
+ * Returns an error message when the combined experience durations exceed the
+ * applicant's age, or null when the data is fine / incomplete.
+ */
+export function experienceExceedsAge(data: {
+  personal?: { dateOfBirth?: string | null };
+  unExperiences?: ExperienceLike[] | null;
+  nonUnExperiences?: ExperienceLike[] | null;
+  faficsExperiences?: ExperienceLike[] | null;
+  localExperiences?: ExperienceLike[] | null;
+}): string | null {
+  const dob = data.personal?.dateOfBirth ? parseDate(data.personal.dateOfBirth) : null;
+  if (!dob) return null;
+  const age = ageInYears(dob);
+  if (age <= 0) return null;
+
+  const rows: ExperienceLike[] = [
+    ...(data.unExperiences ?? []),
+    ...(data.nonUnExperiences ?? []),
+    ...(data.faficsExperiences ?? []),
+    ...(data.localExperiences ?? []),
+  ];
+  const total = rows.reduce((sum, row) => {
+    // durationYears may arrive as a number or a Decimal string ("5" or "5.0").
+    // Normalize to a number first so the bucket lookup matches and we never
+    // accidentally string-concatenate into the running total.
+    const num = Number(row?.durationYears);
+    if (!Number.isFinite(num)) return sum;
+    const years = BUCKET_MIN_YEARS[String(num)] ?? num;
+    return sum + years;
+  }, 0);
+
+  if (total > age) {
+    return `Total years of experience across all sections (at least ${total}) cannot exceed your age (${age}). Please review the durations.`;
+  }
+  return null;
+}
+
 export const applicationSchema = z
   .object({})
   .merge(step1Schema)
@@ -252,5 +334,20 @@ export const applicationSchema = z
         seen.set(key, idx);
       }
     });
+
+    // The applicant cannot route the endorsement to themselves.
+    if (emailsMatchPresident(data.personal?.email, data.association?.presidentEmail)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['association', 'presidentEmail'],
+        message: PRESIDENT_EMAIL_MESSAGE,
+      });
+    }
+
+    // Combined experience durations must stay plausible for the applicant's age.
+    const ageError = experienceExceedsAge(data);
+    if (ageError) {
+      ctx.addIssue({ code: 'custom', path: ['unExperiences'], message: ageError });
+    }
   });
 export type ApplicationData = z.infer<typeof applicationSchema>;

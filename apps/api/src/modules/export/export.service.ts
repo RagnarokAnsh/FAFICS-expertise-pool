@@ -25,7 +25,7 @@ export class ExportService {
 
     // ── Row 1: Title row ──────────────────────────────────────────────
     const today = format(new Date(), 'dd/MM/yyyy');
-    sheet.mergeCells('A1:R1');
+    sheet.mergeCells('A1:P1');
     const titleCell = sheet.getCell('A1');
     titleCell.value = `FAFICS Expertise Pool — Active Members — Generated: ${today}`;
     titleCell.font = {
@@ -47,8 +47,7 @@ export class ExportService {
       'Reference No', 'UID', 'First Name', 'Last Name', 'Gender',
       'Nationality', 'Email', 'Phone', 'Association', 'Country',
       'Separation Date', 'Approved Date', 'Expiry Date', 'Languages',
-      'Preferred Area 1', 'Preferred Area 2', 'Preferred Area 3',
-      'Expert-Level Areas',
+      'Preferred Areas', 'Expert-Level Areas',
     ];
 
     const headerRow = sheet.getRow(2);
@@ -98,15 +97,13 @@ export class ExportService {
         this.formatDate(row.approved_at || row.approvedAt),
         this.formatDate(row.expires_at || row.expiresAt),
         languages.join('; '),
-        preferredAreas[0] || '',
-        preferredAreas[1] || '',
-        preferredAreas[2] || '',
+        preferredAreas.join(', '),
         expertAreas.join('; '),
       ];
 
       // Alternating row colors for readability
       if (idx % 2 === 1) {
-        for (let col = 1; col <= 18; col++) {
+        for (let col = 1; col <= 16; col++) {
           dataRow.getCell(col).fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -116,7 +113,7 @@ export class ExportService {
       }
 
       // Add borders to data cells
-      for (let col = 1; col <= 18; col++) {
+      for (let col = 1; col <= 16; col++) {
         dataRow.getCell(col).border = {
           top: { style: 'thin', color: { argb: 'FFDDE3EF' } },
           bottom: { style: 'thin', color: { argb: 'FFDDE3EF' } },
@@ -142,7 +139,7 @@ export class ExportService {
     // ── Auto-filter on row 2 ──────────────────────────────────────────
     sheet.autoFilter = {
       from: { row: 2, column: 1 },
-      to: { row: 2, column: 18 },
+      to: { row: 2, column: 16 },
     };
 
     const buffer = await workbook.xlsx.writeBuffer();

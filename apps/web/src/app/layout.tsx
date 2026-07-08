@@ -3,6 +3,7 @@ import { Playfair_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "@/components/providers/ReactQueryProvider";
 import { SiteChrome } from "@/components/layout/SiteChrome";
+import { ToastProvider } from "@/components/ui/Toast";
 const playfairDisplay = Playfair_Display({ 
   subsets: ["latin"],
   variable: "--font-playfair-display",
@@ -30,7 +31,9 @@ export default function RootLayout({
       <body className="antialiased font-sans bg-off-white text-text min-h-screen flex flex-col">
         <div id="toast-container"></div>
         <ReactQueryProvider>
-          <SiteChrome>{children}</SiteChrome>
+          <ToastProvider>
+            <SiteChrome>{children}</SiteChrome>
+          </ToastProvider>
         </ReactQueryProvider>
       </body>
     </html>

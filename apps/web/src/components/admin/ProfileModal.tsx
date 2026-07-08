@@ -4,15 +4,27 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin.api';
 import { COMMITTEE_OTHER } from '@/lib/constants/work';
+import { formatDate } from '@/lib/utils/date';
 
 function initials(first: string, last: string) {
   return `${first?.charAt(0) ?? ''}${last?.charAt(0) ?? ''}`.toUpperCase();
 }
 
-function dur(years: number | null) {
-  if (years == null) return '';
-  if (years >= 99) return ' · 30+ yrs';
-  return ` · ${years} yr${years === 1 ? '' : 's'}`;
+function dur(years: number | string | null) {
+  if (years == null || years === '') return '';
+  const n = Number(years);
+  if (!Number.isFinite(n)) return '';
+  if (n >= 99) return ' · 30+ yrs';
+  return ` · ${n} yr${n === 1 ? '' : 's'}`;
+}
+
+/** FAFICS "Area of Contribution": drop the "Other" sentinel, append its free text. */
+function faficsArea(e: any): string {
+  const parts = (e.areaOfContribution || '')
+    .split('; ')
+    .filter((c: string) => c && c !== COMMITTEE_OTHER);
+  if (e.areaOfContributionOther) parts.push(e.areaOfContributionOther);
+  return parts.join(', ');
 }
 
 const LEVEL_PILL: Record<string, string> = {
@@ -79,7 +91,7 @@ export function ProfileModal({ applicationId, onClose }: { applicationId: string
                   <Row k="Nationality" v={[app.nationality, app.secondNationality].filter(Boolean).join(', ')} />
                   <Row k="Email" v={app.email} />
                   <Row k="Phone" v={app.phone} />
-                  <Row k="Separated" v={app.separationDate} />
+                  <Row k="Separated" v={app.separationDate && formatDate(app.separationDate)} />
                   <Row k="Association" v={`${app.associationName}, ${app.associationCountry}`} />
                 </Block>
                 <Block title="Languages">
@@ -114,6 +126,57 @@ export function ProfileModal({ applicationId, onClose }: { applicationId: string
                       </li>
                     ))}
                   </ul>
+                  {app.unExperienceSummary && (
+                    <p className="mt-2 text-[12px] italic leading-snug text-text-muted">{app.unExperienceSummary}</p>
+                  )}
+                </Block>
+              )}
+
+              {app.nonUnExperiences?.length > 0 && (
+                <Block title="Non-UN Experience" className="mb-4">
+                  <ul>
+                    {app.nonUnExperiences.map((e: any) => (
+                      <li key={e.id} className="border-b border-border py-1.5 text-[12.5px] text-text last:border-none">
+                        {e.organization} — {e.positionTitle}{e.areaOfExpertise ? `, ${e.areaOfExpertise}` : ''}{dur(e.durationYears)}
+                      </li>
+                    ))}
+                  </ul>
+                  {app.nonUnExperienceSummary && (
+                    <p className="mt-2 text-[12px] italic leading-snug text-text-muted">{app.nonUnExperienceSummary}</p>
+                  )}
+                </Block>
+              )}
+
+              {app.faficsExperiences?.length > 0 && (
+                <Block title="FAFICS Experience" className="mb-4">
+                  <ul>
+                    {app.faficsExperiences.map((e: any) => {
+                      const area = faficsArea(e);
+                      return (
+                        <li key={e.id} className="border-b border-border py-1.5 text-[12.5px] text-text last:border-none">
+                          {e.positionHeld}{area ? ` — ${area}` : ''}{dur(e.durationYears)}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {app.faficsExperienceSummary && (
+                    <p className="mt-2 text-[12px] italic leading-snug text-text-muted">{app.faficsExperienceSummary}</p>
+                  )}
+                </Block>
+              )}
+
+              {app.localExperiences?.length > 0 && (
+                <Block title="Local Association Experience" className="mb-4">
+                  <ul>
+                    {app.localExperiences.map((e: any) => (
+                      <li key={e.id} className="border-b border-border py-1.5 text-[12.5px] text-text last:border-none">
+                        {e.positionHeld}{e.areaOfContribution ? ` — ${e.areaOfContribution}` : ''}{dur(e.durationYears)}
+                      </li>
+                    ))}
+                  </ul>
+                  {app.localExperienceSummary && (
+                    <p className="mt-2 text-[12px] italic leading-snug text-text-muted">{app.localExperienceSummary}</p>
+                  )}
                 </Block>
               )}
 
@@ -123,13 +186,19 @@ export function ProfileModal({ applicationId, onClose }: { applicationId: string
                     ?.filter((e: any) => e.expertiseLevel || e.isPreferred || (e.isCustom && e.otherDescription))
                     .map((e: any) => (
                     <div key={e.id} className="flex items-center gap-2">
+                      <span
+                        className={`w-4 shrink-0 text-center text-[13px] text-gold ${e.isPreferred ? '' : 'invisible'}`}
+                        title={e.isPreferred ? 'Preferred area' : undefined}
+                        aria-hidden={!e.isPreferred}
+                      >
+                        ★
+                      </span>
                       <span className="flex-1 text-[12px] text-text">{e.areaLabel}</span>
                       {e.expertiseLevel && (
                         <span className={`rounded-[10px] px-2 py-0.5 text-[10px] font-semibold capitalize ${LEVEL_PILL[e.expertiseLevel] ?? LEVEL_PILL.average}`}>
                           {e.expertiseLevel}
                         </span>
                       )}
-                      {e.isPreferred && <span className="text-[13px] text-gold" title="Preferred area">★</span>}
                     </div>
                   ))}
                   {!app.expertise?.some((e: any) => e.expertiseLevel || e.isPreferred || (e.isCustom && e.otherDescription)) && (
@@ -172,8 +241,8 @@ export function ProfileModal({ applicationId, onClose }: { applicationId: string
               {app.status === 'approved' && (
                 <div className="mt-3 rounded-lg border border-[#c0dd97] bg-[#eaf3de] px-3.5 py-2.5 text-[12px] text-success">
                   <strong>✓ Active in Expertise Pool</strong>
-                  {app.approvedAt && ` — Approved ${new Date(app.approvedAt).toLocaleDateString('en-GB')}`}
-                  {app.expiresAt && ` · Expires ${new Date(app.expiresAt).toLocaleDateString('en-GB')}`}
+                  {app.approvedAt && ` — Approved ${formatDate(app.approvedAt)}`}
+                  {app.expiresAt && ` · Expires ${formatDate(app.expiresAt)}`}
                 </div>
               )}
             </div>
