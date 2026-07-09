@@ -26,6 +26,17 @@ const GENDER_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  draft: '#3E6CA6', // blue
+  submitted: '#EAB308', // yellow — pending endorsement
+  endorsed: '#D97706', // orange — pending review
+  under_review: '#7B5AA6', // purple
+  changes_requested: '#D6608F', // pink
+  approved: '#4B9E6B', // green
+  rejected: '#C0504D', // red
+  expired: '#94A3B8', // gray
+};
+
 function initials(first: string, last: string) {
   return `${first?.charAt(0) ?? ''}${last?.charAt(0) ?? ''}`.toUpperCase();
 }
@@ -81,7 +92,7 @@ export default function AdminDashboard() {
       {/* Distribution pie charts */}
       <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
         <ReportCard title="Application Status">
-          <DistributionPieChart data={statusData} labelMap={STATUS_LABELS} />
+          <DistributionPieChart data={statusData} labelMap={STATUS_LABELS} colorMap={STATUS_COLORS} />
         </ReportCard>
         <ReportCard title="Nationalities">
           {analyticsQ.isLoading ? (

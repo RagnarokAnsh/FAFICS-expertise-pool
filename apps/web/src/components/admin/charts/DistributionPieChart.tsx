@@ -10,12 +10,14 @@ interface Props {
   data: { label: string; count: number }[];
   /** Optional map from raw label → display name */
   labelMap?: Record<string, string>;
+  /** Optional map from raw label → fixed slice color (falls back to palette) */
+  colorMap?: Record<string, string>;
   height?: number;
 }
 
 const COLORS = CATEGORICAL;
 
-export function DistributionPieChart({ data, labelMap, height = 260 }: Props) {
+export function DistributionPieChart({ data, labelMap, colorMap, height = 260 }: Props) {
   if (!data.length) {
     return <div className="flex items-center justify-center h-64 text-text-light text-sm">No data yet</div>;
   }
@@ -37,8 +39,8 @@ export function DistributionPieChart({ data, labelMap, height = 260 }: Props) {
             outerRadius={92}
             paddingAngle={2}
           >
-            {formatted.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            {formatted.map((d, i) => (
+              <Cell key={i} fill={colorMap?.[d.label] ?? COLORS[i % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
