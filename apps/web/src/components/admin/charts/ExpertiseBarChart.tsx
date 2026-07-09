@@ -4,6 +4,7 @@ import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
+import { navyRamp } from './chartColors';
 
 interface Props {
   data: { label: string; count: number }[];
@@ -13,6 +14,8 @@ export function ExpertiseBarChart({ data }: Props) {
   if (!data.length) {
     return <div className="flex items-center justify-center h-64 text-text-light text-sm">No data yet</div>;
   }
+
+  const colors = navyRamp(data.length);
 
   return (
     <ResponsiveContainer width="100%" height={Math.max(280, data.length * 36)}>
@@ -32,7 +35,7 @@ export function ExpertiseBarChart({ data }: Props) {
         />
         <Bar dataKey="count" radius={[0, 3, 3, 0]}>
           {data.map((_, i) => (
-            <Cell key={i} fill={i === 0 ? '#C8973A' : '#0D2240'} />
+            <Cell key={i} fill={colors[i]} />
           ))}
         </Bar>
       </BarChart>

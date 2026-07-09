@@ -3,11 +3,28 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin.api';
-import { StatCard } from '@/components/admin/StatCard';
-import { ReportCard, StatusBadge, ICONS } from '@/components/admin/ui';
+import { ReportCard, StatusBadge } from '@/components/admin/ui';
 import { ExpertiseBarChart } from '@/components/admin/charts/ExpertiseBarChart';
-import { LanguageBarChart } from '@/components/admin/charts/LanguageBarChart';
+import { DistributionPieChart } from '@/components/admin/charts/DistributionPieChart';
 import { formatDate } from '@/lib/utils/date';
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  submitted: 'Pending Endorsement',
+  endorsed: 'Pending Review',
+  under_review: 'Under Review',
+  changes_requested: 'Changes Requested',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  expired: 'Expired',
+};
+
+const GENDER_LABELS: Record<string, string> = {
+  male: 'Male',
+  female: 'Female',
+  prefer_not_to_say: 'Not specified',
+  other: 'Other',
+};
 
 function initials(first: string, last: string) {
   return `${first?.charAt(0) ?? ''}${last?.charAt(0) ?? ''}`.toUpperCase();
@@ -48,41 +65,47 @@ export default function AdminDashboard() {
     return <div className="flex min-h-[50vh] items-center justify-center text-danger">Failed to load dashboard statistics.</div>;
   }
 
-  const nationalities = analytics?.nationalityBreakdown?.length ?? 0;
-  const areasCovered = analytics?.expertiseDistribution?.length ?? 0;
+  const statusData = [
+    { label: 'draft', count: stats.drafts ?? 0 },
+    { label: 'submitted', count: stats.pendingEndorsement ?? 0 },
+    { label: 'endorsed', count: stats.pendingReview ?? 0 },
+    { label: 'under_review', count: stats.underReview ?? 0 },
+    { label: 'changes_requested', count: stats.changesRequested ?? 0 },
+    { label: 'approved', count: stats.activeInPool ?? 0 },
+    { label: 'rejected', count: stats.rejected ?? 0 },
+    { label: 'expired', count: stats.expired ?? 0 },
+  ].filter((d) => d.count > 0);
 
   return (
     <div className="mx-auto max-w-[1200px] p-6">
-      {/* Headline stats */}
-      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard accent="success" label="Active in Pool" value={stats.activeInPool} sub="Endorsed & approved" icon={ICONS.users} href="/admin/roster" />
-        <StatCard accent="pending" label="Pending Endorsement" value={stats.pendingEndorsement} sub="Awaiting President review" icon={ICONS.clock} href="/admin/applications?status=submitted" />
-        <StatCard accent="gold" label="Nationalities" value={nationalities} sub="Geographic diversity" icon={ICONS.globe} href="/admin/reports" />
-        <StatCard accent="navy" label="Expertise Areas Covered" value={`${areasCovered}/11`} sub="Across the active pool" icon={ICONS.grid} href="/admin/reports" />
-      </div>
-
-      {/* Workflow statuses */}
-      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard accent="navy" label="Pending Review" value={stats.pendingReview} sub="Endorsed, awaiting desk review" href="/admin/applications?status=endorsed" />
-        <StatCard accent="navy" label="Under Review" value={stats.underReview} sub="Actively being reviewed" href="/admin/applications?status=under_review" />
-        <StatCard accent="pending" label="Changes Requested" value={stats.changesRequested} sub="Returned to applicant" href="/admin/applications?status=changes_requested" />
-        <StatCard accent="gold" label="Expiring in 90 Days" value={stats.expiring90Days} sub="Renewal reminders due" href="/admin/expiring" />
-      </div>
-
-      {/* Charts */}
-      <div className="mb-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <ReportCard title="Top Preferred Expertise Areas">
+      {/* Distribution pie charts */}
+      <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <ReportCard title="Application Status">
+          <DistributionPieChart data={statusData} labelMap={STATUS_LABELS} />
+        </ReportCard>
+        <ReportCard title="Nationalities">
           {analyticsQ.isLoading ? (
             <div className="h-64 animate-pulse rounded bg-off-white" />
           ) : (
-            <ExpertiseBarChart data={(analytics?.expertiseDistribution ?? []).slice(0, 6)} />
+            <DistributionPieChart data={analytics?.nationalityBreakdown ?? []} />
           )}
         </ReportCard>
-        <ReportCard title="Language Coverage">
+        <ReportCard title="Gender">
           {analyticsQ.isLoading ? (
             <div className="h-64 animate-pulse rounded bg-off-white" />
           ) : (
-            <LanguageBarChart data={(analytics?.languageCoverage ?? []).slice(0, 8)} />
+            <DistributionPieChart data={analytics?.genderBalance ?? []} labelMap={GENDER_LABELS} />
+          )}
+        </ReportCard>
+      </div>
+
+      {/* Expertise areas */}
+      <div className="mb-5">
+        <ReportCard title="Expertise Areas — Experts per Category">
+          {analyticsQ.isLoading ? (
+            <div className="h-64 animate-pulse rounded bg-off-white" />
+          ) : (
+            <ExpertiseBarChart data={analytics?.expertiseDistribution ?? []} />
           )}
         </ReportCard>
       </div>
