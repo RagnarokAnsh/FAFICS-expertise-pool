@@ -31,6 +31,16 @@ export default function AdminUsersPage() {
       showToast('Please fill in all required fields.', 'error');
       return;
     }
+    // Basic email format check
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    // Password length check (matches backend DTO rule)
+    if (password.length < 12) {
+      setError('Password must be at least 12 characters.');
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
@@ -44,9 +54,11 @@ export default function AdminUsersPage() {
       setPassword('');
       setRole('admin');
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to create user.';
+      const raw = err.response?.data?.message;
+      // NestJS class-validator returns message as an array of strings
+      const msg = Array.isArray(raw) ? raw.join('\n') : (raw || 'Failed to create user.');
       setError(msg);
-      showToast(msg, 'error');
+      showToast(Array.isArray(raw) ? raw[0] : msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -120,7 +132,7 @@ export default function AdminUsersPage() {
             <h3 className="text-xl font-serif font-bold text-navy mb-4">Create New User</h3>
             
             <form onSubmit={handleCreateUser} noValidate>
-              {error && <div className="mb-4 text-red-500 text-sm">{error}</div>}
+              {error && <div className="mb-4 text-red-500 text-sm whitespace-pre-line">{error}</div>}
               
               <div className="mb-4">
                 <label className="block text-[11px] text-text-light font-medium uppercase mb-1">Email {REQUIRED_STAR}</label>

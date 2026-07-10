@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'libphonenumber-js/mobile';
 
 /** Whole years between a past date and today. */
 function ageInYears(dob: Date): number {
@@ -35,7 +36,7 @@ function parseDate(value: string): Date | null {
 /** E.164 caps a full international number (dial code + number) at 15 digits. */
 export const MAX_PHONE_DIGITS = 15;
 
-/** A phone number must carry an international dial code and enough digits. */
+/** A phone number must carry an international dial code and be valid per the country's rules. */
 const phoneNumber = (label: string) =>
   z
     .string()
@@ -43,11 +44,11 @@ const phoneNumber = (label: string) =>
     .refine((v) => /^\+\d/.test(v.trim()), {
       message: 'Select a country code',
     })
-    .refine((v) => (v.replace(/\D/g, '').length >= 8), {
-      message: 'Enter a valid phone number',
-    })
     .refine((v) => v.replace(/\D/g, '').length <= MAX_PHONE_DIGITS, {
       message: `Phone number cannot exceed ${MAX_PHONE_DIGITS} digits`,
+    })
+    .refine((v) => isValidPhoneNumber(v.replace(/\s+/g, '')), {
+      message: 'Enter a valid phone number for the selected country',
     });
 
 export const personalInfoSchema = z
@@ -64,11 +65,11 @@ export const personalInfoSchema = z
       .string()
       .nullish()
       .refine((v) => !v || /^\+\d/.test(v.trim()), { message: 'Select a country code' })
-      .refine((v) => !v || v.replace(/\D/g, '').length >= 8, {
-        message: 'Enter a valid phone number',
-      })
       .refine((v) => !v || v.replace(/\D/g, '').length <= MAX_PHONE_DIGITS, {
         message: `Phone number cannot exceed ${MAX_PHONE_DIGITS} digits`,
+      })
+      .refine((v) => !v || isValidPhoneNumber(v.replace(/\s+/g, '')), {
+        message: 'Enter a valid phone number for the selected country',
       }),
     email: z.string().min(1, 'Email is required').email('Invalid email address'),
     separationDate: z.string().min(1, 'Date of Separation is required'),
@@ -123,7 +124,10 @@ export const personalInfoSchema = z
 export const associationSchema = z.object({
   // UUID will be populated by the frontend mapping or selection
   associationId: z.string().uuid('Association ID must be a valid UUID').nullish(),
-  associationName: z.string().min(1, 'Association Name is required'),
+  associationName: z.string().min(1, 'Association Name is required').refine(
+    (v) => !/\d/.test(v),
+    { message: 'Association Name must not contain numbers' },
+  ),
   associationCountry: z.string().min(1, 'Association Country is required'),
   associationGeneralEmail: z.union([z.string().email('Invalid email'), z.literal('')]).nullish(),
   presidentEmail: z.string().min(1, 'President Email is required').email('Invalid email'),
@@ -133,9 +137,11 @@ export const associationSchema = z.object({
     .string()
     .nullish()
     .refine((v) => !v || /^\+\d/.test(v.trim()), { message: 'Select a country code' })
-    .refine((v) => !v || v.replace(/\D/g, '').length >= 8, { message: 'Enter a valid phone number' })
     .refine((v) => !v || v.replace(/\D/g, '').length <= MAX_PHONE_DIGITS, {
       message: `Phone number cannot exceed ${MAX_PHONE_DIGITS} digits`,
+    })
+    .refine((v) => !v || isValidPhoneNumber(v.replace(/\s+/g, '')), {
+      message: 'Enter a valid phone number for the selected country',
     }),
   associateMemberName: z.string().nullish(),
   associateMemberCountry: z.string().nullish(),

@@ -210,7 +210,7 @@ export function Step1PersonalInfo({ onNext }: StepProps) {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Field label="Member Association" required error={errors.association?.associationName?.message}>
-            <Input placeholder="e.g. AFICS-NY, USA" hasError={!!errors.association?.associationName} {...register('association.associationName')} />
+            <Input placeholder="e.g. AFICS-NY, USA" hasError={!!errors.association?.associationName} {...register('association.associationName')} onInput={(e) => { const input = e.currentTarget; input.value = input.value.replace(/\d/g, ''); }} />
           </Field>
           <Field label="Country" required error={errors.association?.associationCountry?.message}>
             <Controller
