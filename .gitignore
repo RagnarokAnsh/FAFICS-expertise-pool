@@ -27,8 +27,16 @@ apps/api/prisma/generated/
 .vscode/
 .idea/
 
-# Claude Code local tooling (not part of the application)
+# Generated deliverables (built from the markdown source, not tracked)
+FAFICS-Deployment-Guide.docx
+
+# Claude Code / local AI tooling (not part of the application)
 .claude/
+CLAUDE.md
+.mcp.json
+repomix-output.xml
+.code-review-graph/
+
 *.swp
 *.swo
 *~
@@ -58,5 +66,3 @@ FAFICS_Architecture.md
 FAFICS_Phase_Prompts.md
 FAFICS_Tech_Stack_Reference.md
 fafics_schema.sql
-# Added by code-review-graph
-.code-review-graph/
