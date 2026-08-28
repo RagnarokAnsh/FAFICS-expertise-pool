@@ -15,6 +15,8 @@ import { renewalReminderTemplate } from './templates/renewal-reminder.template';
 import { expiredTemplate } from './templates/expired.template';
 import { applicantEditLinkTemplate } from './templates/applicant-edit-link.template';
 import { draftSavedTemplate } from './templates/draft-saved.template';
+import { passwordResetTemplate } from './templates/password-reset.template';
+import { passwordChangedTemplate } from './templates/password-changed.template';
 
 @Injectable()
 export class MailService {
@@ -254,6 +256,41 @@ export class MailService {
       status: app.status,
     });
     return this.sendEmail(app.email, subject, html);
+  }
+
+  /**
+   * Password-reset link for a dashboard user. Unlike every other send here this
+   * one is keyed on the user record, not an application, so the recipient and
+   * display name are passed in directly.
+   */
+  async sendPasswordReset(params: {
+    to: string;
+    recipientName: string;
+    resetUrl: string;
+    validFor: string;
+    triggeredByAdmin?: boolean;
+  }): Promise<{ messageId: string }> {
+    const { subject, html } = passwordResetTemplate({
+      recipientName: params.recipientName,
+      resetUrl: params.resetUrl,
+      validFor: params.validFor,
+      triggeredByAdmin: params.triggeredByAdmin,
+    });
+    return this.sendEmail(params.to, subject, html);
+  }
+
+  /** Confirmation that a dashboard password was changed, so an unexpected change is noticed. */
+  async sendPasswordChanged(params: {
+    to: string;
+    recipientName: string;
+    changedAt: Date;
+  }): Promise<{ messageId: string }> {
+    const { subject, html } = passwordChangedTemplate({
+      recipientName: params.recipientName,
+      changedAt: params.changedAt.toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
+      loginUrl: `${this.getWebBaseUrl()}/admin/login`,
+    });
+    return this.sendEmail(params.to, subject, html);
   }
 
   async sendDraftSavedEmail(applicationId: string, resumeUrl: string): Promise<{ messageId: string }> {

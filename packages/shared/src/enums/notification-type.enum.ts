@@ -16,4 +16,6 @@ export enum NotificationType {
   EXPIRED = 'expired',
   APPLICANT_EDIT_LINK = 'applicant_edit_link',
   DRAFT_SAVED_LINK = 'draft_saved_link',
+  PASSWORD_RESET = 'password_reset',
+  PASSWORD_CHANGED = 'password_changed',
 }

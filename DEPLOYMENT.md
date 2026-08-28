@@ -904,6 +904,26 @@ Check `journalctl -u fafics-api -n 50`.
 - Check the spam folder before assuming a send failed
 - Test the port from the server: `nc -zv smtp.gmail.com 587`
 
+### A password reset link goes nowhere, or points at localhost
+
+Reset links are built from `WEB_BASE_URL` at the moment the email is sent, so a
+wrong value here produces a link to the wrong host even though everything else
+works. Fix `.env` and restart the API; previously sent links keep the old host
+and must be re-requested.
+
+Other checks, in order:
+
+- The link is valid for **one hour** and works **once**. A second click, or a
+  click after a newer link was requested, gives "no longer valid" — this is
+  expected. Request a fresh one from **Forgot password**.
+- `PASSWORD_RESET_TTL_MS` in `.env` controls the window (default `3600000`).
+- Requesting a reset for an unregistered address still shows the "check your
+  email" screen and sends nothing. This is deliberate — the response cannot be
+  used to discover which addresses have accounts. Check the admin notification
+  log to see whether a send actually happened.
+- The forgot-password endpoint is rate-limited to 3 requests per minute per IP.
+  Repeated attempts return 429.
+
 ### Excel export times out or fails
 
 The full-roster export builds the workbook in memory. On a 1 GB server, with a large pool and other activity, it can be killed.

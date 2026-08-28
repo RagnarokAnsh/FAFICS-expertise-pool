@@ -126,8 +126,73 @@ export const adminApi = {
     return unwrap(response);
   },
 
+  updateUser: async (
+    userId: string,
+    dto: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      role?: string;
+      isActive?: boolean;
+    },
+  ) => {
+    const response = await adminApiClient.patch(`/admin/users/${userId}`, dto);
+    return unwrap(response);
+  },
+
+  deleteUser: async (userId: string) => {
+    const response = await adminApiClient.delete(`/admin/users/${userId}`);
+    return unwrap(response);
+  },
+
+  /** Emails a reset link to the officer. The admin never sees the password. */
+  sendUserPasswordReset: async (userId: string) => {
+    const response = await adminApiClient.post(`/admin/users/${userId}/reset-password`);
+    return unwrap(response);
+  },
+
   getAnalytics: async () => {
     const response = await adminApiClient.get('/admin/analytics');
+    return unwrap(response);
+  },
+};
+
+
+/**
+ * Password self-service endpoints. These live on /auth rather than /admin:
+ * forgot-password and reset-password are reachable without a session (that is
+ * the point), while change-password requires the auth cookie.
+ */
+export const authApi = {
+  /**
+   * Always resolves for a well-formed address, whether or not it is registered.
+   * The API deliberately gives the same answer either way so the form cannot be
+   * used to discover which addresses have accounts.
+   */
+  forgotPassword: async (email: string) => {
+    const response = await adminApiClient.post('/auth/forgot-password', { email });
+    return unwrap(response);
+  },
+
+  resetPassword: async (token: string, password: string) => {
+    const response = await adminApiClient.post('/auth/reset-password', { token, password });
+    return unwrap(response);
+  },
+
+  /**
+   * Changes the signed-in user's password. The server clears the auth cookie on
+   * success, so the caller must send the user back to the login page.
+   */
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const response = await adminApiClient.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    return unwrap(response);
+  },
+
+  me: async () => {
+    const response = await adminApiClient.get('/auth/me');
     return unwrap(response);
   },
 };

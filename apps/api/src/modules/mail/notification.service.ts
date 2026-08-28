@@ -108,6 +108,114 @@ export class NotificationService {
     }
   }
 
+  /**
+   * Mints a single-use password-reset token for a dashboard user and emails the
+   * link. Returns silently when the user does not exist or has no login — the
+   * caller (forgot-password) must not reveal which addresses are registered.
+   *
+   * Any outstanding reset tokens for the user are invalidated first, so only the
+   * most recent link works.
+   */
+  async sendPasswordResetLink(
+    userId: string,
+    opts: { triggeredByAdmin?: boolean } = {},
+  ): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.isActive) {
+      this.logger.warn(`sendPasswordResetLink: user ${userId} not found or inactive`);
+      return false;
+    }
+
+    try {
+      // Burn any live reset links for this user so a stale email cannot be
+      // replayed after a newer one is requested.
+      await this.prisma.magicToken.updateMany({
+        where: { userId, purpose: TokenPurpose.PASSWORD_RESET as any, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      const ttlMs = Number(
+        this.configService.get('PASSWORD_RESET_TTL_MS') ?? 60 * 60 * 1000,
+      );
+      const { rawToken } = await this.tokensService.generate({
+        purpose: TokenPurpose.PASSWORD_RESET,
+        userId,
+        recipientEmail: user.email,
+        ttlMs,
+      });
+
+      const webBaseUrl =
+        this.configService.get<string>('app.webBaseUrl') ||
+        this.configService.get<string>('WEB_BASE_URL') ||
+        'http://localhost:3000';
+      const resetUrl = `${webBaseUrl.replace(/\/+$/, '')}/admin/reset-password/${rawToken}`;
+
+      const result = await this.mailService.sendPasswordReset({
+        to: user.email,
+        recipientName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
+        resetUrl,
+        validFor: formatDuration(ttlMs),
+        triggeredByAdmin: opts.triggeredByAdmin,
+      });
+
+      await this.prisma.notificationLog.create({
+        data: {
+          recipientEmail: user.email,
+          notificationType: NotificationType.PASSWORD_RESET as any,
+          providerMessageId: result.messageId,
+          sentAt: new Date(),
+        },
+      });
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Failed to send password reset for ${user.email}: ${error.message}`);
+      await this.prisma.notificationLog.create({
+        data: {
+          recipientEmail: user.email,
+          notificationType: NotificationType.PASSWORD_RESET as any,
+          failedAt: new Date(),
+          errorMessage: error.message,
+        },
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Notifies a user that their password changed. Best-effort: a delivery failure
+   * must never roll back the password change that already succeeded.
+   */
+  async sendPasswordChangedNotice(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return;
+
+    try {
+      const result = await this.mailService.sendPasswordChanged({
+        to: user.email,
+        recipientName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
+        changedAt: user.passwordChangedAt ?? new Date(),
+      });
+      await this.prisma.notificationLog.create({
+        data: {
+          recipientEmail: user.email,
+          notificationType: NotificationType.PASSWORD_CHANGED as any,
+          providerMessageId: result.messageId,
+          sentAt: new Date(),
+        },
+      });
+    } catch (error: any) {
+      this.logger.error(`Failed to send password-changed notice to ${user.email}: ${error.message}`);
+      await this.prisma.notificationLog.create({
+        data: {
+          recipientEmail: user.email,
+          notificationType: NotificationType.PASSWORD_CHANGED as any,
+          failedAt: new Date(),
+          errorMessage: error.message,
+        },
+      });
+    }
+  }
+
   async sendPresidentLink(applicationId: string): Promise<void> {
     const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
     if (!application) {
@@ -276,4 +384,12 @@ export class NotificationService {
 
     return { data, total, page, limit };
   }
+}
+
+/** Renders a TTL in milliseconds as "1 hour" / "30 minutes" for email copy. */
+function formatDuration(ms: number): string {
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+  const hours = Math.round(minutes / 60);
+  return `${hours} hour${hours === 1 ? '' : 's'}`;
 }

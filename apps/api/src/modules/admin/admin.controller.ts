@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Query,
   Body,
@@ -32,6 +33,7 @@ import { RequestChangesDto } from './dto/request-changes.dto';
 import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { SendRemindersDto } from './dto/send-reminders.dto';
 
 @ApiTags('Admin')
@@ -245,6 +247,57 @@ export class AdminController {
   ) {
     await this.adminService.updateUserRole(id, body.role, actorEmail);
     return { message: 'Role updated' };
+  }
+
+  @Patch('users/:id')
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update an officer profile, role, or active state' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'User updated' })
+  @ApiResponse({ status: 409, description: 'Email already in use' })
+  async updateUser(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser('email') actorEmail: string,
+    @CurrentUser('userId') actorId: string,
+  ) {
+    await this.adminService.updateUser(id, dto, actorEmail, actorId);
+    return { message: 'User updated' };
+  }
+
+  @Delete('users/:id')
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete an officer account' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'User deleted' })
+  @ApiResponse({
+    status: 400,
+    description: 'Blocked - owns applications, presides an association, is self, or is the last admin',
+  })
+  async deleteUser(
+    @Param('id') id: string,
+    @CurrentUser('email') actorEmail: string,
+    @CurrentUser('userId') actorId: string,
+  ) {
+    await this.adminService.deleteUser(id, actorEmail, actorId);
+    return { message: 'User deleted' };
+  }
+
+  @Post('users/:id/reset-password')
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Email a password reset link to an officer' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'Reset link sent' })
+  async sendUserPasswordReset(
+    @Param('id') id: string,
+    @CurrentUser('email') actorEmail: string,
+    @CurrentUser('userId') actorId: string,
+  ) {
+    const { email } = await this.adminService.sendUserPasswordReset(id, actorEmail, actorId);
+    return { message: `Password reset link sent to ${email}` };
   }
 
   // ─── Notification Logs ────────────────────────────────────────────────

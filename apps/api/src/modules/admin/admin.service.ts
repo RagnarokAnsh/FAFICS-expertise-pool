@@ -26,6 +26,7 @@ import { RejectDto } from './dto/reject.dto';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { AnalyticsResponse } from './dto/analytics-response.dto';
 import { Prisma } from '@prisma/client';
 
@@ -562,11 +563,24 @@ export class AdminService {
    * List all officer users (non-member roles).
    */
   async listUsers(): Promise<
-    { id: string; email: string; role: string; firstName: string; lastName: string; isActive: boolean; createdAt: string }[]
+    {
+      id: string;
+      email: string;
+      role: string;
+      firstName: string;
+      lastName: string;
+      isActive: boolean;
+      createdAt: string;
+      lastLoginAt: string | null;
+      passwordChangedAt: string | null;
+    }[]
   > {
     const users = await this.prisma.user.findMany({
       where: {
-        role: { not: 'member' as any },
+        // Dashboard accounts only. Presidents are excluded deliberately: they
+        // authenticate by single-use magic link, have no password to reset, and
+        // deleting one would orphan its association. Members are applicants.
+        role: { in: ['admin', 'secretary', 'committee'] as any },
       },
       select: {
         id: true,
@@ -576,6 +590,8 @@ export class AdminService {
         lastName: true,
         isActive: true,
         createdAt: true,
+        lastLoginAt: true,
+        passwordChangedAt: true,
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -588,6 +604,8 @@ export class AdminService {
       lastName: u.lastName ?? '',
       isActive: u.isActive,
       createdAt: u.createdAt.toISOString(),
+      lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
+      passwordChangedAt: u.passwordChangedAt?.toISOString() ?? null,
     }));
   }
 
@@ -630,6 +648,189 @@ export class AdminService {
     });
 
     this.logger.log(`User ${userId} role changed from ${oldRole} to ${role} by ${actorEmail}`);
+  }
+
+  /**
+   * Updates an officer's profile fields and/or role. Only the keys present in
+   * the DTO are written, so the UI can PATCH a single field.
+   */
+  async updateUser(
+    userId: string,
+    dto: UpdateUserDto,
+    actorEmail: string,
+    actorId?: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException(`User ${userId} not found`);
+
+    const data: Prisma.UserUpdateInput = {};
+
+    if (dto.email !== undefined) {
+      const email = dto.email.toLowerCase().trim();
+      if (email !== user.email) {
+        const clash = await this.prisma.user.findUnique({ where: { email } });
+        if (clash) throw new ConflictException(`User with email ${dto.email} already exists`);
+        data.email = email;
+      }
+    }
+    if (dto.firstName !== undefined) data.firstName = dto.firstName.trim();
+    if (dto.lastName !== undefined) data.lastName = dto.lastName.trim();
+
+    // Demoting or deactivating the final administrator would leave nobody able
+    // to manage users, so both are blocked while this is the last one standing.
+    const losingAdmin =
+      user.role === 'admin' &&
+      ((dto.role !== undefined && dto.role !== 'admin') || dto.isActive === false);
+    if (losingAdmin) {
+      await this.assertNotLastActiveAdmin(userId);
+    }
+
+    if (dto.role !== undefined) data.role = dto.role as any;
+    if (dto.isActive !== undefined) {
+      if (dto.isActive === false && userId === actorId) {
+        throw new BadRequestException('You cannot deactivate your own account.');
+      }
+      data.isActive = dto.isActive;
+    }
+
+    if (Object.keys(data).length === 0) return;
+
+    await this.prisma.user.update({ where: { id: userId }, data });
+
+    await this.auditService.log({
+      actorId,
+      actorEmail,
+      actorRole: UserRole.ADMIN,
+      action: 'user.updated',
+      metadata: {
+        userId,
+        changes: Object.keys(data),
+        previous: {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isActive: user.isActive,
+        },
+      },
+    });
+
+    this.logger.log(`User ${userId} updated by ${actorEmail} (${Object.keys(data).join(', ')})`);
+  }
+
+  /**
+   * Permanently removes an officer account.
+   *
+   * Refused when the account owns applications: `applications.user_id` is a
+   * RESTRICT foreign key, so the delete would fail at the database anyway, and
+   * cascading it would destroy submitted applications. Those accounts should be
+   * deactivated instead, which blocks login while preserving their records.
+   *
+   * Audit rows survive the delete - `audit_logs.actor_id` is ON DELETE SET NULL
+   * and `actor_email` is denormalised, so the trail still names who acted.
+   */
+  async deleteUser(userId: string, actorEmail: string, actorId?: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        _count: { select: { applications: true } },
+        presidedAssociation: { select: { id: true, name: true } },
+      },
+    });
+    if (!user) throw new NotFoundException(`User ${userId} not found`);
+
+    if (userId === actorId) {
+      throw new BadRequestException('You cannot delete your own account.');
+    }
+
+    if (user.role === 'admin') {
+      await this.assertNotLastActiveAdmin(userId);
+    }
+
+    if (user._count.applications > 0) {
+      throw new BadRequestException(
+        `This account owns ${user._count.applications} application(s) and cannot be deleted. ` +
+          'Deactivate it instead - that blocks sign-in while keeping the application records intact.',
+      );
+    }
+
+    if (user.presidedAssociation) {
+      throw new BadRequestException(
+        `This account is the president of "${user.presidedAssociation.name}". ` +
+          'Assign a different president to that association before deleting it.',
+      );
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+
+    await this.auditService.log({
+      actorId,
+      actorEmail,
+      actorRole: UserRole.ADMIN,
+      action: 'user.deleted',
+      metadata: {
+        deletedUserId: userId,
+        deletedUserEmail: user.email,
+        role: user.role,
+      },
+    });
+
+    this.logger.log(`User ${user.email} deleted by ${actorEmail}`);
+  }
+
+  /**
+   * Sends a password reset link to an officer on an administrator's behalf, for
+   * the common "I am locked out, please help" request. The admin never sees or
+   * sets the password - only the account owner can complete the reset.
+   */
+  async sendUserPasswordReset(
+    userId: string,
+    actorEmail: string,
+    actorId?: string,
+  ): Promise<{ email: string }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException(`User ${userId} not found`);
+    if (!user.isActive) {
+      throw new BadRequestException(
+        'This account is deactivated. Reactivate it before sending a reset link.',
+      );
+    }
+
+    const sent = await this.notificationService.sendPasswordResetLink(userId, {
+      triggeredByAdmin: true,
+    });
+    if (!sent) {
+      throw new BadRequestException(
+        'The reset email could not be sent. Check the notification log for details.',
+      );
+    }
+
+    await this.auditService.log({
+      actorId,
+      actorEmail,
+      actorRole: UserRole.ADMIN,
+      action: 'user.password_reset_sent',
+      metadata: { userId, userEmail: user.email },
+    });
+
+    this.logger.log(`Password reset link sent to ${user.email} by ${actorEmail}`);
+    return { email: user.email };
+  }
+
+  /**
+   * Throws when `userId` is the only active administrator left. Shared by the
+   * role change, deactivation, and delete paths so none of them can lock every
+   * administrator out of the dashboard.
+   */
+  private async assertNotLastActiveAdmin(userId: string): Promise<void> {
+    const otherActiveAdmins = await this.prisma.user.count({
+      where: { role: 'admin' as any, isActive: true, id: { not: userId } },
+    });
+    if (otherActiveAdmins === 0) {
+      throw new BadRequestException(
+        'This is the last active administrator. Promote another administrator first.',
+      );
+    }
   }
 
   // ─── Distinct Filter Options ────────────────────────────────────────────

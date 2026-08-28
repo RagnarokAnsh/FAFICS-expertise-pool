@@ -9,7 +9,7 @@
 //                    ↘ changes_requested            approved → expired
 //
 // What it creates:
-//   • Officer accounts: admin, secretary, committee (password login)
+//   • Officer accounts: 5 administrators (password login), one deactivated
 //   • ~8 associations, each with a president user (magic-link endorser)
 //   • One application in EVERY lifecycle status (flow testing)
 //   • A POOL of ~22 additional APPROVED profiles with diverse nationality,
@@ -429,10 +429,43 @@ async function main() {
   const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
 
   // ── Officers ───────────────────────────────────────────────────────────────
-  const admin = await prisma.user.create({ data: { email: 'admin@fafics.org', passwordHash, role: UserRole.admin, firstName: 'System', lastName: 'Admin', emailVerifiedAt: now } });
-  const secretary = await prisma.user.create({ data: { email: 'secretary@fafics.org', passwordHash, role: UserRole.secretary, firstName: 'Sara', lastName: 'Keeper', emailVerifiedAt: now } });
-  await prisma.user.create({ data: { email: 'committee@fafics.org', passwordHash, role: UserRole.committee, firstName: 'Colin', lastName: 'Mittee', emailVerifiedAt: now } });
-  console.log('✓ Officers: admin@fafics.org, secretary@fafics.org, committee@fafics.org');
+  // The dashboard has a single officer role: administrator. The secretary and
+  // committee roles remain in the enum for historical audit rows, but no account
+  // is created with them - every dashboard login below is an admin.
+  //
+  // The last two are shaped for exercising user management: `deactivated.admin`
+  // starts inactive and `no.login.admin` has never signed in, so the user list
+  // shows both states without having to create them by hand.
+  const OFFICERS = [
+    { email: 'admin@fafics.org', firstName: 'System', lastName: 'Admin', isActive: true, lastLoginAt: daysAgo(0.1) },
+    { email: 'sara.keeper@fafics.org', firstName: 'Sara', lastName: 'Keeper', isActive: true, lastLoginAt: daysAgo(1) },
+    { email: 'colin.mittee@fafics.org', firstName: 'Colin', lastName: 'Mittee', isActive: true, lastLoginAt: daysAgo(9) },
+    { email: 'deactivated.admin@fafics.org', firstName: 'Dana', lastName: 'Retired', isActive: false, lastLoginAt: daysAgo(210) },
+    { email: 'no.login.admin@fafics.org', firstName: 'Noor', lastName: 'Newcomer', isActive: true, lastLoginAt: null },
+  ];
+
+  const officers = [];
+  for (const o of OFFICERS) {
+    officers.push(
+      await prisma.user.create({
+        data: {
+          email: o.email,
+          passwordHash,
+          role: UserRole.admin,
+          firstName: o.firstName,
+          lastName: o.lastName,
+          isActive: o.isActive,
+          emailVerifiedAt: now,
+          lastLoginAt: o.lastLoginAt,
+          passwordChangedAt: o.lastLoginAt ? daysAgo(30) : null,
+        },
+      }),
+    );
+  }
+
+  // Reviewer on the seeded application audit trail - an administrator now.
+  const secretary = officers[1];
+  console.log(`✓ Officers (all admin role): ${OFFICERS.map((o) => o.email).join(', ')}`);
 
   // ── Associations + presidents ───────────────────────────────────────────────
   for (const a of ASSOCIATIONS) {
@@ -500,9 +533,9 @@ async function main() {
     if (!isDraft) audit.push({ applicationId: application.id, actorId: member.id, actorEmail: email, actorRole: UserRole.member, action: 'application.submitted', oldStatus: ApplicationStatus.draft, newStatus: ApplicationStatus.submitted, createdAt: ts.submittedAt ?? now });
     if (ts.endorsedAt) audit.push({ applicationId: application.id, actorEmail: assoc.presidentEmail, actorRole: UserRole.president, action: 'application.endorsed', oldStatus: ApplicationStatus.submitted, newStatus: ApplicationStatus.endorsed, createdAt: ts.endorsedAt });
     if (spec.status === ApplicationStatus.changes_requested) audit.push({ applicationId: application.id, actorEmail: assoc.presidentEmail, actorRole: UserRole.president, action: 'application.changes_requested', oldStatus: ApplicationStatus.submitted, newStatus: ApplicationStatus.changes_requested, metadata: { notes: ts.presidentNotes } as Prisma.InputJsonValue, createdAt: daysAgo(35) });
-    if (spec.status === ApplicationStatus.under_review) audit.push({ applicationId: application.id, actorId: secretary.id, actorEmail: secretary.email, actorRole: UserRole.secretary, action: 'application.under_review', oldStatus: ApplicationStatus.endorsed, newStatus: ApplicationStatus.under_review, createdAt: daysAgo(10) });
-    if (ts.approvedAt) audit.push({ applicationId: application.id, actorId: secretary.id, actorEmail: secretary.email, actorRole: UserRole.secretary, action: 'application.approved', oldStatus: ApplicationStatus.under_review, newStatus: ApplicationStatus.approved, createdAt: ts.approvedAt });
-    if (ts.rejectedAt) audit.push({ applicationId: application.id, actorId: secretary.id, actorEmail: secretary.email, actorRole: UserRole.secretary, action: 'application.rejected', oldStatus: ApplicationStatus.endorsed, newStatus: ApplicationStatus.rejected, metadata: { reason: ts.secretaryNotes } as Prisma.InputJsonValue, createdAt: ts.rejectedAt });
+    if (spec.status === ApplicationStatus.under_review) audit.push({ applicationId: application.id, actorId: secretary.id, actorEmail: secretary.email, actorRole: UserRole.admin, action: 'application.under_review', oldStatus: ApplicationStatus.endorsed, newStatus: ApplicationStatus.under_review, createdAt: daysAgo(10) });
+    if (ts.approvedAt) audit.push({ applicationId: application.id, actorId: secretary.id, actorEmail: secretary.email, actorRole: UserRole.admin, action: 'application.approved', oldStatus: ApplicationStatus.under_review, newStatus: ApplicationStatus.approved, createdAt: ts.approvedAt });
+    if (ts.rejectedAt) audit.push({ applicationId: application.id, actorId: secretary.id, actorEmail: secretary.email, actorRole: UserRole.admin, action: 'application.rejected', oldStatus: ApplicationStatus.endorsed, newStatus: ApplicationStatus.rejected, metadata: { reason: ts.secretaryNotes } as Prisma.InputJsonValue, createdAt: ts.rejectedAt });
     if (spec.status === ApplicationStatus.expired) audit.push({ applicationId: application.id, actorEmail: 'system@fafics.org', actorRole: UserRole.admin, action: 'system.expiry_run', oldStatus: ApplicationStatus.approved, newStatus: ApplicationStatus.expired, metadata: { reason: 'automatic_expiry' } as Prisma.InputJsonValue, createdAt: daysAgo(95) });
     if (audit.length) await prisma.auditLog.createMany({ data: audit });
 
@@ -530,7 +563,7 @@ async function main() {
   console.log('✅ Dev seed complete.');
   console.log('   Applications by status:', Object.entries(statusTally).map(([s, c]) => `${s}=${c}`).join(', '));
   console.log(`   Officer login password: ${DEFAULT_PASSWORD}`);
-  console.log('   Admin: admin@fafics.org · Secretary: secretary@fafics.org · Committee: committee@fafics.org');
+  console.log('   All officers share the admin role. Primary login: admin@fafics.org');
   if (livePresidentTokenUrl) {
     console.log('\n   🔗 Endorse the SUBMITTED application here (stable 14-day token):');
     console.log(`      ${livePresidentTokenUrl}`);

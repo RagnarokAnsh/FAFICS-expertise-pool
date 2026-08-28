@@ -40,6 +40,7 @@ const TITLES: { match: string; title: string }[] = [
   { match: '/admin/reports', title: 'Reports & Analytics' },
   { match: '/admin/export', title: 'Export' },
   { match: '/admin/users', title: 'User Management' },
+  { match: '/admin/account', title: 'My Account' },
 ];
 
 // Hidden per client feedback — re-enable when ready (count badge next to sidebar items)
@@ -92,6 +93,20 @@ function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null
             </div>
           );
         })}
+        <div>
+          <Link
+            href="/admin/account"
+            className={`mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
+              pathname.startsWith('/admin/account') ? 'bg-gold/[0.18] text-gold' : 'text-white/55 hover:bg-white/[0.08] hover:text-white'
+            }`}
+            onClick={onNavigate}
+          >
+            <svg className="h-[15px] w-[15px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="truncate">My Account</span>
+          </Link>
+        </div>
         {role === 'admin' && (
           <div>
 
@@ -123,6 +138,17 @@ function Sidebar({ role, pathname, onLogout, onNavigate }: { role: string | null
   );
 }
 
+/**
+ * Routes under /admin that must render without a session. Password recovery has
+ * to work precisely when the user cannot sign in, so these screens are exempt
+ * from the role-cookie gate below and render outside the dashboard chrome.
+ */
+const PUBLIC_ADMIN_ROUTES = ['/admin/login', '/admin/forgot-password', '/admin/reset-password'];
+
+function isPublicAdminRoute(pathname: string): boolean {
+  return PUBLIC_ADMIN_ROUTES.some((route) => pathname.includes(route));
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -141,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // role hint instead. The API still enforces auth on every request, and a
     // 401 from an expired session redirects here via the admin API interceptor.
     const userRole = Cookies.get('fafics_role');
-    if (!userRole && !pathname.includes('/admin/login')) {
+    if (!userRole && !isPublicAdminRoute(pathname)) {
       router.push('/admin/login');
     } else {
       setRole(userRole || null);
@@ -160,7 +186,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/admin/login');
   };
 
-  if (pathname.includes('/admin/login')) {
+  if (isPublicAdminRoute(pathname)) {
     return <>{children}</>;
   }
 

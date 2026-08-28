@@ -10,6 +10,7 @@ import { adminApi } from '@/lib/api/admin.api';
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -26,7 +27,22 @@ export default function AdminLogin() {
       Cookies.set('fafics_role', result.role, { expires: 1 });
       router.push('/admin/dashboard');
     } catch (err: any) {
-      setError('Invalid email or password');
+      // Every failure used to read "Invalid email or password", which made the
+      // rate limiter indistinguishable from a wrong password: after 5 attempts
+      // the API returns 429 and the correct password looked wrong too.
+      const status = err.response?.status;
+      if (status === 429) {
+        setError(
+          'Too many sign-in attempts. For security, further attempts are blocked for about a minute — wait, then try again.',
+        );
+      } else if (status === 401) {
+        setError('Invalid email or password.');
+      } else if (!err.response) {
+        setError('Could not reach the server. Check your connection and try again.');
+      } else {
+        const raw = err.response?.data?.message;
+        setError(Array.isArray(raw) ? raw.join('\n') : raw || 'Sign-in failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -45,7 +61,7 @@ export default function AdminLogin() {
             <Image src="/logo.png" alt="FAFICS" width={72} height={72} className="h-full w-full object-contain" priority />
           </div>
           <h1 className="font-serif text-[26px] font-bold text-white tracking-[0.02em]">Officer Login</h1>
-          <p className="mt-1 text-[13px] text-white/55">FAFICS Expertise Pool — staff access</p>
+          <p className="mt-1 text-[13px] text-white/55">FAFICS Expertise Pool — Volunteer access</p>
         </div>
 
         {/* Card */}
@@ -81,14 +97,42 @@ export default function AdminLogin() {
               <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.04em] text-text-mid">
                 Password
               </label>
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                className="h-[44px] w-full rounded-lg border-[1.5px] border-border px-3.5 text-[14px] text-text transition-colors placeholder:text-text-muted focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/15"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="••••••••"
+                  className="h-[44px] w-full rounded-lg border-[1.5px] border-border pl-3.5 pr-10 text-[14px] text-text transition-colors placeholder:text-text-muted focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/15"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors hover:text-text focus:outline-none"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <div className="mt-2 text-right">
+                <Link
+                  href="/admin/forgot-password"
+                  className="text-[12.5px] font-medium text-navy transition-colors hover:text-gold"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button

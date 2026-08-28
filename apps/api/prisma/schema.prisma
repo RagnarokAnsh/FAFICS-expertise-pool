@@ -93,6 +93,8 @@ enum NotificationType {
   expired                   // → applicant when profile expires
   applicant_edit_link       // → applicant request for edit link
   draft_saved_link          // → applicant when draft is first saved
+  password_reset            // → officer/admin password reset link
+  password_changed          // → officer/admin confirmation that password changed
   @@map("notification_type")
 }
 
@@ -145,6 +147,7 @@ model User {
   isActive        Boolean   @default(true)             @map("is_active")
   emailVerifiedAt DateTime?                            @map("email_verified_at") @db.Timestamptz()
   lastLoginAt     DateTime?                            @map("last_login_at") @db.Timestamptz()
+  passwordChangedAt DateTime?                          @map("password_changed_at") @db.Timestamptz()
   createdAt       DateTime  @default(now())            @map("created_at") @db.Timestamptz()
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
