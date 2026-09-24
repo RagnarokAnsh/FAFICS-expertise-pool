@@ -1,0 +1,73 @@
+# FAFICS Expertise Pool — Angular frontend on Apache / LiteSpeed (cPanel shared hosting).
+#
+# `ng build` copies this file into dist/. Upload it WITH the rest of dist/ into the
+# site's document root (usually public_html/). It makes the app's routes work:
+# /apply, /status, /endorse/<token>, /admin/dashboard, ... all return index.html
+# and the Angular router takes over, so links in emails keep working.
+#
+# The NestJS API runs separately (cPanel "Setup Node.js App") at /api — see
+# DEPLOYMENT.md, Appendix D. If cPanel wrote a "CLOUDLINUX PASSENGER
+# CONFIGURATION" block into this file, keep that block when you replace it.
+
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # HTTPS only: the officer session cookie is Secure, so the admin panel cannot
+  # work over plain HTTP. (The X-Forwarded-Proto check avoids a redirect loop
+  # behind a proxy or CDN that terminates TLS.)
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Never touch the API — it is served by the Node.js app mounted at /api.
+  RewriteRule ^api(/|$) - [L]
+
+  # Real files (JS/CSS chunks, fonts, logo, favicon) are served as they are.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Everything else is an app route.
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType font/woff2 .woff2
+  AddType text/javascript .js .mjs
+</IfModule>
+
+<IfModule mod_headers.c>
+  # index.html is tiny and must always be revalidated so a new upload takes
+  # effect immediately. Every other build file has a content hash in its name
+  # (main-AMTZ5C73.js, styles-TIG4YKA5.css, media/...-I7YTNGC6.woff2), so it can
+  # be cached for a year — a new build produces new names.
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "-[A-Z0-9]{8}\.(js|css|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  # Several pages carry a secret token in their URL (/endorse/<token>,
+  # /apply/resume/<token>, /admin/reset-password/<token>); never send it to
+  # another site in a Referer header.
+  Header always set Referrer-Policy "same-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  # 'unsafe-inline' styles are required: Angular injects component <style> tags
+  # and the charts position elements with inline style attributes. If the API
+  # is served from ANOTHER origin (environment.ts apiUrl is a full URL), add
+  # that origin to connect-src.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+  # Turn on once HTTPS is confirmed working for the domain (browsers remember it):
+  # Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>

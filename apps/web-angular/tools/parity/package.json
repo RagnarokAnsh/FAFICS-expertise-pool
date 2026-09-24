@@ -1,0 +1,14 @@
+{
+  "name": "fafics-parity-tools",
+  "private": true,
+  "description": "Dev-only checks that apps/web-angular matches apps/web (Next.js). Not part of any build.",
+  "scripts": {
+    "compare": "node compare.js"
+  },
+  "devDependencies": {
+    "axe-core": "^4.13.0",
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^24.0.0"
+  }
+}

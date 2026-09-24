@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-off-white text-text font-sans min-h-screen;
+    scroll-behavior: smooth;
+  }
+}
+
+/*
+ * Angular inserts routed components after an (empty) <router-outlet> element.
+ * Hide the outlet so it never counts as a flex/grid item or a `space-y-*`
+ * sibling — the rendered DOM then lays out exactly like the Next.js app.
+ */
+router-outlet {
+  display: none;
+}
