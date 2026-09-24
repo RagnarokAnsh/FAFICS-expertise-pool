@@ -8,6 +8,8 @@ dist/
 .next/
 out/
 build/
+# npm pack output (e.g. the @fafics/shared tarball shipped with the API, DEPLOYMENT.md Appendix D)
+*.tgz
 
 # Compiled output must never be committed from packages/shared/src — it belongs
 # in dist/. These guard against a stray in-place `tsc` run polluting the source.
