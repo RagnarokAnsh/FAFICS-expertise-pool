@@ -70,6 +70,16 @@ The full procedure, including the API and the database, is in [DEPLOYMENT.md →
 - `src/fonts.css` + `src/fonts/`: the self-hosted Playfair Display and DM Sans files that `next/font` produces, with the same fallback metrics.
 - TanStack Angular Query stands in for React Query, with the same defaults and query keys.
 
+## Status (September 2026)
+
+- **Complete.** Every page and feature of `apps/web` has been ported, including the officer dashboard and its charts.
+- **Verified against the Next.js app** with the tools in [`tools/parity`](tools/parity):
+  - Every public and officer page was screenshotted at desktop (1280 px), tablet (820 px) and mobile (390 px) widths. They match to within 0.4% of pixels, and the difference is the logo's image compression.
+  - Ten scripted journeys produce the same screens and the same API calls in both apps: applying, the 30-second autosave, status checks, endorsement and return, resuming drafts, officer actions, user management, export and password reset.
+  - The production build runs under the `.htaccess` Content-Security-Policy without violations.
+  - Automated accessibility checks give identical results.
+- **Before go-live:** follow [DEPLOYMENT.md → Appendix D](../../DEPLOYMENT.md#appendix-d--cpanel-shared-hosting-milesweb-with-the-angular-frontend). The hosting plan must support Node.js applications and PostgreSQL (otherwise use an external managed database), outbound SMTP must be allowed, and the seeded administrator password must be changed after the first sign-in.
+
 ## Known differences from `apps/web`
 
 These were verified and kept on purpose:

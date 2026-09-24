@@ -19,6 +19,7 @@ Retired UN staff apply online, their association president endorses the applicat
 - [Email](#email)
 - [Scheduled maintenance](#scheduled-maintenance)
 - [API reference](#api-reference)
+- [Angular frontend for shared hosting](#angular-frontend-for-shared-hosting)
 - [Deployment](#deployment)
 
 ---
@@ -109,6 +110,7 @@ Officer sessions use a JSON Web Token held in an `HttpOnly` cookie, so the token
 | Layer | Choice |
 | --- | --- |
 | Frontend | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS |
+| Frontend for static/shared hosting | Angular 21 port of the same UI in `apps/web-angular` (see [below](#angular-frontend-for-shared-hosting)) |
 | Forms and validation | React Hook Form with Zod schemas |
 | Data fetching | TanStack Query |
 | Charts | Recharts |
@@ -123,7 +125,7 @@ Officer sessions use a JSON Web Token held in an `HttpOnly` cookie, so the token
 | API docs | Swagger / OpenAPI |
 | Monorepo | Turborepo with npm workspaces |
 
-There is no Redis, no message queue, and no container runtime. The system is two Node processes and a PostgreSQL database.
+There is no Redis, no message queue, and no container runtime. The system is two Node processes and a PostgreSQL database. With the Angular frontend, it is one Node process (the API) plus static files.
 
 ---
 
@@ -152,12 +154,20 @@ fafics-expertise-pool/
 │   │           ├── mail/           Templates + notification dispatch and logging
 │   │           ├── queue/          Nightly maintenance job and its scheduler
 │   │           └── tokens/         Magic-token issue, hash, validate, consume
-│   └── web/                    Next.js frontend — port 3000
-│       └── src/
-│           ├── app/            Routes: /, /apply, /status, /endorse, /admin
+│   ├── web/                    Next.js frontend — port 3000
+│   │   └── src/
+│   │       ├── app/            Routes: /, /apply, /status, /endorse, /admin
+│   │       ├── components/     Form steps, admin tables, charts, shared UI
+│   │       ├── hooks/          useApplicationForm, useAutoSave
+│   │       └── lib/            API clients, Zod schemas, constants, utilities
+│   └── web-angular/            Angular port of apps/web (static build) — dev port 4300
+│       ├── public/.htaccess    SPA routing + headers for Apache/LiteSpeed hosting
+│       ├── tools/              preview-dist.mjs (serve dist/ like the host), parity/ (screenshot diff vs apps/web)
+│       └── src/app/
+│           ├── pages/          One lazy-loaded page per route (same URLs as apps/web)
 │           ├── components/     Form steps, admin tables, charts, shared UI
-│           ├── hooks/          useApplicationForm, useAutoSave
-│           └── lib/            API clients, Zod schemas, constants, utilities
+│           ├── core/           Form engine (react-hook-form port), portal, toast, error handling
+│           └── lib/            API clients, Zod schemas, constants, utilities (copied from apps/web)
 ├── packages/
 │   └── shared/                 @fafics/shared — enums and types used by both apps
 ├── turbo.json
@@ -213,6 +223,8 @@ npm run dev
 
 To run just one side, use `npm run start:dev` in `apps/api` or `npm run dev` in `apps/web`.
 
+`npm run dev` at the root also starts the Angular frontend on http://localhost:4300. To run the API with only the Angular frontend, use `npx turbo run dev --filter=api --filter=web-angular`.
+
 ### Other commands
 
 | Command | Run from | Purpose |
@@ -225,7 +237,7 @@ To run just one side, use `npm run start:dev` in `apps/api` or `npm run dev` in 
 | `npx prisma generate` | `apps/api` | Regenerate the Prisma client after a schema change |
 | `npm run db:seed:dev` | `apps/api` | Load sample applications for testing |
 
-> **Note on tests.** The API is wired for Jest (`npm run test`, `npm run test:cov`), but no test suites have been written yet — the commands will report zero tests found. Verification to date has been manual QA against the running application.
+> **Note on tests.** The API is wired for Jest (`npm run test`, `npm run test:cov`), but no test suites have been written yet — the commands will report zero tests found. Verification to date has been manual QA against the running application. The Angular frontend has end-to-end checks against the Next.js one in `apps/web-angular/tools/parity` (screenshots, complete user journeys, API calls and accessibility); the header of each script explains how to run it.
 
 ---
 
@@ -356,9 +368,22 @@ All routes are prefixed with `/api`. Every successful response is wrapped in `{ 
 
 ---
 
+## Angular frontend for shared hosting
+
+`apps/web-angular` is a port of the Next.js frontend to Angular 21. The pages, design, text, validation and behaviour are the same, and so are the URLs. It exists for hosting that can't run a Next.js server, such as the client's MilesWeb cPanel account. `npm run build` in `apps/web-angular` produces static files in `dist/`, including an `.htaccess` for routing, that are uploaded to the domain's document root. The API is unchanged and runs next to them as a cPanel Node.js app at `/api`.
+
+- Develop: `npm run dev` in `apps/web-angular` → http://localhost:4300 (`/api` is proxied to port 3001)
+- Build: `npm run build` in `apps/web-angular` → `apps/web-angular/dist/`
+- Preview the build as the host serves it: `node tools/preview-dist.mjs` → http://localhost:4400
+- API location: set in `apps/web-angular/src/environments/environment.ts` before building (default `/api`, same domain)
+
+Details are in [apps/web-angular/README.md](apps/web-angular/README.md). The shared-hosting deployment is covered in [DEPLOYMENT.md, Appendix D](DEPLOYMENT.md#appendix-d--cpanel-shared-hosting-milesweb-with-the-angular-frontend). Pick **one** frontend per deployment. Both talk to the same API and database.
+
+---
+
 ## Deployment
 
-See **[DEPLOYMENT.md](DEPLOYMENT.md)** for server sizing, a step-by-step production install, reverse proxy and HTTPS configuration, backups, and a troubleshooting section.
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for server sizing, a step-by-step production install, reverse proxy and HTTPS configuration, backups, and a troubleshooting section. For cPanel shared hosting with the Angular frontend, see [Appendix D](DEPLOYMENT.md#appendix-d--cpanel-shared-hosting-milesweb-with-the-angular-frontend).
 
 Two points are worth flagging before you start, because both are easy to get wrong and neither produces an obvious error message:
 

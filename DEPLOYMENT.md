@@ -4,6 +4,8 @@ This document covers what the system needs to run in production, how to size a s
 
 It assumes a single Linux server running both application processes and PostgreSQL behind nginx. That is the recommended topology for this workload; alternatives are covered in [Appendix B](#appendix-b--alternative-topologies).
 
+**On shared hosting (cPanel/mPanel, no root access), such as the client's MilesWeb account, follow [Appendix D](#appendix-d--cpanel-shared-hosting-milesweb-with-the-angular-frontend) instead.** It uses the Angular frontend (`apps/web-angular`), which builds to static files, and runs the API as a cPanel Node.js app.
+
 ---
 
 ## Contents
@@ -27,6 +29,7 @@ It assumes a single Linux server running both application processes and PostgreS
 - [Appendix A — sub-path deployment](#appendix-a--sub-path-deployment)
 - [Appendix B — alternative topologies](#appendix-b--alternative-topologies)
 - [Appendix C — environment variable reference](#appendix-c--environment-variable-reference)
+- [Appendix D — cPanel shared hosting (MilesWeb) with the Angular frontend](#appendix-d--cpanel-shared-hosting-milesweb-with-the-angular-frontend)
 
 ---
 
@@ -1040,3 +1043,156 @@ Set on the **machine that builds the frontend**, before `npm run build`:
 | `NEXT_PUBLIC_BASE_PATH` | | Only for a sub-path deployment, e.g. `/experts` |
 
 Both are compiled into the JavaScript bundle. Setting them on the server has no effect.
+
+---
+
+## Appendix D — cPanel shared hosting (MilesWeb) with the Angular frontend
+
+Shared hosting accounts (MilesWeb's shared plans with cPanel or mPanel) have no root access, nginx or systemd, and cannot keep a Next.js server running. This arrangement replaces them:
+
+- The **Angular frontend** (`apps/web-angular`) is built on a workstation into plain static files. The host's web server (Apache or LiteSpeed) serves them from the document root. An `.htaccess` in the build handles the app routes.
+- The **API** runs as a cPanel **Setup Node.js App** application (Phusion Passenger), mounted at `/api` on the same domain.
+- **PostgreSQL** runs on the account if the plan offers it, otherwise with an external managed provider.
+
+```
+https://experts.example.org/          →  public_html/      Angular build (apps/web-angular/dist) + .htaccess
+https://experts.example.org/api/...   →  ~/fafics-api/     NestJS API, started by Passenger
+                                                │
+                                           PostgreSQL 13+  (on the account, or managed elsewhere)
+```
+
+The site and the API share one origin, so no CORS configuration is involved and the session cookie is first-party. Everything the applicant and the Secretariat see, including the URLs in emails, is identical to the Next.js deployment.
+
+### D.1 Check the hosting plan first
+
+| Requirement | Why | Notes |
+| --- | --- | --- |
+| **Node.js applications** ("Setup Node.js App"), Node 20 or later | Runs the API | At the time of writing (September 2026), MilesWeb's Starter and Premium shared plans have no Node.js apps; Business and above do. Confirm with MilesWeb for the purchased plan. |
+| **PostgreSQL 13 or later** with the `uuid-ossp`, `pg_trgm` and `unaccent` extensions | The schema uses them and `gen_random_uuid()` | MilesWeb's plan table does not list PostgreSQL. Ask support. If it isn't available, use a managed PostgreSQL service (Neon, Supabase, Aiven, DigitalOcean). |
+| **SSH / cPanel Terminal** | `npm install`, migrations, seeding | |
+| **SSL certificate** (AutoSSL / Let's Encrypt) | The officer session cookie is `Secure` | HTTPS is mandatory, see [section 16](#officer-login-succeeds-then-bounces-straight-back-to-the-login-page). |
+| **Outbound SMTP** to `smtp.gmail.com:587` (and outbound 5432 for an external database) | Email and database | Some shared hosts block these. Ask, or see D.7. |
+| **Cron jobs** | Keeps the API awake for the nightly job | See D.8. |
+
+The static frontend needs nothing from the server beyond serving files. Only the API needs Node.js.
+
+### D.2 Build on a workstation
+
+Any machine with Node.js 22 and a checkout of the repository will do. From the repository root:
+
+```bash
+npm ci
+npx turbo run build --filter=@fafics/api --filter=web-angular
+npm pack -w packages/shared --pack-destination apps/api
+```
+
+This produces:
+
+- `apps/web-angular/dist/`, the complete website, including a hidden `.htaccess`;
+- `apps/api/dist/`, the compiled API;
+- `apps/api/fafics-shared-1.0.0.tgz`, the shared package the API imports (not published to npm).
+
+The frontend's API address is compiled in from `apps/web-angular/src/environments/environment.ts`. The default `'/api'` is correct for this layout. Change it only if the API is on a different domain, and then also add that origin to `connect-src` in `apps/web-angular/public/.htaccess`.
+
+### D.3 Create the database
+
+**On the account (cPanel → PostgreSQL Databases):** create a database and a user, and add the user to the database with all privileges. cPanel prefixes both names with the account name, e.g. `cpuser_fafics` and `cpuser_faficsuser`. If `prisma migrate deploy` (D.4) later fails with `permission denied to create extension`, ask support to enable `uuid-ossp`, `pg_trgm` and `unaccent` on that database.
+
+```ini
+DATABASE_URL=postgresql://cpuser_faficsuser:<password>@localhost:5432/cpuser_fafics
+```
+
+**Managed elsewhere:** create the database with the provider and use the connection string it gives you, keeping `sslmode=require`. A small pool is kind to shared hosting:
+
+```ini
+DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<db>?sslmode=require&connection_limit=5
+```
+
+### D.4 Create and install the API application
+
+1. **cPanel → Setup Node.js App → Create Application:**
+
+   | Field | Value |
+   | --- | --- |
+   | Node.js version | The newest 22.x offered (20.x minimum) |
+   | Application mode | Production |
+   | Application root | `fafics-api`, a folder in the home directory, **not** inside `public_html` |
+   | Application URL | the domain + `api`, e.g. `experts.example.org/api` |
+   | Application startup file | `dist/main.js` |
+
+   After saving, cPanel shows a command that enters the application's environment, e.g. `source /home/<user>/nodevenv/fafics-api/22/bin/activate && cd /home/<user>/fafics-api`.
+
+2. **Upload** into `~/fafics-api/`: `apps/api/dist/`, `apps/api/prisma/`, `apps/api/package.json`, `apps/api/tsconfig.json` and `apps/api/fafics-shared-1.0.0.tgz`. File Manager's upload-a-zip-then-Extract is the quickest way. **Do not upload `node_modules`.** CloudLinux keeps modules in the application's virtual environment and refuses to install if a `node_modules` folder exists.
+
+3. **Create `~/fafics-api/.env`** with the settings from [section 5.2](#52-create-the-environment-file) and permissions `600`. On this layout:
+   - `NODE_ENV=production`
+   - `DATABASE_URL` from D.3
+   - `API_BASE_URL` and `WEB_BASE_URL` both set to the site address, e.g. `https://experts.example.org` (no trailing slash, no `/api`)
+   - `API_PORT` is ignored, because Passenger assigns the socket.
+
+4. **Install and prepare the database** in cPanel → Terminal (or over SSH):
+
+   ```bash
+   source /home/<user>/nodevenv/fafics-api/22/bin/activate && cd /home/<user>/fafics-api
+   npm pkg set "dependencies.@fafics/shared=file:./fafics-shared-1.0.0.tgz"
+   npm install --include=dev
+   npx prisma generate
+   npx prisma migrate deploy
+   npx prisma db seed          # first deployment only — creates the admin from ADMIN_EMAIL / ADMIN_PASSWORD
+   ```
+
+   The `npm pkg set` line matters. Without it, npm tries to fetch `@fafics/shared` from the public registry, where the name is not ours. `--include=dev` is needed because the Prisma CLI and the seed runner are dev dependencies.
+
+5. **Setup Node.js App → Restart**, then open `https://experts.example.org/api/health`. It should return `{"status":"ok","info":{"database":{"status":"up"}}}`.
+
+Passenger passes the full path (`/api/...`) to the application, which is what the API expects, since all its routes live under `/api`.
+
+### D.5 Upload the frontend
+
+1. In File Manager, open the domain's document root (usually `public_html/`) and turn on **Settings → Show Hidden Files**.
+2. Delete the old site files, but **keep** the `api/` folder that Setup Node.js App created, `.well-known/`, and any `CLOUDLINUX PASSENGER CONFIGURATION` block in `.htaccess`.
+3. Upload the **contents** of `apps/web-angular/dist/`, including `.htaccess`.
+
+Check: `https://experts.example.org/apply` shows the form, and reloading `https://experts.example.org/admin/login` shows the login page rather than a 404.
+
+Before uploading, you can check the build locally exactly as the host will serve it: `node tools/preview-dist.mjs` in `apps/web-angular` (API running locally) serves `dist/` on port 4400 with the `.htaccess` headers applied.
+
+### D.6 HTTPS
+
+cPanel → **SSL/TLS Status** → run AutoSSL for the domain (or install the certificate MilesWeb provides). The `.htaccess` redirects HTTP to HTTPS. Once HTTPS works everywhere, uncomment the `Strict-Transport-Security` line in `.htaccess`.
+
+### D.7 Email
+
+Configure SMTP exactly as in [section 10](#10-email-setup). Shared hosts sometimes block outbound SMTP to outside servers. Test by requesting a password reset from the admin login page. If nothing arrives and the API log shows connection timeouts, either:
+
+- use a mailbox on the hosting account (`SMTP_HOST=mail.<domain>`, port 465 or 587, the mailbox's address and password); or
+- set `RESEND_API_KEY`, which sends over HTTPS.
+
+### D.8 Nightly maintenance
+
+The API runs its maintenance job at 02:00 UTC inside the process: it expires profiles, sends renewal reminders and reissues expired president links. Passenger starts the process on the first request and **stops it after a few idle minutes**, so at 02:00 it may not be running. Add a cPanel **Cron Job** that keeps it warm:
+
+```
+*/3 * * * * curl -fsS -o /dev/null https://experts.example.org/api/health
+```
+
+Each step of the job picks up everything that is due, not only what became due that day. A run that is missed is therefore caught up the next night.
+
+### D.9 Updating
+
+- **Frontend:** rebuild (`npm run build` in `apps/web-angular`) and repeat D.5.
+- **API:** rebuild (D.2) and upload the new `dist/`.
+  - If migrations changed, also upload `prisma/` and run `npx prisma migrate deploy`.
+  - If dependencies changed, also upload `package.json` and repeat the `npm pkg set` and `npm install --include=dev` lines.
+  - Then **Restart** in Setup Node.js App.
+
+### D.10 Troubleshooting
+
+| Symptom | Cause |
+| --- | --- |
+| `/` works, but reloading any other page gives a 404 | `.htaccess` was not uploaded (hidden file), or `mod_rewrite` is off |
+| Every page is a 500 Internal Server Error | The host forbids a directive in `.htaccess`, usually `Options`. Remove the `Options -Indexes` line |
+| `/api/health` returns the Angular page | The Node.js app is not mounted at `/api`. Check its Application URL |
+| `/api/...` returns 503 or "Incomplete response received from application" | The API crashed on start. Read `stderr.log` in `~/fafics-api/`. Usual causes: a missing `.env` value, an unreachable `DATABASE_URL`, `prisma generate` not run |
+| Login succeeds, then returns to the login page | The site was opened over `http://`. See D.6 |
+| Pages load unstyled, or the console shows `Content-Security-Policy` errors | The API or an asset is served from another origin. Add it to the CSP in `.htaccess` |
