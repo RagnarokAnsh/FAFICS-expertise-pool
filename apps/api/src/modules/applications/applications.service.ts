@@ -171,9 +171,19 @@ export class ApplicationsService {
         },
       });
 
-      // Write a single audit entry when the application is first started.
-      // Subsequent auto-saves (updateDraft) intentionally do NOT write audit
-      // rows — they would flood the timeline with one entry every ~30s.
+      return { application, resumed: false };
+    });
+
+    const { application, resumed } = result;
+
+    // Write a single audit entry when the application is first started.
+    // Subsequent auto-saves (updateDraft) intentionally do NOT write audit
+    // rows — they would flood the timeline with one entry every ~30s.
+    // This must run AFTER the transaction commits: AuditService writes through
+    // its own connection, which cannot see the uncommitted application row, so
+    // inside the transaction the application_id foreign key rejected the insert
+    // and the entry was silently dropped.
+    if (!resumed) {
       await this.auditService.log({
         applicationId: application.id,
         actorEmail: dto.personal.email ?? '',
@@ -181,11 +191,7 @@ export class ApplicationsService {
         action: 'application.draft_created',
         newStatus: 'draft',
       });
-
-      return { application, resumed: false };
-    });
-
-    const { application, resumed } = result;
+    }
     this.logger.log(`Draft ${resumed ? 'resumed' : 'created'}: ${application.id}`);
 
     // Generate the applicant edit token up front. It is the ownership credential
