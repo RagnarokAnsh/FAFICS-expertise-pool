@@ -2,6 +2,7 @@ import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { FormStore } from '../../core/form/form-store';
 import { ToastService } from '../../core/toast.service';
 import { applicationsApi } from '../../lib/api/applications.api';
+import { LANGUAGES, LANGUAGE_OTHER } from '../../lib/constants/languages';
 import { ApplicationData, applicationSchema } from '../../lib/schemas/application.schema';
 import { withBasePath } from '../../lib/utils/base-path';
 
@@ -19,6 +20,18 @@ export function sanitizeForApi(data: any): any {
     return data.map(sanitizeForApi).filter((item) => item !== undefined && item !== null);
   }
   if (typeof data === 'object') {
+    // A language row with "Other (please specify)": the API stores the typed
+    // name as the language. The form-only `languageOther` field is never sent,
+    // and neither is "Other" itself (e.g. an autosave before anything is typed).
+    if ('languageOther' in data || data.language === LANGUAGE_OTHER) {
+      const { languageOther, ...row } = data;
+      if (row.language === LANGUAGE_OTHER) {
+        const typed = typeof languageOther === 'string' ? languageOther.trim() : '';
+        // A UN language typed under Other is saved under its listed spelling.
+        row.language = LANGUAGES.find((l) => l.toLowerCase() === typed.toLowerCase()) ?? typed;
+      }
+      return sanitizeForApi(row);
+    }
     const result: Record<string, any> = {};
     for (const [key, value] of Object.entries(data)) {
       // Don't send metadata or consent fields during draft updates
@@ -59,6 +72,19 @@ function extractStep1Data(data: any): { personal: any; association: any } {
 }
 
 const hasText = (v?: string | null): boolean => !!v && v.trim() !== '';
+
+/** A saved language outside the list loads as "Other (please specify)" with its name filled in. */
+function withOtherLanguages(data?: Partial<ApplicationData>): Partial<ApplicationData> | undefined {
+  if (!data?.languages) return data;
+  return {
+    ...data,
+    languages: data.languages.map((l) =>
+      hasText(l?.language) && !LANGUAGES.includes(l.language)
+        ? { ...l, language: LANGUAGE_OTHER, languageOther: l.language }
+        : l,
+    ),
+  };
+}
 
 /**
  * Resume at the first step that still needs input. Steps 2–4 auto-append empty
@@ -124,6 +150,7 @@ export class ApplicationFormState {
   }
 
   init(initialData?: Partial<ApplicationData>, initialDraftId?: string, isResume?: boolean, initialEditToken?: string) {
+    initialData = withOtherLanguages(initialData);
     this.form.init(applicationSchema, initialData, { reset: !!initialData });
     const step = computeInitialStep(initialData);
     this.currentStep.set(step);

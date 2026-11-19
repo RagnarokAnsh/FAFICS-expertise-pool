@@ -1,6 +1,7 @@
 import './zod-setup'; // Angular-only: must run before any schema below is built (CSP)
 import { z } from 'zod';
 import { isValidPhoneNumber } from 'libphonenumber-js/mobile';
+import { LANGUAGE_OTHER } from '../constants/languages';
 
 /** Whole years between a past date and today. */
 function ageInYears(dob: Date): number {
@@ -159,17 +160,50 @@ export const educationSchema = z.object({
   sortOrder: z.number().default(1),
 });
 
-export const languageSchema = z.object({
-  language: z.string().min(1, 'Language is required'),
-  proficiency: z.enum(['mother_tongue', 'proficient', 'working_level', 'basic'], {
-    message: 'Proficiency Level is required',
-  }),
-  sortOrder: z.number().default(1),
-});
+export const languageSchema = z
+  .object({
+    language: z.string().min(1, 'Language is required'),
+    // Typed name when "Other (please specify)" is selected (form-only).
+    languageOther: z.string().nullish(),
+    proficiency: z.enum(['mother_tongue', 'proficient', 'working_level', 'basic'], {
+      message: 'Proficiency Level is required',
+    }),
+    sortOrder: z.number().default(1),
+  })
+  .refine((l) => l.language !== LANGUAGE_OTHER || !!l.languageOther?.trim(), {
+    message: 'Please specify the language',
+    path: ['languageOther'],
+    // Also run while the row's proficiency is still empty, so both errors show at once.
+    when: (payload) => typeof payload.value === 'object' && payload.value !== null,
+  });
+
+/** The language a row stands for: the typed name for "Other", else the selected one. */
+export function effectiveLanguage(l?: { language?: string | null; languageOther?: string | null }): string {
+  return ((l?.language === LANGUAGE_OTHER ? l?.languageOther : l?.language) ?? '').trim();
+}
 
 export const step2Schema = z.object({
   educations: z.array(educationSchema).min(1, 'At least one education qualification is required'),
-  languages: z.array(languageSchema).min(1, 'At least one working language is required'),
+  languages: z
+    .array(languageSchema)
+    .min(1, 'At least one working language is required')
+    // A language may only be listed once, including one typed under "Other".
+    .superRefine((languages, ctx) => {
+      const seen = new Set<string>();
+      languages.forEach((lang, idx) => {
+        const key = effectiveLanguage(lang).toLowerCase();
+        if (!key) return;
+        if (seen.has(key)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [idx, lang.language === LANGUAGE_OTHER ? 'languageOther' : 'language'],
+            message: 'This language is already selected',
+          });
+        } else {
+          seen.add(key);
+        }
+      });
+    }),
 });
 
 // durationYears is a Postgres Decimal(4,1); the API serializes it to JSON as a
@@ -326,21 +360,7 @@ export const applicationSchema = z
   .merge(step4Schema)
   .merge(step5Schema)
   .superRefine((data, ctx) => {
-    // A language may only be listed once.
-    const seen = new Map<string, number>();
-    (data.languages ?? []).forEach((lang, idx) => {
-      const key = lang.language?.trim().toLowerCase();
-      if (!key) return;
-      if (seen.has(key)) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['languages', idx, 'language'],
-          message: 'This language is already selected',
-        });
-      } else {
-        seen.set(key, idx);
-      }
-    });
+    // The duplicate-language check lives on step2Schema.languages.
 
     // The applicant cannot route the endorsement to themselves.
     if (emailsMatchPresident(data.personal?.email, data.association?.presidentEmail)) {

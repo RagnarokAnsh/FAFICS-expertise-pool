@@ -2,13 +2,13 @@ import { ChangeDetectionStrategy, Component, Injector, OnInit, inject, output } 
 import { FieldArray, FormStore } from '../../../core/form/form-store';
 import { RegisterDirective } from '../../../core/form/register.directive';
 import { ToastService } from '../../../core/toast.service';
+import { LANGUAGES, LANGUAGE_OTHER } from '../../../lib/constants/languages';
 import { firstErrorMessage } from '../../../lib/utils/form-errors';
 import { ButtonComponent } from '../../ui/button';
 import { CardComponent } from '../../ui/card';
 import { DynamicRowListComponent } from '../../ui/dynamic-row-list';
 import { InputDirective, SelectDirective } from '../../ui/field';
 
-const LANGUAGES = ['Arabic', 'Chinese', 'English', 'French', 'Russian', 'Spanish'];
 const PROFICIENCIES = [
   { value: 'mother_tongue', label: 'Mother tongue' },
   { value: 'proficient', label: 'Proficient' },
@@ -104,9 +104,21 @@ const PROFICIENCIES = [
             @for (l of languages; track l) {
               <option [value]="l" [disabled]="usedElsewhere(index).includes(l)">{{ l }}</option>
             }
+            <option [value]="languageOther">Other (please specify)</option>
           </select>
           @if (form.error('languages.' + index + '.language')?.message; as message) {
             <span class="text-[11.5px] text-danger">{{ message }}</span>
+          }
+          @if (form.value('languages.' + index + '.language') === languageOther) {
+            <input
+              appInput
+              placeholder="Please specify the language…"
+              [hasError]="!!form.error('languages.' + index + '.languageOther')"
+              [appRegister]="'languages.' + index + '.languageOther'"
+            />
+            @if (form.error('languages.' + index + '.languageOther')?.message; as message) {
+              <span class="text-[11.5px] text-danger">{{ message }}</span>
+            }
           }
         </div>
         <div class="flex flex-col gap-1">
@@ -159,6 +171,7 @@ export class Step2EducationComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly injector = inject(Injector);
   protected readonly languages = LANGUAGES;
+  protected readonly languageOther = LANGUAGE_OTHER;
   protected readonly proficiencies = PROFICIENCIES;
 
   protected readonly edu: FieldArray = this.form.fieldArray('educations', this.injector);
