@@ -177,7 +177,8 @@ import { MultiSelectComponent } from '../../ui/multi-select';
       <p class="text-[13px] text-text-mid leading-relaxed mb-4">
         If you wish to be considered for a particular FAFICS position or standing committee, indicate your preference(s)
         below and briefly describe the rationale and what you can offer. This helps committee chairs identify suitable
-        members from the pool.
+        members from the pool. Your preferences do not prevent you from being considered for other committees or
+        assignments.
       </p>
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-[5px]">

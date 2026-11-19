@@ -72,7 +72,7 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
       <div className="mb-7">
         <h2 className="font-serif text-[22px] font-bold text-navy mb-1">Work Experience</h2>
         <p className="text-[13.5px] text-text-mid leading-relaxed">
-          List your last 2–3 positions for each category. Use <strong>+ Add Position</strong> to add rows.
+          List your most relevant positions (at least your last 2–3). Use <strong>+ Add Position</strong> to add more.
         </p>
       </div>
 
@@ -127,7 +127,10 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
         </div>
       </Card>
 
-      <Card title="B — Non-UN Experience">
+      <Card title="B — Non-UN Experience (Optional)">
+        <p className="text-[13px] text-text-mid leading-relaxed mb-4">
+          Leave this section empty if it does not apply. Fields marked {REQUIRED_MARK} are required only for positions you add.
+        </p>
         <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.2fr 1.4fr 1fr 100px' }}>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Organization {REQUIRED_MARK}</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
@@ -167,11 +170,14 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
         </div>
       </Card>
 
-      <Card title="C — FAFICS Experience">
+      <Card title="C — FAFICS Experience (Optional)">
+        <p className="text-[13px] text-text-mid leading-relaxed mb-4">
+          Leave this section empty if it does not apply. Fields marked {REQUIRED_MARK} are required only for positions you add.
+        </p>
         <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.5fr 1fr 120px' }}>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Contribution {REQUIRED_MARK}</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Duration (years) {REQUIRED_MARK}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Contribution</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Duration (years)</span>
         </div>
 
         <DynamicRowList
@@ -235,7 +241,10 @@ export function Step3WorkExperience({ onNext, onBack }: StepProps) {
         </div>
       </Card>
 
-      <Card title="D — Local Association Experience">
+      <Card title="D — Local Association Experience (Optional)">
+        <p className="text-[13px] text-text-mid leading-relaxed mb-4">
+          Leave this section empty if it does not apply. Fields marked {REQUIRED_MARK} are required only for positions you add.
+        </p>
         <div className="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style={{ gridTemplateColumns: '1.5fr 1fr 120px' }}>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Position Held {REQUIRED_MARK}</span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted">Area of Contribution</span>
