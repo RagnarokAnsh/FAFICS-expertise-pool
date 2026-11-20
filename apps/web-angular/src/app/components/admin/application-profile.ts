@@ -40,10 +40,10 @@ const TD2 = TD2_BASE + ' text-text-mid';
 const TD2_FIRST = TD2_BASE + ' font-medium text-navy';
 
 /**
- * The admin application page's read-only profile (Angular only; the President's
- * review page keeps components/endorse/endorsement-view.ts). Same data, laid out
- * as aligned field grids and tables with shared column widths, so the cards line
- * up with each other.
+ * The read-only application profile (Angular only), shared by the admin
+ * application page and the President's review page
+ * (components/endorse/endorsement-view.ts). Laid out as aligned field grids and
+ * tables with shared column widths, so the cards line up with each other.
  */
 @Component({
   selector: 'app-application-profile',
