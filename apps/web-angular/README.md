@@ -88,6 +88,12 @@ These were verified and kept on purpose:
 - **The endorsement and resume pages load their data in the browser.** Next.js loads it on the server. The pages and the API calls are the same.
 - **The logo is served as the original PNG.** Next.js re-compresses it through its image optimizer, so a few pixels differ.
 
+Since the Angular app went into production (autumn 2026), some changes are made here only, so these pages no longer match `apps/web`:
+
+- **Admin application page** (`/admin/applications/:id`). It now has a full-width header with the name, status, reference, association and submission date. Below it, the profile (`components/admin/application-profile.ts`) sits on the left and a 360 px Status & Actions column on the right, with both columns starting at the same line. On narrow screens Status & Actions comes first and the audit timeline last. Field grids replace the paired cards, and the tables share column boundaries; on phones the experience tables turn into stacked records. The President's review page still uses `components/endorse/endorsement-view.ts` with the original layout.
+- **President endorsement links** (review point 10): the Resend to President and Edit President Email actions on the admin page, and the 3- and 7-day reminders.
+- **Experience durations** show the label the applicant picked ("3-5 years", "20+ years") instead of the stored upper bound ("5", "99"), on both the admin page and the President's page.
+
 ## Keeping it in sync with `apps/web`
 
 The React app is the reference. When a page changes in `apps/web`, make the same change here, with the same markup, classes and text. The parity tooling in [`tools/parity`](tools/parity) screenshots every route in both apps and reports pixel differences:

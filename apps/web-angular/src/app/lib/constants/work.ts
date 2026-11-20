@@ -55,6 +55,26 @@ export const MAX_COMPETENCIES = 5;
 // The FAFICS contribution / committee option that reveals a free-text field.
 export const COMMITTEE_OTHER = "Other";
 
+// Experience duration buckets (Step 3). The API stores each bucket's UPPER
+// bound, so 5 means "3-5 years" and 99 is the "20+ years" sentinel.
+export const DURATION_OPTIONS = [
+  { value: 0.5, label: '< 1 year' },
+  { value: 1.0, label: '1 year' },
+  { value: 2.0, label: '2 years' },
+  { value: 5.0, label: '3-5 years' },
+  { value: 10.0, label: '6-10 years' },
+  { value: 20.0, label: '11-20 years' },
+  { value: 99.0, label: '20+ years' },
+];
+
+/** The label the applicant picked for a stored duration ("3-5 years"), or "-". */
+export function durationLabel(value: number | string | null | undefined): string {
+  if (value == null || value === '') return '-';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '-';
+  return DURATION_OPTIONS.find((d) => d.value === n)?.label ?? `${n} year${n === 1 ? '' : 's'}`;
+}
+
 export const AREAS_OF_EXPERTISE = [
   "Administration / Operations",
   "Finance / Budget",

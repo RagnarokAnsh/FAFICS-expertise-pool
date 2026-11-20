@@ -1,11 +1,20 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { COMMITTEE_OTHER } from '../../lib/constants/work';
+import { durationLabel } from '../../lib/constants/work';
+import {
+  contributionParts,
+  preferredCommittees,
+  ratedExpertise,
+  visibleEducations,
+  visibleFaficsExperiences,
+  visibleLanguages,
+  visibleLocalExperiences,
+  visibleNonUnExperiences,
+  visibleUnExperiences,
+} from '../../lib/utils/application-view';
 import { formatDate } from '../../lib/utils/date';
 import { CardComponent } from '../ui/card';
 import { EndorseActionsComponent } from './endorse-actions';
-
-const hasText = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
 
 /** components/endorse/EndorsementView.tsx */
 @Component({
@@ -167,7 +176,7 @@ const hasText = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.positionTitle }}</td>
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.grade || '-' }}</td>
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.areaOfExpertise || '-' }}</td>
-                    <td class="py-3 text-[14px] text-text-mid">{{ exp.durationYears || '-' }}</td>
+                    <td class="py-3 text-[14px] text-text-mid">{{ durationLabel(exp.durationYears) }}</td>
                   </tr>
                 }
               </tbody>
@@ -199,7 +208,7 @@ const hasText = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.organization }}</td>
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.positionTitle }}</td>
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.areaOfExpertise || '-' }}</td>
-                    <td class="py-3 text-[14px] text-text-mid">{{ exp.durationYears || '-' }}</td>
+                    <td class="py-3 text-[14px] text-text-mid">{{ durationLabel(exp.durationYears) }}</td>
                   </tr>
                 }
               </tbody>
@@ -243,7 +252,7 @@ const hasText = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '
                         </ul>
                       }
                     </td>
-                    <td class="py-3 text-[14px] text-text-mid">{{ exp.durationYears || '-' }}</td>
+                    <td class="py-3 text-[14px] text-text-mid">{{ durationLabel(exp.durationYears) }}</td>
                   </tr>
                 }
               </tbody>
@@ -273,7 +282,7 @@ const hasText = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '
                   <tr class="border-b border-border last:border-0">
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.positionHeld }}</td>
                     <td class="py-3 text-[14px] text-text-mid">{{ exp.areaOfContribution || '-' }}</td>
-                    <td class="py-3 text-[14px] text-text-mid">{{ exp.durationYears || '-' }}</td>
+                    <td class="py-3 text-[14px] text-text-mid">{{ durationLabel(exp.durationYears) }}</td>
                   </tr>
                 }
               </tbody>
@@ -381,51 +390,20 @@ export class EndorsementViewComponent {
   readonly isAdminView = input(false);
 
   protected readonly formatDate = formatDate;
+  protected readonly durationLabel = durationLabel;
+  protected readonly contributionParts = contributionParts;
   protected readonly app = this.application;
 
   protected readonly fullName = computed(() =>
     [this.app().firstName, this.app().middleName, this.app().lastName].filter(Boolean).join(' '),
   );
 
-  // Drafts (and older submissions that skipped step validation) can contain
-  // partially-filled rows — e.g. a language row with a proficiency but no
-  // language name. Hide husks so the review never shows blank entries.
-  protected readonly educations = computed(() =>
-    (this.app().educations ?? []).filter((e: any) => hasText(e?.degreeName) || hasText(e?.institution)),
-  );
-  protected readonly languages = computed(() =>
-    (this.app().languages ?? []).filter((l: any) => hasText(l?.language)),
-  );
-  protected readonly unExperiences = computed(() =>
-    (this.app().unExperiences ?? []).filter((e: any) => hasText(e?.agency) || hasText(e?.positionTitle)),
-  );
-  protected readonly nonUnExperiences = computed(() =>
-    (this.app().nonUnExperiences ?? []).filter((e: any) => hasText(e?.organization) || hasText(e?.positionTitle)),
-  );
-  protected readonly faficsExperiences = computed(() =>
-    (this.app().faficsExperiences ?? []).filter((e: any) => hasText(e?.positionHeld)),
-  );
-  protected readonly localExperiences = computed(() =>
-    (this.app().localExperiences ?? []).filter((e: any) => hasText(e?.positionHeld)),
-  );
-
-  protected readonly rated = computed(() =>
-    (this.app().expertise ?? []).filter(
-      (exp: any) => exp.expertiseLevel || exp.isPreferred || (exp.isCustom && exp.otherDescription),
-    ),
-  );
-
-  // Drop the "Other" sentinel; show the specified free text instead.
-  protected readonly committees = computed(() => {
-    const committees = (this.app().preferredCommittees ?? []).filter((c: string) => c !== COMMITTEE_OTHER);
-    if (this.app().preferredCommitteesOther) committees.push(this.app().preferredCommitteesOther);
-    return committees;
-  });
-
-  // Drop the "Other" sentinel; show the specified free text instead.
-  protected contributionParts(exp: any): string[] {
-    const parts = (exp.areaOfContribution || '').split('; ').filter((c: string) => c && c !== COMMITTEE_OTHER);
-    if (exp.areaOfContributionOther) parts.push(exp.areaOfContributionOther);
-    return parts;
-  }
+  protected readonly educations = computed(() => visibleEducations(this.app()));
+  protected readonly languages = computed(() => visibleLanguages(this.app()));
+  protected readonly unExperiences = computed(() => visibleUnExperiences(this.app()));
+  protected readonly nonUnExperiences = computed(() => visibleNonUnExperiences(this.app()));
+  protected readonly faficsExperiences = computed(() => visibleFaficsExperiences(this.app()));
+  protected readonly localExperiences = computed(() => visibleLocalExperiences(this.app()));
+  protected readonly rated = computed(() => ratedExpertise(this.app()));
+  protected readonly committees = computed(() => preferredCommittees(this.app()));
 }

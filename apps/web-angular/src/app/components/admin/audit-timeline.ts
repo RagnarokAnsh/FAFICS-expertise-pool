@@ -19,21 +19,20 @@ interface AuditLog {
     @if (!logs() || logs()!.length === 0) {
       <div class="text-sm text-text-light">No timeline events available.</div>
     } @else {
-      <div class="relative border-l-2 border-gray-200 ml-3 mt-4">
+      <!-- Title on its own line, then the time, so narrow cards don't squeeze the title. -->
+      <div class="relative border-l-2 border-gray-200 ml-3 mt-1">
         @for (log of logs(); track log.id) {
-          <div class="mb-6 ml-6 relative">
+          <div class="mb-5 last:mb-0 ml-6 relative">
             <div
               [class]="
-                'absolute -left-[31px] top-1 w-[14px] h-[14px] rounded-full border-2 border-white shadow-sm ' +
+                'absolute -left-[31px] top-3.5 w-[14px] h-[14px] rounded-full border-2 border-white shadow-sm ' +
                 getColor(log.action)
               "
             ></div>
             <div class="bg-white border border-border p-3 rounded shadow-sm text-sm">
-              <div class="flex justify-between items-start gap-2 mb-1">
-                <span class="font-semibold text-navy capitalize break-words min-w-0">{{ actionLabel(log.action) }}</span>
-                <span class="text-xs text-text-light whitespace-nowrap shrink-0">{{ formatDateTime(log.createdAt) }}</span>
-              </div>
-              <div class="text-text-mid text-[13px] mb-2 break-words">
+              <div class="font-semibold text-navy capitalize break-words">{{ actionLabel(log.action) }}</div>
+              <div class="text-xs text-text-light mt-0.5 mb-1.5">{{ formatDateTime(log.createdAt) }}</div>
+              <div class="text-text-mid text-[13px] break-words">
                 By: <span class="break-all">{{ log.actorEmail }}</span> ({{ log.actorRole }})
               </div>
               @if (log.metadata && hasKeys(log.metadata)) {

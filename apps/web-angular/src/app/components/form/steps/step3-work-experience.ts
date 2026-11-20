@@ -5,6 +5,7 @@ import { ToastService } from '../../../core/toast.service';
 import {
   AREAS_OF_EXPERTISE,
   COMMITTEE_OTHER,
+  DURATION_OPTIONS,
   FAFICS_COMMITTEES,
   FAFICS_ROLES,
   UN_AGENCIES,
@@ -23,15 +24,7 @@ import { MultiSelectComponent } from '../../ui/multi-select';
 // no semicolons.
 const COMMITTEE_SEP = '; ';
 
-const DURATIONS = [
-  { value: 0.5, label: '< 1 year' },
-  { value: 1.0, label: '1 year' },
-  { value: 2.0, label: '2 years' },
-  { value: 5.0, label: '3-5 years' },
-  { value: 10.0, label: '6-10 years' },
-  { value: 20.0, label: '11-20 years' },
-  { value: 99.0, label: '20+ years' },
-];
+const DURATIONS = DURATION_OPTIONS;
 
 const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
 
