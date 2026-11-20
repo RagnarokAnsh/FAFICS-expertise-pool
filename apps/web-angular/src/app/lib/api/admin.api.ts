@@ -90,6 +90,18 @@ export const adminApi = {
     return unwrap(response);
   },
 
+  /** Emails the President the endorsement request again. Earlier links keep working. */
+  resendPresidentLink: async (id: string): Promise<{ presidentEmail: string; message: string }> => {
+    const response = await adminApiClient.post(`/admin/applications/${id}/resend-president-link`);
+    return unwrap(response);
+  },
+
+  /** Corrects the President's email. While awaiting the President, a new link is sent to it. */
+  updatePresidentEmail: async (id: string, presidentEmail: string): Promise<{ presidentEmail: string; linkSent: boolean }> => {
+    const response = await adminApiClient.patch(`/admin/applications/${id}/president-email`, { presidentEmail });
+    return unwrap(response);
+  },
+
   exportRoster: async () => {
     const response = await adminApiClient.get('/admin/export/roster', { responseType: 'blob' });
     const url = window.URL.createObjectURL(new Blob([response.data]));

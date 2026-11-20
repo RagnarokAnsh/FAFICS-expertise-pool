@@ -6,6 +6,7 @@ import { Resend } from 'resend';
 import { submissionConfirmationTemplate } from './templates/submission-confirmation.template';
 import { presidentReviewTemplate } from './templates/president-review.template';
 import { presidentLinkExpiredTemplate } from './templates/president-link-expired.template';
+import { presidentReminderTemplate } from './templates/president-reminder.template';
 import { changesRequestedTemplate } from './templates/changes-requested.template';
 import { endorsedTemplate } from './templates/endorsed.template';
 import { secretaryReviewPendingTemplate } from './templates/secretary-review-pending.template';
@@ -115,6 +116,17 @@ export class MailService {
       submissionDate: app.submittedAt!,
       magicLinkUrl,
       preferredCommittees: app.preferredCommittees,
+    });
+    return this.sendEmail(app.presidentEmail, subject, html);
+  }
+
+  async sendPresidentReminder(applicationId: string, magicLinkUrl: string): Promise<{ messageId: string }> {
+    const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
+    const { subject, html } = presidentReminderTemplate({
+      applicantName: `${app.firstName} ${app.lastName}`,
+      associationName: app.associationName,
+      submissionDate: app.submittedAt!,
+      magicLinkUrl,
     });
     return this.sendEmail(app.presidentEmail, subject, html);
   }

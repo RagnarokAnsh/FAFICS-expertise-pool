@@ -88,7 +88,7 @@ import { formatDate } from '../../lib/utils/date';
                   </div>
                 </div>
 
-                <app-action-buttons [applicationId]="app.id" [status]="app.status" />
+                <app-action-buttons [applicationId]="app.id" [status]="app.status" [presidentEmail]="app.presidentEmail" />
               </div>
 
               <div appCard heading="Audit Timeline">

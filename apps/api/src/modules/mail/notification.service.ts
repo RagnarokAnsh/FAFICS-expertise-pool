@@ -216,29 +216,85 @@ export class NotificationService {
     }
   }
 
-  async sendPresidentLink(applicationId: string): Promise<void> {
+  /**
+   * Emails the President the endorsement request with a fresh magic link.
+   *
+   * By default every earlier president link is voided first: on submission,
+   * resubmission and after the President's email was corrected, only the new
+   * link should work. An officer's resend passes `keepEarlierLinks`, so a
+   * President who opens an older email can still use it.
+   *
+   * Returns true when the email went out. Never throws.
+   */
+  async sendPresidentLink(
+    applicationId: string,
+    opts: { keepEarlierLinks?: boolean; actorEmail?: string; actorRole?: string; action?: string } = {},
+  ): Promise<boolean> {
     const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
     if (!application) {
       this.logger.error(`sendPresidentLink: application ${applicationId} not found`);
-      return;
+      return false;
     }
 
     try {
-      const ttlMs = this.configService.get<number>('PRESIDENT_LINK_TTL_MS', 14 * 24 * 60 * 60 * 1000);
-      const { rawToken } = await this.tokensService.reissue({
-        applicationId,
-        purpose: TokenPurpose.PRESIDENT_REVIEW,
-        recipientEmail: application.presidentEmail,
-        ttlMs,
+      const magicLinkUrl = await this.mintPresidentLink(applicationId, application.presidentEmail, {
+        keepEarlierLinks: opts.keepEarlierLinks,
+      });
+      const result = await this.mailService.sendPresidentReviewRequest(applicationId, magicLinkUrl);
+
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.presidentEmail,
+          notificationType: NotificationType.PRESIDENT_REVIEW_REQUEST as any,
+          providerMessageId: result.messageId,
+          sentAt: new Date(),
+        },
       });
 
-      const webBaseUrl =
-        this.configService.get<string>('app.webBaseUrl') ||
-        this.configService.get<string>('WEB_BASE_URL') ||
-        'http://localhost:3000';
-      const magicLinkUrl = `${webBaseUrl}/endorse/${rawToken}`;
+      await this.auditService.log({
+        applicationId,
+        actorEmail: opts.actorEmail ?? 'system',
+        actorRole: opts.actorRole ?? 'admin',
+        action: opts.action ?? (opts.actorEmail ? 'president.link_resent' : 'president.link_sent'),
+        metadata: { sentTo: application.presidentEmail },
+      });
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Failed to send president link for ${applicationId}: ${error.message}`);
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.presidentEmail,
+          notificationType: NotificationType.PRESIDENT_REVIEW_REQUEST as any,
+          failedAt: new Date(),
+          errorMessage: error.message,
+        },
+      });
+      return false;
+    }
+  }
 
-      const result = await this.mailService.sendPresidentReviewRequest(applicationId, magicLinkUrl);
+  /**
+   * Automatic reminder to a President who has not yet acted. It carries a new
+   * link and leaves the earlier ones working. The audit row
+   * (`president.reminder_sent`) is what the nightly job counts, so it is only
+   * written when the email went out: a failed send is retried the next night.
+   *
+   * Returns true when the email went out. Never throws.
+   */
+  async sendPresidentReminder(applicationId: string, daysAfterSubmission: number): Promise<boolean> {
+    const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
+    if (!application) {
+      this.logger.error(`sendPresidentReminder: application ${applicationId} not found`);
+      return false;
+    }
+
+    try {
+      const magicLinkUrl = await this.mintPresidentLink(applicationId, application.presidentEmail, {
+        keepEarlierLinks: true,
+      });
+      const result = await this.mailService.sendPresidentReminder(applicationId, magicLinkUrl);
 
       await this.prisma.notificationLog.create({
         data: {
@@ -254,10 +310,12 @@ export class NotificationService {
         applicationId,
         actorEmail: 'system',
         actorRole: 'admin',
-        action: 'president.link_sent',
+        action: 'president.reminder_sent',
+        metadata: { sentTo: application.presidentEmail, daysAfterSubmission },
       });
+      return true;
     } catch (error: any) {
-      this.logger.error(`Failed to send president link for ${applicationId}: ${error.message}`);
+      this.logger.error(`Failed to send president reminder for ${applicationId}: ${error.message}`);
       await this.prisma.notificationLog.create({
         data: {
           applicationId,
@@ -267,7 +325,27 @@ export class NotificationService {
           errorMessage: error.message,
         },
       });
+      return false;
     }
+  }
+
+  /** Creates a president-review token and returns the /endorse URL for it. */
+  private async mintPresidentLink(
+    applicationId: string,
+    recipientEmail: string,
+    opts: { keepEarlierLinks?: boolean },
+  ): Promise<string> {
+    const ttlMs = this.configService.get<number>('PRESIDENT_LINK_TTL_MS', 14 * 24 * 60 * 60 * 1000);
+    const params = { applicationId, purpose: TokenPurpose.PRESIDENT_REVIEW, recipientEmail, ttlMs };
+    const { rawToken } = opts.keepEarlierLinks
+      ? await this.tokensService.generate(params)
+      : await this.tokensService.reissue(params);
+
+    const webBaseUrl =
+      this.configService.get<string>('app.webBaseUrl') ||
+      this.configService.get<string>('WEB_BASE_URL') ||
+      'http://localhost:3000';
+    return `${webBaseUrl}/endorse/${rawToken}`;
   }
 
   async sendDraftResumeLink(applicationId: string, existingRawToken?: string): Promise<void> {

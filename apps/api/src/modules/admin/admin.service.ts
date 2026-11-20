@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -393,6 +394,83 @@ export class AdminService {
     await this.notificationService.sendEmail(NotificationType.CHANGES_REQUESTED, id);
 
     this.logger.log(`Changes requested on application ${id} by ${actorEmail}`);
+  }
+
+  // ─── President endorsement ─────────────────────────────────────────────
+
+  /**
+   * Emails the President the endorsement request again, with a new link.
+   * Links sent earlier keep working. Only while the application is waiting
+   * for the President (status `submitted`).
+   */
+  async resendPresidentLink(
+    id: string,
+    actorEmail: string,
+    actorRole: string,
+  ): Promise<{ presidentEmail: string }> {
+    const app = await this.prisma.application.findUnique({ where: { id } });
+    if (!app) throw new NotFoundException(`Application ${id} not found`);
+    if (app.status !== 'submitted') {
+      throw new BadRequestException(
+        'The endorsement email can only be resent while the application is awaiting the President.',
+      );
+    }
+
+    const sent = await this.notificationService.sendPresidentLink(id, {
+      keepEarlierLinks: true,
+      actorEmail,
+      actorRole,
+    });
+    if (!sent) {
+      throw new ServiceUnavailableException('The email could not be sent. Please try again later.');
+    }
+    this.logger.log(`President link resent for application ${id} by ${actorEmail}`);
+    return { presidentEmail: app.presidentEmail };
+  }
+
+  /**
+   * Corrects the President's email on a submitted application. While the
+   * application is waiting for the President, the links already sent went to
+   * the wrong address: they are voided and a new link goes to the new address.
+   */
+  async updatePresidentEmail(
+    id: string,
+    presidentEmail: string,
+    actorEmail: string,
+    actorRole: string,
+  ): Promise<{ presidentEmail: string; linkSent: boolean }> {
+    const app = await this.prisma.application.findUnique({ where: { id } });
+    if (!app) throw new NotFoundException(`Application ${id} not found`);
+    if (app.status === 'draft') {
+      throw new BadRequestException('This application has not been submitted yet.');
+    }
+
+    const next = presidentEmail.trim();
+    if (next.toLowerCase() === (app.presidentEmail ?? '').trim().toLowerCase()) {
+      throw new BadRequestException("This is already the President's email address.");
+    }
+    if (next.toLowerCase() === (app.email ?? '').trim().toLowerCase()) {
+      throw new BadRequestException("The President's email must be different from the applicant's email address.");
+    }
+
+    await this.prisma.application.update({ where: { id }, data: { presidentEmail: next } });
+    await this.auditService.log({
+      applicationId: id,
+      actorEmail,
+      actorRole,
+      action: 'admin.president_email_changed',
+      metadata: { from: app.presidentEmail, to: next },
+    });
+    this.logger.log(`President email changed on application ${id} by ${actorEmail}`);
+
+    if (app.status !== 'submitted') return { presidentEmail: next, linkSent: false };
+
+    const linkSent = await this.notificationService.sendPresidentLink(id, {
+      actorEmail,
+      actorRole,
+      action: 'president.link_sent',
+    });
+    return { presidentEmail: next, linkSent };
   }
 
   /**

@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TokensService } from '../tokens/tokens.service';
-import { EndorsementView, NotificationType } from '@fafics/shared';
+import { EndorsementView, NotificationType, TokenPurpose } from '@fafics/shared';
 import { EndorseDto } from './dto/endorse.dto';
 import { ReturnDto } from './dto/return.dto';
 import { AuditService } from '../audit/audit.service';
@@ -165,6 +165,10 @@ export class EndorsementService {
       });
     });
 
+    // Resends and reminders can leave several president links live; the
+    // decision is made, so none of them should open the application again.
+    await this.tokensService.invalidateForApplication(application.id, TokenPurpose.PRESIDENT_REVIEW);
+
     await this.notificationService.sendEmail(NotificationType.APPROVED, application.id);
 
     return { message: 'Application endorsed and added to Expertise Pool' };
@@ -203,6 +207,8 @@ export class EndorsementService {
         newStatus: 'changes_requested' as any,
       });
     });
+
+    await this.tokensService.invalidateForApplication(application.id, TokenPurpose.PRESIDENT_REVIEW);
 
     await this.notificationService.sendEmail(NotificationType.CHANGES_REQUESTED, application.id);
 

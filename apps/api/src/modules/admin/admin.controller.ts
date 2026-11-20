@@ -35,6 +35,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SendRemindersDto } from './dto/send-reminders.dto';
+import { UpdatePresidentEmailDto } from './dto/update-president-email.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -150,6 +151,40 @@ export class AdminController {
   ) {
     await this.adminService.addNotes(id, dto, actorEmail);
     return { message: 'Notes added' };
+  }
+
+  @Post('applications/:id/resend-president-link')
+  @Roles('secretary', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Email the President the endorsement request again (earlier links keep working)' })
+  @ApiParam({ name: 'id', description: 'Application UUID' })
+  @ApiResponse({ status: 200, description: 'Endorsement email sent' })
+  @ApiResponse({ status: 400, description: 'Application is not awaiting the President' })
+  @ApiResponse({ status: 503, description: 'The email could not be sent' })
+  async resendPresidentLink(
+    @Param('id') id: string,
+    @CurrentUser('email') actorEmail: string,
+    @CurrentUser('role') actorRole: string,
+  ) {
+    const { presidentEmail } = await this.adminService.resendPresidentLink(id, actorEmail, actorRole);
+    return { presidentEmail, message: `Endorsement email sent to ${presidentEmail}` };
+  }
+
+  @Patch('applications/:id/president-email')
+  @Roles('secretary', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Correct the President's email; while awaiting the President, a new link is sent to it",
+  })
+  @ApiParam({ name: 'id', description: 'Application UUID' })
+  @ApiResponse({ status: 200, description: 'President email updated' })
+  async updatePresidentEmail(
+    @Param('id') id: string,
+    @Body() dto: UpdatePresidentEmailDto,
+    @CurrentUser('email') actorEmail: string,
+    @CurrentUser('role') actorRole: string,
+  ) {
+    return this.adminService.updatePresidentEmail(id, dto.presidentEmail, actorEmail, actorRole);
   }
 
   // ─── Export ────────────────────────────────────────────────────────────
