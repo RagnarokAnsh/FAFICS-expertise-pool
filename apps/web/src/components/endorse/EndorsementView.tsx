@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { EndorseActions } from './EndorseActions';
+import { ApplicantStatusBanner } from '../application/ApplicantStatusBanner';
 import { COMMITTEE_OTHER } from '../../lib/constants/work';
 import { formatDate } from '../../lib/utils/date';
 
@@ -8,11 +9,16 @@ interface EndorsementViewProps {
   application: any;
   token?: string;
   isAdminView?: boolean;
+  /**
+   * The applicant viewing their own submitted application: shows their status
+   * instead of the President's banner, and never the Endorse/Return actions.
+   */
+  isApplicantView?: boolean;
 }
 
 const hasText = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
 
-export function EndorsementView({ application, token, isAdminView }: EndorsementViewProps) {
+export function EndorsementView({ application, token, isAdminView, isApplicantView }: EndorsementViewProps) {
   const renderField = (label: string, value: string | null | undefined) => (
     <div className="mb-4 min-w-0">
       <div className="text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1">{label}</div>
@@ -43,7 +49,9 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
 
   return (
     <div className={isAdminView ? "" : "max-w-[1020px] mx-auto px-4 md:px-8 py-8"}>
-      {!isAdminView && (
+      {isApplicantView && <ApplicantStatusBanner application={application} />}
+
+      {!isAdminView && !isApplicantView && (
         <div className="bg-gold/10 border border-gold/30 rounded-lg p-5 mb-8">
           <h2 className="text-[16px] font-serif font-bold text-navy mb-2 flex items-center gap-2">
             <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -357,7 +365,7 @@ export function EndorsementView({ application, token, isAdminView }: Endorsement
         );
       })()}
 
-      {!isAdminView && token && (
+      {!isAdminView && !isApplicantView && token && (
         <div className="mt-12">
           <EndorseActions token={token} />
         </div>

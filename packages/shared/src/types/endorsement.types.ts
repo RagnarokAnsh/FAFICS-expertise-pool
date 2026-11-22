@@ -49,3 +49,14 @@ export interface EndorsementView {
   competencies: string[];
   submittedAt: string | null;
 }
+
+/**
+ * Read-only view of an application shown to the applicant via their emailed
+ * view link. Same fields as the President's view, plus the current status.
+ */
+export interface ApplicantApplicationView extends EndorsementView {
+  status: string;
+  endorsedAt: string | null;
+  approvedAt: string | null;
+  expiresAt: string | null;
+}

@@ -44,6 +44,7 @@ import jwtConfig from './config/jwt.config';
         PRESIDENT_LINK_TTL_MS: Joi.number().default(1209600000),
         EMAIL_VERIFY_TTL_MS: Joi.number().default(86400000),
         PASSWORD_RESET_TTL_MS: Joi.number().default(3600000),
+        APPLICANT_VIEW_LINK_TTL_MS: Joi.number().default(7776000000), // 90 days
         RESEND_API_KEY: Joi.string().default('re_test'),
         FROM_EMAIL: Joi.string().default('noreply@fafics.org'),
         SECRETARY_EMAIL: Joi.string().default('secretary@fafics.org'),

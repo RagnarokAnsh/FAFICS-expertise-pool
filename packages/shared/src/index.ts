@@ -28,5 +28,5 @@ export type {
   ExpertiseAreaDefinition,
   ExpertiseAssessment,
 } from './types/expertise.types';
-export type { EndorsementView } from './types/endorsement.types';
+export type { EndorsementView, ApplicantApplicationView } from './types/endorsement.types';
 export type { DashboardStats, RosterRow } from './types/dashboard.types';

@@ -76,6 +76,7 @@ enum TokenPurpose {
   email_verification  // 24h — officer account email verification
   password_reset      // 1h  — admin/secretary password reset
   applicant_edit      // 3h  — applicant edit link
+  applicant_view      // 90d — applicant read-only view of their submitted application
   @@map("token_purpose")
 }
 
@@ -95,6 +96,7 @@ enum NotificationType {
   draft_saved_link          // → applicant when draft is first saved
   password_reset            // → officer/admin password reset link
   password_changed          // → officer/admin confirmation that password changed
+  applicant_view_link       // → applicant request for a view-only link to their application
   @@map("notification_type")
 }
 

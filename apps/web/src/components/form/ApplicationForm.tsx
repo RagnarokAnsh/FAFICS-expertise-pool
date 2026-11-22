@@ -111,7 +111,7 @@ export function ApplicationForm({ initialData, initialDraftId, isResume, preside
             <p className="font-mono text-[24px] font-bold text-navy">{referenceNumber}</p>
           </div>
           <p className="text-[14px] text-text-mid mb-8">
-            We have sent a confirmation email with these details. Your application has also been forwarded to your Local Association President for endorsement.
+            We have sent a confirmation email with these details and a link to view your submitted application. Your application has also been forwarded to your Local Association President for endorsement.
           </p>
           <button 
             className="px-6 py-3 bg-navy text-white text-[14px] font-semibold rounded-lg hover:bg-navy-mid transition-colors"

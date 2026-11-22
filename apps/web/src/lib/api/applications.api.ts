@@ -61,6 +61,15 @@ export const applicationsApi = {
     return unwrap(response);
   },
 
+  /** Emails a read-only link to a submitted application (generic response either way). */
+  requestViewLink: async (email: string, referenceNumber: string): Promise<{ message: string }> => {
+    const response = await apiClient.post('/applications/request-view-link', {
+      email,
+      referenceNumber,
+    });
+    return unwrap(response);
+  },
+
   getResumeData: async (token: string): Promise<any> => {
     const response = await apiClient.get(`/applications/resume/${token}`);
     return unwrap(response);

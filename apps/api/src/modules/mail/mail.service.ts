@@ -15,6 +15,7 @@ import { rejectedTemplate } from './templates/rejected.template';
 import { renewalReminderTemplate } from './templates/renewal-reminder.template';
 import { expiredTemplate } from './templates/expired.template';
 import { applicantEditLinkTemplate } from './templates/applicant-edit-link.template';
+import { applicantViewLinkTemplate } from './templates/applicant-view-link.template';
 import { draftSavedTemplate } from './templates/draft-saved.template';
 import { passwordResetTemplate } from './templates/password-reset.template';
 import { passwordChangedTemplate } from './templates/password-changed.template';
@@ -99,11 +100,34 @@ export class MailService {
     return base.replace(/\/+$/, '');
   }
 
-  async sendSubmissionConfirmation(applicationId: string): Promise<{ messageId: string }> {
+  async sendSubmissionConfirmation(
+    applicationId: string,
+    viewUrl: string,
+    viewLinkValidFor: string,
+  ): Promise<{ messageId: string }> {
     const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
     const { subject, html } = submissionConfirmationTemplate({
       referenceNumber: app.referenceNumber!,
       applicantName: `${app.firstName} ${app.lastName}`,
+      viewUrl,
+      viewLinkValidFor,
+      statusUrl: `${this.getWebBaseUrl()}/status`,
+    });
+    return this.sendEmail(app.email, subject, html);
+  }
+
+  /** A fresh read-only link to the applicant's submitted application. */
+  async sendApplicantViewLink(
+    applicationId: string,
+    viewUrl: string,
+    validFor: string,
+  ): Promise<{ messageId: string }> {
+    const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
+    const { subject, html } = applicantViewLinkTemplate({
+      applicantName: `${app.firstName} ${app.lastName}`,
+      referenceNumber: app.referenceNumber!,
+      viewUrl,
+      validFor,
     });
     return this.sendEmail(app.email, subject, html);
   }

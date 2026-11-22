@@ -39,9 +39,13 @@ export class NotificationService {
       let result: { messageId: string };
 
       switch (notificationType) {
-        case NotificationType.SUBMISSION_CONFIRMATION:
-          result = await this.mailService.sendSubmissionConfirmation(applicationId);
+        case NotificationType.SUBMISSION_CONFIRMATION: {
+          // Every confirmation (first submission, resubmission, retry) carries
+          // its own read-only link, so the applicant can see what they sent.
+          const { viewUrl, validFor } = await this.mintApplicantViewLink(applicationId, application.email);
+          result = await this.mailService.sendSubmissionConfirmation(applicationId, viewUrl, validFor);
           break;
+        }
         case NotificationType.CHANGES_REQUESTED: {
           // Mint a single-use edit token so the email links the applicant
           // straight to the editable form (not the status page).
@@ -329,6 +333,83 @@ export class NotificationService {
     }
   }
 
+  /**
+   * Emails the applicant a new read-only link to their submitted application
+   * (requested from the status page). Earlier view links keep working until
+   * they expire.
+   *
+   * Returns true when the email went out. Never throws.
+   */
+  async sendApplicantViewLink(applicationId: string): Promise<boolean> {
+    const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
+    if (!application) {
+      this.logger.error(`sendApplicantViewLink: application ${applicationId} not found`);
+      return false;
+    }
+
+    try {
+      const { viewUrl, validFor } = await this.mintApplicantViewLink(applicationId, application.email);
+      const result = await this.mailService.sendApplicantViewLink(applicationId, viewUrl, validFor);
+
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.email,
+          notificationType: NotificationType.APPLICANT_VIEW_LINK as any,
+          providerMessageId: result.messageId,
+          sentAt: new Date(),
+        },
+      });
+
+      await this.auditService.log({
+        applicationId,
+        actorEmail: application.email,
+        actorRole: 'member',
+        action: 'application.view_link_sent',
+      });
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Failed to send view link for ${applicationId}: ${error.message}`);
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.email,
+          notificationType: NotificationType.APPLICANT_VIEW_LINK as any,
+          failedAt: new Date(),
+          errorMessage: error.message,
+        },
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Creates a read-only applicant-view token and returns its URL plus how long
+   * it works, for the email copy. The token only opens GET
+   * /applications/view/:token; it cannot edit, endorse or return anything.
+   */
+  private async mintApplicantViewLink(
+    applicationId: string,
+    recipientEmail: string,
+  ): Promise<{ viewUrl: string; validFor: string }> {
+    const ttlMs = Number(this.configService.get('APPLICANT_VIEW_LINK_TTL_MS') ?? 90 * 24 * 60 * 60 * 1000);
+    const { rawToken } = await this.tokensService.generate({
+      purpose: TokenPurpose.APPLICANT_VIEW,
+      applicationId,
+      recipientEmail,
+      ttlMs,
+    });
+
+    const webBaseUrl =
+      this.configService.get<string>('app.webBaseUrl') ||
+      this.configService.get<string>('WEB_BASE_URL') ||
+      'http://localhost:3000';
+    return {
+      viewUrl: `${webBaseUrl.replace(/\/+$/, '')}/application/${rawToken}`,
+      validFor: formatDuration(ttlMs),
+    };
+  }
+
   /** Creates a president-review token and returns the /endorse URL for it. */
   private async mintPresidentLink(
     applicationId: string,
@@ -421,6 +502,9 @@ export class NotificationService {
       case NotificationType.DRAFT_SAVED_LINK:
         await this.sendDraftResumeLink(log.applicationId);
         break;
+      case NotificationType.APPLICANT_VIEW_LINK:
+        await this.sendApplicantViewLink(log.applicationId);
+        break;
       case NotificationType.RENEWAL_REMINDER_90D:
         await this.sendEmail(type, log.applicationId, 90);
         break;
@@ -464,10 +548,12 @@ export class NotificationService {
   }
 }
 
-/** Renders a TTL in milliseconds as "1 hour" / "30 minutes" for email copy. */
+/** Renders a TTL in milliseconds as "30 minutes" / "1 hour" / "90 days" for email copy. */
 function formatDuration(ms: number): string {
   const minutes = Math.round(ms / 60_000);
   if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`;
   const hours = Math.round(minutes / 60);
-  return `${hours} hour${hours === 1 ? '' : 's'}`;
+  if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'}`;
+  const days = Math.round(hours / 24);
+  return `${days} days`;
 }

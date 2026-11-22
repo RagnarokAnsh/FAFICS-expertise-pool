@@ -28,6 +28,8 @@ import { SubmitApplicationDto } from './dto/submit-application.dto';
 import { ApplicationStatusQueryDto } from './dto/application-status-query.dto';
 import { RequestEditLinkDto } from './dto/request-edit-link.dto';
 import { RequestDraftLinkDto } from './dto/request-draft-link.dto';
+import { RequestViewLinkDto } from './dto/request-view-link.dto';
+import { ApplicantApplicationView } from '@fafics/shared';
 
 /**
  * ApplicationsController handles the public-facing application endpoints.
@@ -76,6 +78,34 @@ export class ApplicationsController {
   @ApiNotFoundResponse({ description: 'Application not found' })
   async requestEditLink(@Body() dto: RequestEditLinkDto): Promise<{ message: string }> {
     return this.applicationsService.requestEditLink(dto);
+  }
+
+  /**
+   * POST /api/applications/request-view-link
+   * Emails the applicant a read-only link to their submitted application.
+   * Always returns 200 with the same message (prevents enumeration).
+   */
+  @Post('request-view-link')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } }) // limit email sends per IP
+  @ApiOperation({ summary: 'Request a read-only link to a submitted application' })
+  @ApiOkResponse({ description: 'If a submitted application matches, a link has been sent' })
+  async requestViewLink(@Body() dto: RequestViewLinkDto): Promise<{ message: string }> {
+    return this.applicationsService.requestViewLink(dto);
+  }
+
+  /**
+   * GET /api/applications/view/:token
+   * Read-only view of a submitted application, opened from the applicant's
+   * emailed view link. The link is not consumed.
+   */
+  @Get('view/:token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'View a submitted application (applicant view link)' })
+  @ApiOkResponse({ description: 'Application data retrieved' })
+  @ApiNotFoundResponse({ description: 'Link invalid or expired' })
+  async getApplicantView(@Param('token') token: string): Promise<ApplicantApplicationView> {
+    return this.applicationsService.getApplicantView(token);
   }
 
   /**

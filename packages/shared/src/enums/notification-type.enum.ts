@@ -18,4 +18,5 @@ export enum NotificationType {
   DRAFT_SAVED_LINK = 'draft_saved_link',
   PASSWORD_RESET = 'password_reset',
   PASSWORD_CHANGED = 'password_changed',
+  APPLICANT_VIEW_LINK = 'applicant_view_link',
 }

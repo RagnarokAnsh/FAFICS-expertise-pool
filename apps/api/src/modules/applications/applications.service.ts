@@ -16,12 +16,14 @@ import { UpdateApplicationDto } from './dto/update-application.dto';
 import { SubmitApplicationDto } from './dto/submit-application.dto';
 import { ApplicationStatusQueryDto } from './dto/application-status-query.dto';
 import { RequestEditLinkDto } from './dto/request-edit-link.dto';
+import { RequestViewLinkDto } from './dto/request-view-link.dto';
+import { APPLICATION_VIEW_INCLUDE, toApplicantApplicationView } from './application-view.mapper';
 import { Prisma } from '@prisma/client';
 import { TokensService } from '../tokens/tokens.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationService } from '../mail/notification.service';
 import { ConfigService } from '@nestjs/config';
-import { TokenPurpose, NotificationType } from '@fafics/shared';
+import { TokenPurpose, NotificationType, ApplicantApplicationView } from '@fafics/shared';
 /**
  * ApplicationsService handles the core CRUD lifecycle of an application:
  * creating drafts, updating drafts, submitting, and checking status.
@@ -663,6 +665,53 @@ export class ApplicationsService {
     });
 
     return generic;
+  }
+
+  /**
+   * Emails the applicant a read-only link to their submitted application.
+   * Always returns the same generic message, so the response cannot be used to
+   * discover which email/reference combinations exist.
+   */
+  async requestViewLink(dto: RequestViewLinkDto): Promise<{ message: string }> {
+    const generic = {
+      message:
+        'If a submitted application matches those details, a link to view it has been sent to the email on file.',
+    };
+
+    const application = await this.prisma.application.findFirst({
+      where: { email: dto.email, referenceNumber: dto.referenceNumber },
+      select: { id: true, status: true },
+    });
+
+    // Drafts have nothing submitted to view; they use the draft resume link.
+    if (!application || application.status === 'draft') {
+      return generic;
+    }
+
+    // Not awaited: the response time must not reveal whether a match exists.
+    // sendApplicantViewLink logs its own failures and never throws.
+    void this.notificationService.sendApplicantViewLink(application.id);
+    return generic;
+  }
+
+  /**
+   * Read-only view of a submitted application for its applicant. Only an
+   * applicant-view link opens it, and it is never consumed, so the applicant
+   * can come back to it until it expires.
+   */
+  async getApplicantView(rawToken: string): Promise<ApplicantApplicationView> {
+    const magicToken = await this.tokensService.peek(rawToken, TokenPurpose.APPLICANT_VIEW);
+
+    const application = await this.prisma.application.findUnique({
+      where: { id: magicToken.applicationId! },
+      include: APPLICATION_VIEW_INCLUDE,
+    });
+
+    if (!application) {
+      throw new NotFoundException('Invalid or expired link');
+    }
+
+    return toApplicantApplicationView(application);
   }
 
   /**
