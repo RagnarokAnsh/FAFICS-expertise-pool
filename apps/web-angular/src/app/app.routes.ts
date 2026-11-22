@@ -4,6 +4,7 @@ import { Routes } from '@angular/router';
  * Same URLs as the Next.js app (so emailed links keep working):
  *   /                          → /apply
  *   /apply, /apply/:draftId, /apply/resume/:token, /endorse/:token, /status
+ *   /application/:token        → applicant's read-only view of their submitted application
  *   /admin                     → /admin/dashboard
  *   /admin/login, /admin/forgot-password, /admin/reset-password/:token
  *     (rendered without the dashboard shell, like PUBLIC_ADMIN_ROUTES)
@@ -23,6 +24,10 @@ export const routes: Routes = [
   { path: 'apply/:draftId', loadComponent: () => import('./pages/apply/draft.page').then((m) => m.DraftPage) },
   { path: 'endorse/:token', loadComponent: () => import('./pages/endorse/endorse.page').then((m) => m.EndorsePage) },
   { path: 'status', loadComponent: () => import('./pages/status/status.page').then((m) => m.StatusPage) },
+  {
+    path: 'application/:token',
+    loadComponent: () => import('./pages/application/application-view.page').then((m) => m.ApplicationViewPage),
+  },
   {
     path: 'admin',
     children: [

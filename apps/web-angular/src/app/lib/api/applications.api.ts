@@ -1,3 +1,4 @@
+import type { ApplicantApplicationView } from '@fafics/shared';
 import { apiClient } from './client';
 
 /**
@@ -58,6 +59,21 @@ export const applicationsApi = {
       email,
       referenceNumber,
     });
+    return unwrap(response);
+  },
+
+  /** Emails a read-only link to a submitted application (same reply whether or not it matches). */
+  requestViewLink: async (email: string, referenceNumber: string): Promise<{ message: string }> => {
+    const response = await apiClient.post('/applications/request-view-link', {
+      email,
+      referenceNumber,
+    });
+    return unwrap(response);
+  },
+
+  /** The applicant's read-only view of their submitted application (view link). */
+  getApplicantView: async (token: string): Promise<ApplicantApplicationView> => {
+    const response = await apiClient.get(`/applications/view/${encodeURIComponent(token)}`);
     return unwrap(response);
   },
 

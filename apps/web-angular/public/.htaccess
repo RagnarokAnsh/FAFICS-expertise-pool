@@ -55,8 +55,8 @@ DirectoryIndex index.html
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   # Several pages carry a secret token in their URL (/endorse/<token>,
-  # /apply/resume/<token>, /admin/reset-password/<token>); never send it to
-  # another site in a Referer header.
+  # /apply/resume/<token>, /application/<token>, /admin/reset-password/<token>);
+  # never send it to another site in a Referer header.
   Header always set Referrer-Policy "same-origin"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
   # 'unsafe-inline' styles are required: Angular injects component <style> tags

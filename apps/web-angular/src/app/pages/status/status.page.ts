@@ -161,6 +161,37 @@ const STATUS_FG: Record<string, string> = {
                   }
                 </div>
 
+                <!-- View link section for any submitted application -->
+                @if (result.status !== 'draft') {
+                  <div class="mt-6 border-t border-border pt-6 text-left">
+                    <h3 class="font-serif text-[18px] font-bold text-navy mb-3">View your submitted application</h3>
+                    <p class="text-[14px] text-text-mid mb-5">
+                      We can email you a secure link to a read-only copy of the application you submitted.
+                    </p>
+
+                    @if (viewLinkSent()) {
+                      <div class="p-4 bg-[#eaf3de] text-[#3b6d11] rounded-lg text-[14px] font-medium border border-[#c4e1a4]">
+                        ✓ Link sent! Check your email inbox (and spam folder).
+                      </div>
+                    } @else {
+                      <button
+                        appButton
+                        variant="ghost"
+                        (click)="handleRequestViewLink()"
+                        [disabled]="isSendingViewLink()"
+                        class="border-navy text-navy hover:bg-navy hover:text-white"
+                      >
+                        {{ isSendingViewLink() ? 'Sending...' : 'Email me a link to view my application' }}
+                      </button>
+                      @if (queryEmail()) {
+                        <p class="text-[13px] text-text-muted mt-3">
+                          A secure link will be sent to: {{ maskEmail(queryEmail()!) }}
+                        </p>
+                      }
+                    }
+                  </div>
+                }
+
                 <!-- Edit link section for draft / changes_requested -->
                 @if (result.status === 'draft' || result.status === 'changes_requested') {
                   <div class="mt-6 border-t border-border pt-6 text-left">
@@ -329,6 +360,9 @@ export class StatusPage {
   protected readonly isSendingEditLink = signal(false);
   protected readonly editLinkSent = signal(false);
   protected readonly queryEmail = signal<string | null>(null);
+  // view-link state (read-only copy of a submitted application)
+  protected readonly isSendingViewLink = signal(false);
+  protected readonly viewLinkSent = signal(false);
 
   /* ── Section B state ── */
   protected readonly errB = signal<{ email?: string }>({});
@@ -401,6 +435,7 @@ export class StatusPage {
     this.statusError.set(null);
     this.statusResult.set(null);
     this.editLinkSent.set(false);
+    this.viewLinkSent.set(false);
     this.queryEmail.set(data.email);
 
     try {
@@ -431,6 +466,25 @@ export class StatusPage {
       this.toast.showToast('An error occurred. Please try again.', 'error');
     } finally {
       this.isSendingEditLink.set(false);
+    }
+  }
+
+  protected async handleRequestViewLink(): Promise<void> {
+    const result = this.statusResult();
+    const queryEmail = this.queryEmail();
+    if (!result || !result.referenceNumber || !queryEmail) return;
+    this.isSendingViewLink.set(true);
+    try {
+      await applicationsApi.requestViewLink(queryEmail, result.referenceNumber);
+      this.viewLinkSent.set(true);
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        this.toast.showToast('Too many requests. Please wait a minute and try again.', 'error');
+      } else {
+        this.toast.showToast('An error occurred. Please try again.', 'error');
+      }
+    } finally {
+      this.isSendingViewLink.set(false);
     }
   }
 
