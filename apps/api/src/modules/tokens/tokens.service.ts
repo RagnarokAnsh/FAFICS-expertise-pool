@@ -42,16 +42,16 @@ export class TokensService {
     return { rawToken, tokenHash };
   }
 
-  async validate(rawToken: string, markUsed: boolean = true): Promise<MagicToken> {
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    
-    const magicToken = await this.prisma.magicToken.findUnique({
-      where: { tokenHash },
-    });
-
-    if (!magicToken) {
-      throw new NotFoundException('Invalid or expired link');
-    }
+  /**
+   * Checks a magic link and, by default, consumes it.
+   *
+   * `purpose` is required: a link only works for what it was issued for. A
+   * link of another purpose fails exactly like an unknown one (404) and is not
+   * consumed, so an applicant's own edit or view link can never open the
+   * President's endorsement endpoints, and the reverse.
+   */
+  async validate(rawToken: string, purpose: TokenPurpose, markUsed: boolean = true): Promise<MagicToken> {
+    const magicToken = await this.findForPurpose(rawToken, purpose);
 
     if (markUsed && magicToken.usedAt !== null) {
       throw new GoneException('This link has already been used');
@@ -90,16 +90,8 @@ export class TokensService {
    * Use this for read-only operations (e.g., viewing application data).
    * The token remains valid for a subsequent validate() call.
    */
-  async peek(rawToken: string): Promise<MagicToken> {
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-    const magicToken = await this.prisma.magicToken.findUnique({
-      where: { tokenHash },
-    });
-
-    if (!magicToken) {
-      throw new NotFoundException('Invalid or expired link');
-    }
+  async peek(rawToken: string, purpose: TokenPurpose): Promise<MagicToken> {
+    const magicToken = await this.findForPurpose(rawToken, purpose);
 
     if (magicToken.usedAt !== null) {
       throw new GoneException('This link has already been used');
@@ -107,6 +99,21 @@ export class TokensService {
 
     if (magicToken.expiresAt.getTime() < Date.now()) {
       throw new GoneException('This link has expired');
+    }
+
+    return magicToken;
+  }
+
+  /** Looks a raw token up by its hash; a missing token or another purpose is a 404. */
+  private async findForPurpose(rawToken: string, purpose: TokenPurpose): Promise<MagicToken> {
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    const magicToken = await this.prisma.magicToken.findUnique({
+      where: { tokenHash },
+    });
+
+    if (!magicToken || (magicToken.purpose as string) !== purpose) {
+      throw new NotFoundException('Invalid or expired link');
     }
 
     return magicToken;

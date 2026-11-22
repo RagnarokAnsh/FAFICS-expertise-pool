@@ -232,13 +232,11 @@ export class ApplicationsService {
     }
 
     // validate(..., false) checks existence + expiry without consuming the token,
-    // so it can be reused across many auto-saves. Throws NotFound/Gone otherwise.
-    const magicToken = await this.tokensService.validate(rawToken, false);
+    // so it can be reused across many auto-saves. A link of any other purpose
+    // fails as NotFound; NotFound/Gone are thrown for bad or expired links.
+    const magicToken = await this.tokensService.validate(rawToken, TokenPurpose.APPLICANT_EDIT, false);
 
-    if (
-      (magicToken.purpose as string) !== TokenPurpose.APPLICANT_EDIT ||
-      magicToken.applicationId !== applicationId
-    ) {
+    if (magicToken.applicationId !== applicationId) {
       throw new ForbiddenException(
         'This edit link is not valid for this application.',
       );
@@ -671,7 +669,7 @@ export class ApplicationsService {
    * Validates an edit token and retrieves the full application data.
    */
   async resumeFromToken(rawToken: string): Promise<any> {
-    const magicToken = await this.tokensService.validate(rawToken, false);
+    const magicToken = await this.tokensService.validate(rawToken, TokenPurpose.APPLICANT_EDIT, false);
 
     const application = await this.prisma.application.findUnique({
       where: { id: magicToken.applicationId! },

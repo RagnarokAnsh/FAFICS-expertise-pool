@@ -20,7 +20,9 @@ export class EndorsementService {
   async validateAndGetApplication(rawToken: string): Promise<EndorsementView> {
     // Use peek() to validate without consuming the token.
     // The token is only consumed when the president actually endorses or returns.
-    const magicToken = await this.tokensService.peek(rawToken);
+    // Only president links open this page: an applicant's own edit or view link
+    // is rejected here, so applicants cannot endorse their own application.
+    const magicToken = await this.tokensService.peek(rawToken, TokenPurpose.PRESIDENT_REVIEW);
 
     const application = await this.prisma.application.findUnique({
       where: { id: magicToken.applicationId! },
@@ -128,7 +130,7 @@ export class EndorsementService {
   }
 
   async endorse(rawToken: string, dto: EndorseDto): Promise<{ message: string }> {
-    const magicToken = await this.tokensService.validate(rawToken);
+    const magicToken = await this.tokensService.validate(rawToken, TokenPurpose.PRESIDENT_REVIEW);
 
     const application = await this.prisma.application.findUnique({
       where: { id: magicToken.applicationId! },
@@ -175,7 +177,7 @@ export class EndorsementService {
   }
 
   async returnApplication(rawToken: string, dto: ReturnDto): Promise<{ message: string }> {
-    const magicToken = await this.tokensService.validate(rawToken);
+    const magicToken = await this.tokensService.validate(rawToken, TokenPurpose.PRESIDENT_REVIEW);
 
     const application = await this.prisma.application.findUnique({
       where: { id: magicToken.applicationId! },

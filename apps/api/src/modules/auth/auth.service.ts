@@ -105,18 +105,15 @@ export class AuthService {
    * TokensService.validate, so the link cannot be replayed.
    */
   async resetPassword(rawToken: string, newPassword: string): Promise<{ email: string }> {
-    // peek() checks validity WITHOUT consuming the token, so a token of another
-    // purpose (e.g. a president endorsement link) posted here is rejected
-    // without being burned. Only once the purpose matches do we consume it.
-    const preview = await this.tokensService.peek(rawToken);
-    if (preview.purpose !== TokenPurpose.PASSWORD_RESET) {
-      throw new BadRequestException('This link is not a password reset link.');
-    }
+    // peek() checks validity WITHOUT consuming the token, and a token of another
+    // purpose (e.g. a president endorsement link) posted here is rejected as an
+    // invalid link without being burned. Only a password-reset link is consumed.
+    const preview = await this.tokensService.peek(rawToken, TokenPurpose.PASSWORD_RESET);
     if (!preview.userId) {
       throw new BadRequestException('This reset link is not linked to an account.');
     }
 
-    await this.tokensService.validate(rawToken);
+    await this.tokensService.validate(rawToken, TokenPurpose.PASSWORD_RESET);
 
     const user = await this.prisma.user.findUnique({ where: { id: preview.userId } });
     if (!user || !user.isActive) {
