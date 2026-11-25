@@ -317,6 +317,10 @@ export class NotificationService {
         action: 'president.reminder_sent',
         metadata: { sentTo: application.presidentEmail, daysAfterSubmission },
       });
+
+      // Let the applicant know too. Best-effort and logged on its own: a
+      // failure here must not change whether the President's reminder counts.
+      await this.sendApplicantReminderNotice(applicationId, daysAfterSubmission);
       return true;
     } catch (error: any) {
       this.logger.error(`Failed to send president reminder for ${applicationId}: ${error.message}`);
@@ -325,6 +329,58 @@ export class NotificationService {
           applicationId,
           recipientEmail: application.presidentEmail,
           notificationType: NotificationType.PRESIDENT_REVIEW_REQUEST as any,
+          failedAt: new Date(),
+          errorMessage: error.message,
+        },
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Tells the applicant their President has just been reminded to endorse.
+   * Has no endorsement link (only the President may endorse); it carries a
+   * fresh read-only view link instead. Skipped once the application is no
+   * longer waiting for the President, so a late retry cannot mislead.
+   *
+   * Returns true when the email went out. Never throws.
+   */
+  async sendApplicantReminderNotice(applicationId: string, daysAfterSubmission?: number): Promise<boolean> {
+    const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
+    if (!application) {
+      this.logger.error(`sendApplicantReminderNotice: application ${applicationId} not found`);
+      return false;
+    }
+    if (application.status !== 'submitted') {
+      this.logger.log(`sendApplicantReminderNotice: ${applicationId} is ${application.status}, not sent`);
+      return false;
+    }
+
+    try {
+      const { viewUrl, validFor } = await this.mintApplicantViewLink(applicationId, application.email);
+      const result = await this.mailService.sendApplicantReminderNotice(
+        applicationId,
+        viewUrl,
+        validFor,
+        daysAfterSubmission,
+      );
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.email,
+          notificationType: NotificationType.PRESIDENT_REMINDER_APPLICANT_NOTICE as any,
+          providerMessageId: result.messageId,
+          sentAt: new Date(),
+        },
+      });
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Failed to send applicant reminder notice for ${applicationId}: ${error.message}`);
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.email,
+          notificationType: NotificationType.PRESIDENT_REMINDER_APPLICANT_NOTICE as any,
           failedAt: new Date(),
           errorMessage: error.message,
         },
@@ -504,6 +560,9 @@ export class NotificationService {
         break;
       case NotificationType.APPLICANT_VIEW_LINK:
         await this.sendApplicantViewLink(log.applicationId);
+        break;
+      case NotificationType.PRESIDENT_REMINDER_APPLICANT_NOTICE:
+        await this.sendApplicantReminderNotice(log.applicationId);
         break;
       case NotificationType.RENEWAL_REMINDER_90D:
         await this.sendEmail(type, log.applicationId, 90);

@@ -97,6 +97,7 @@ enum NotificationType {
   password_reset            // → officer/admin password reset link
   password_changed          // → officer/admin confirmation that password changed
   applicant_view_link       // → applicant request for a view-only link to their application
+  president_reminder_applicant_notice // → applicant when their President is reminded (day 3 and 7)
   @@map("notification_type")
 }
 

@@ -19,4 +19,5 @@ export enum NotificationType {
   PASSWORD_RESET = 'password_reset',
   PASSWORD_CHANGED = 'password_changed',
   APPLICANT_VIEW_LINK = 'applicant_view_link',
+  PRESIDENT_REMINDER_APPLICANT_NOTICE = 'president_reminder_applicant_notice',
 }

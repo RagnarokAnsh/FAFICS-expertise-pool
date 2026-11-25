@@ -16,6 +16,7 @@ import { renewalReminderTemplate } from './templates/renewal-reminder.template';
 import { expiredTemplate } from './templates/expired.template';
 import { applicantEditLinkTemplate } from './templates/applicant-edit-link.template';
 import { applicantViewLinkTemplate } from './templates/applicant-view-link.template';
+import { applicantReminderNoticeTemplate } from './templates/applicant-reminder-notice.template';
 import { draftSavedTemplate } from './templates/draft-saved.template';
 import { passwordResetTemplate } from './templates/password-reset.template';
 import { passwordChangedTemplate } from './templates/password-changed.template';
@@ -153,6 +154,27 @@ export class MailService {
       magicLinkUrl,
     });
     return this.sendEmail(app.presidentEmail, subject, html);
+  }
+
+  /** Tells the applicant their President was reminded. No endorsement link. */
+  async sendApplicantReminderNotice(
+    applicationId: string,
+    viewUrl: string,
+    viewLinkValidFor: string,
+    daysAfterSubmission?: number,
+  ): Promise<{ messageId: string }> {
+    const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
+    const { subject, html } = applicantReminderNoticeTemplate({
+      applicantName: `${app.firstName} ${app.lastName}`,
+      referenceNumber: app.referenceNumber!,
+      associationName: app.associationName,
+      presidentEmail: app.presidentEmail,
+      submissionDate: app.submittedAt!,
+      daysAfterSubmission,
+      viewUrl,
+      viewLinkValidFor,
+    });
+    return this.sendEmail(app.email, subject, html);
   }
 
   async sendPresidentLinkExpired(applicationId: string, magicLinkUrl: string): Promise<{ messageId: string }> {
