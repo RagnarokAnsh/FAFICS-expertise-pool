@@ -1,47 +1,32 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ViewEncapsulation, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 
-/**
- * The Next.js built-in 404 page, reproduced markup-for-markup (including its
- * body colour override and document title) so unknown URLs look the same.
- */
+/** Unknown URLs: a page in the site's style with a way back to the main pages. */
 @Component({
   selector: 'app-not-found-page',
+  imports: [RouterLink],
   template: `
-    <div
-      style="font-family: system-ui, &quot;Segoe UI&quot;, Roboto, Helvetica, Arial, sans-serif, &quot;Apple Color Emoji&quot;, &quot;Segoe UI Emoji&quot;; height: 100vh; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center"
-    >
-      <div>
-        <h1
-          class="next-error-h1"
-          style="display: inline-block; margin: 0 20px 0 0; padding: 0 23px 0 0; font-size: 24px; font-weight: 500; vertical-align: top; line-height: 49px"
-        >404</h1>
-        <div style="display: inline-block">
-          <h2 style="font-size: 14px; font-weight: 400; line-height: 49px; margin: 0">This page could not be found.</h2>
+    <div class="min-h-[60vh] flex items-center justify-center bg-off-white px-4 py-16">
+      <div class="max-w-md w-full bg-white rounded-lg shadow-sm p-8 text-center border border-gray-100">
+        <p class="font-mono text-[13px] text-text-light mb-2">404</p>
+        <h1 class="text-2xl font-serif font-bold text-navy mb-2">Page not found</h1>
+        <p class="text-text-mid mb-6">The page you are looking for does not exist or has moved.</p>
+        <div class="flex flex-col gap-3">
+          <a
+            routerLink="/apply"
+            class="inline-flex h-[44px] items-center justify-center rounded-lg bg-navy px-5 text-[14px] font-semibold text-white transition-colors hover:bg-navy-mid"
+            >Go to the application form</a
+          >
+          <a
+            routerLink="/status"
+            class="inline-flex h-[44px] items-center justify-center rounded-lg border border-border px-5 text-[14px] font-semibold text-navy transition-colors hover:bg-navy-light"
+            >Check application status</a
+          >
         </div>
       </div>
     </div>
   `,
-  styles: `
-    body {
-      color: #000;
-      background: #fff;
-      margin: 0;
-    }
-    .next-error-h1 {
-      border-right: 1px solid rgba(0, 0, 0, 0.3);
-    }
-    @media (prefers-color-scheme: dark) {
-      body {
-        color: #fff;
-        background: #000;
-      }
-      .next-error-h1 {
-        border-right: 1px solid rgba(255, 255, 255, 0.3);
-      }
-    }
-  `,
-  encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
 })
@@ -50,7 +35,7 @@ export class NotFoundPage {
     const title = inject(Title);
     const meta = inject(Meta);
     const previousTitle = title.getTitle();
-    title.setTitle('404: This page could not be found.');
+    title.setTitle('Page not found — FAFICS Expertise Pool');
     const robots = meta.addTag({ name: 'robots', content: 'noindex' });
     inject(DestroyRef).onDestroy(() => {
       title.setTitle(previousTitle);

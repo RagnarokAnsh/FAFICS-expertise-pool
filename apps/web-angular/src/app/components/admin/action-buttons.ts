@@ -78,7 +78,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     </div>
 
     @if (modalType() && config(); as c) {
-      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4">
         <div class="bg-white rounded-lg max-w-lg w-full p-6">
           <h3 class="text-xl font-serif font-bold text-navy mb-4">{{ c.title }}</h3>
           <p class="text-sm text-text-mid mb-4">{{ c.desc }}</p>
@@ -103,7 +103,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     }
 
     @if (presidentDialog() === 'resend') {
-      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4">
         <div class="bg-white rounded-lg max-w-lg w-full p-6" role="dialog" aria-modal="true" aria-labelledby="resend-title">
           <h3 id="resend-title" class="text-xl font-serif font-bold text-navy mb-4">Resend to President?</h3>
           <p class="text-sm text-text-mid mb-2">This will immediately email the endorsement request, with a new link, to:</p>
@@ -132,7 +132,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     }
 
     @if (presidentDialog() === 'editEmail') {
-      <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4">
         <form
           class="bg-white rounded-lg max-w-lg w-full p-6"
           role="dialog"

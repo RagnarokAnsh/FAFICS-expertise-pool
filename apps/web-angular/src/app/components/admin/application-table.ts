@@ -53,27 +53,33 @@ import { BadgeComponent } from '../ui/badge';
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-gray-50 border-b border-border">
-                <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Reference No</th>
-                <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Name</th>
-                <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Association</th>
-                <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Country</th>
-                <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Status</th>
-                <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Submitted</th>
-                <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase text-right">Action</th>
+                <th class="hidden md:table-cell py-3 px-4 text-[12px] font-semibold text-navy uppercase">Reference No</th>
+                <th class="py-3 px-2 md:px-4 text-[12px] font-semibold text-navy uppercase">Name</th>
+                <th class="hidden md:table-cell py-3 px-4 text-[12px] font-semibold text-navy uppercase">Association</th>
+                <th class="hidden md:table-cell py-3 px-4 text-[12px] font-semibold text-navy uppercase">Country</th>
+                <th class="py-3 px-2 md:px-4 text-[12px] font-semibold text-navy uppercase">Status</th>
+                <th class="hidden md:table-cell py-3 px-4 text-[12px] font-semibold text-navy uppercase">Submitted</th>
+                <th class="py-3 px-2 md:px-4 text-[12px] font-semibold text-navy uppercase text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               @for (app of data(); track app.id) {
                 <tr class="border-b border-border last:border-0 hover:bg-gray-50 transition-colors">
-                  <td class="py-3 px-4 text-[14px] text-text-mid font-mono">{{ app.referenceNumber }}</td>
-                  <td class="py-3 px-4 text-[14px] text-navy font-semibold">{{ fullName(app) }}</td>
-                  <td class="py-3 px-4 text-[14px] text-text-mid">{{ app.associationName }}</td>
-                  <td class="py-3 px-4 text-[14px] text-text-mid">{{ app.associationCountry }}</td>
-                  <td class="py-3 px-4">
+                  <td class="hidden md:table-cell py-3 px-4 text-[14px] text-text-mid font-mono">{{ app.referenceNumber }}</td>
+                  <td class="py-3 px-2 md:px-4 text-[14px] text-navy font-semibold">
+                    {{ fullName(app) }}
+                    <!-- Phones: the hidden Reference and Association columns, under the name. -->
+                    <span class="md:hidden block text-[12px] font-normal text-text-light">
+                      <span class="font-mono">{{ app.referenceNumber || 'Draft' }}</span> · {{ app.associationName }}
+                    </span>
+                  </td>
+                  <td class="hidden md:table-cell py-3 px-4 text-[14px] text-text-mid">{{ app.associationName }}</td>
+                  <td class="hidden md:table-cell py-3 px-4 text-[14px] text-text-mid">{{ app.associationCountry }}</td>
+                  <td class="py-3 px-2 md:px-4">
                     <span appBadge [status]="app.status"></span>
                   </td>
-                  <td class="py-3 px-4 text-[14px] text-text-light">{{ formatDate(app.submittedAt) }}</td>
-                  <td class="py-3 px-4 text-right">
+                  <td class="hidden md:table-cell py-3 px-4 text-[14px] text-text-light">{{ formatDate(app.submittedAt) }}</td>
+                  <td class="py-3 px-2 md:px-4 text-right">
                     <a
                       [routerLink]="'/admin/applications/' + app.id"
                       class="text-[13px] font-semibold text-gold hover:text-gold-hover hover:underline"

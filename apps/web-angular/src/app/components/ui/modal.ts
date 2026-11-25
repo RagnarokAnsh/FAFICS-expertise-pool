@@ -7,7 +7,7 @@ import { PortalDirective } from '../../core/portal.directive';
   imports: [PortalDirective],
   template: `
     @if (isOpen()) {
-      <div appPortal class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div appPortal class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col animate-[fadeIn_0.2s_ease]">
           <div class="flex items-center justify-between p-4 border-b">
             <h2 class="text-lg font-semibold">{{ heading() }}</h2>

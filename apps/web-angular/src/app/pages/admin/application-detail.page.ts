@@ -59,14 +59,14 @@ import { formatDate } from '../../lib/utils/date';
             <h1 class="font-serif text-[22px] sm:text-[28px] font-bold leading-tight text-navy">{{ fullName(app) }}</h1>
             <span appBadge [status]="app.status"></span>
           </div>
-          <p class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-text-mid">
+          <p class="mt-1.5 flex flex-col items-start gap-y-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 text-[13.5px] text-text-mid">
             <span class="font-mono text-navy">{{ app.referenceNumber || 'Draft' }}</span>
             @if (app.associationName) {
-              <span aria-hidden="true" class="text-border">|</span>
+              <span aria-hidden="true" class="hidden sm:inline text-border">|</span>
               <span>{{ app.associationName }}{{ app.associationCountry ? ', ' + app.associationCountry : '' }}</span>
             }
             @if (app.submittedAt) {
-              <span aria-hidden="true" class="text-border">|</span>
+              <span aria-hidden="true" class="hidden sm:inline text-border">|</span>
               <span>Submitted {{ formatDate(app.submittedAt) }}</span>
             }
           </p>

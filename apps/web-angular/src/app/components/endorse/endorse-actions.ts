@@ -34,7 +34,7 @@ import { ButtonComponent } from '../ui/button';
       </div>
 
       @if (modalState() !== 'none') {
-        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4">
           <div class="bg-white rounded-lg max-w-lg w-full p-6">
             <h3 class="text-xl font-serif font-bold text-navy mb-4">
               {{ modalState() === 'endorse' ? 'Confirm Endorsement' : 'Return Application' }}

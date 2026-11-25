@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { QueryClient, injectQuery } from '@tanstack/angular-query-experimental';
 import {
   PasswordChecklistComponent,
@@ -40,7 +41,7 @@ const ACTION_BUTTON =
 @Component({
   selector: 'app-user-modal-shell',
   template: `
-    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4">
       <div class="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-serif font-bold text-navy mb-4">{{ heading() }}</h3>
         <ng-content />
@@ -313,7 +314,7 @@ export class DeleteUserDialogComponent {
 /** app/admin/users/page.tsx */
 @Component({
   selector: 'app-users-page',
-  imports: [ButtonComponent, CreateUserModalComponent, EditUserModalComponent, DeleteUserDialogComponent],
+  imports: [NgTemplateOutlet, ButtonComponent, CreateUserModalComponent, EditUserModalComponent, DeleteUserDialogComponent],
   template: `
     <div class="p-4 sm:p-6 lg:p-8 max-w-[1100px] mx-auto">
       <div class="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -327,7 +328,59 @@ export class DeleteUserDialogComponent {
         @if (usersQ.isLoading()) {
           <div class="p-8 text-center text-text-light">Loading users...</div>
         } @else {
-          <div class="overflow-x-auto">
+          <!-- Shared by the table (wider screens) and the card list (phones). -->
+          <ng-template #statusBadge let-user>
+        <span
+          [class]="
+            'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-medium ' +
+            (user.isActive ? 'bg-success/10 text-success' : 'bg-text-muted/15 text-text-light')
+          "
+        >
+          <span [class]="'h-1.5 w-1.5 rounded-full ' + (user.isActive ? 'bg-success' : 'bg-text-muted')"></span
+          >{{ user.isActive ? 'Active' : 'Inactive' }}
+        </span>
+          </ng-template>
+          <ng-template #userActions let-user let-isSelf="isSelf" let-busy="busy">
+        <button
+          (click)="editing.set(user)"
+          [disabled]="busy"
+          [class]="actionButton + ' border-border text-navy hover:enabled:bg-navy hover:enabled:text-white'"
+        >
+          Edit
+        </button>
+        <button
+          (click)="handleSendReset(user)"
+          [disabled]="busy || !user.isActive"
+          [attr.title]="
+            user.isActive ? 'Email this user a link to set a new password' : 'Reactivate the account first'
+          "
+          [class]="actionButton + ' border-border text-navy hover:enabled:bg-navy hover:enabled:text-white'"
+        >
+          Send Reset
+        </button>
+        <button
+          (click)="handleToggleActive(user)"
+          [disabled]="busy || isSelf"
+          [attr.title]="isSelf ? 'You cannot deactivate your own account' : null"
+          [class]="
+            actionButton + ' border-border text-text-mid hover:enabled:bg-text-mid hover:enabled:text-white'
+          "
+        >
+          {{ user.isActive ? 'Deactivate' : 'Reactivate' }}
+        </button>
+        <button
+          (click)="deleting.set(user)"
+          [disabled]="busy || isSelf"
+          [attr.title]="isSelf ? 'You cannot delete your own account' : null"
+          [class]="
+            actionButton + ' border-danger/30 text-danger hover:enabled:bg-danger hover:enabled:text-white'
+          "
+        >
+          Delete
+        </button>
+          </ng-template>
+
+          <div class="hidden md:block overflow-x-auto">
             <table class="w-full min-w-[1000px] text-left border-collapse">
               <thead>
                 <tr class="bg-gray-50 border-b border-border">
@@ -352,15 +405,7 @@ export class DeleteUserDialogComponent {
                     </td>
                     <td class="py-3 px-4 text-[14px] text-text-mid">{{ user.email }}</td>
                     <td class="py-3 px-4">
-                      <span
-                        [class]="
-                          'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-medium ' +
-                          (user.isActive ? 'bg-success/10 text-success' : 'bg-text-muted/15 text-text-light')
-                        "
-                      >
-                        <span [class]="'h-1.5 w-1.5 rounded-full ' + (user.isActive ? 'bg-success' : 'bg-text-muted')"></span
-                        >{{ user.isActive ? 'Active' : 'Inactive' }}
-                      </span>
+                      <ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: user }" />
                     </td>
                     <td class="py-3 px-4 text-[14px] text-text-light">
                       {{ user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never' }}
@@ -368,43 +413,7 @@ export class DeleteUserDialogComponent {
                     <td class="py-3 px-4 text-[14px] text-text-light">{{ formatDate(user.createdAt) }}</td>
                     <td class="py-3 px-4 w-px whitespace-nowrap">
                       <div class="flex items-center justify-end gap-1.5">
-                        <button
-                          (click)="editing.set(user)"
-                          [disabled]="busy"
-                          [class]="actionButton + ' border-border text-navy hover:enabled:bg-navy hover:enabled:text-white'"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          (click)="handleSendReset(user)"
-                          [disabled]="busy || !user.isActive"
-                          [attr.title]="
-                            user.isActive ? 'Email this user a link to set a new password' : 'Reactivate the account first'
-                          "
-                          [class]="actionButton + ' border-border text-navy hover:enabled:bg-navy hover:enabled:text-white'"
-                        >
-                          Send Reset
-                        </button>
-                        <button
-                          (click)="handleToggleActive(user)"
-                          [disabled]="busy || isSelf"
-                          [attr.title]="isSelf ? 'You cannot deactivate your own account' : null"
-                          [class]="
-                            actionButton + ' border-border text-text-mid hover:enabled:bg-text-mid hover:enabled:text-white'
-                          "
-                        >
-                          {{ user.isActive ? 'Deactivate' : 'Reactivate' }}
-                        </button>
-                        <button
-                          (click)="deleting.set(user)"
-                          [disabled]="busy || isSelf"
-                          [attr.title]="isSelf ? 'You cannot delete your own account' : null"
-                          [class]="
-                            actionButton + ' border-danger/30 text-danger hover:enabled:bg-danger hover:enabled:text-white'
-                          "
-                        >
-                          Delete
-                        </button>
+                        <ng-container *ngTemplateOutlet="userActions; context: { $implicit: user, isSelf: isSelf, busy: busy }" />
                       </div>
                     </td>
                   </tr>
@@ -417,6 +426,37 @@ export class DeleteUserDialogComponent {
               </tbody>
             </table>
           </div>
+
+          <!-- Phones: one card per user, with every action visible. -->
+          <ul class="md:hidden divide-y divide-border">
+            @for (user of usersQ.data() ?? []; track user.id) {
+              @let isSelf = meQ.data()?.userId === user.id;
+              @let busy = busyId() === user.id;
+              <li class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-[14px] text-navy font-medium">
+                      {{ displayName(user) }}@if (isSelf) {<span
+                          class="ml-2 rounded bg-navy/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-navy"
+                          >You</span
+                        >}
+                    </p>
+                    <p class="text-[13px] text-text-mid [overflow-wrap:anywhere]">{{ user.email }}</p>
+                    <p class="mt-1 text-[12px] text-text-light">
+                      Last sign-in: {{ user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never' }}
+                    </p>
+                  </div>
+                  <ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: user }" />
+                </div>
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                  <ng-container *ngTemplateOutlet="userActions; context: { $implicit: user, isSelf: isSelf, busy: busy }" />
+                </div>
+              </li>
+            }
+            @if (usersQ.data()?.length === 0) {
+              <li class="py-8 text-center text-text-light">No users yet.</li>
+            }
+          </ul>
         }
       </div>
 

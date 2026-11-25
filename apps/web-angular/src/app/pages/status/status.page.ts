@@ -161,37 +161,6 @@ const STATUS_FG: Record<string, string> = {
                   }
                 </div>
 
-                <!-- View link section for any submitted application -->
-                @if (result.status !== 'draft') {
-                  <div class="mt-6 border-t border-border pt-6 text-left">
-                    <h3 class="font-serif text-[18px] font-bold text-navy mb-3">View your submitted application</h3>
-                    <p class="text-[14px] text-text-mid mb-5">
-                      We can email you a secure link to a read-only copy of the application you submitted.
-                    </p>
-
-                    @if (viewLinkSent()) {
-                      <div class="p-4 bg-[#eaf3de] text-[#3b6d11] rounded-lg text-[14px] font-medium border border-[#c4e1a4]">
-                        ✓ Link sent! Check your email inbox (and spam folder).
-                      </div>
-                    } @else {
-                      <button
-                        appButton
-                        variant="ghost"
-                        (click)="handleRequestViewLink()"
-                        [disabled]="isSendingViewLink()"
-                        class="border-navy text-navy hover:bg-navy hover:text-white"
-                      >
-                        {{ isSendingViewLink() ? 'Sending...' : 'Email me a link to view my application' }}
-                      </button>
-                      @if (queryEmail()) {
-                        <p class="text-[13px] text-text-muted mt-3">
-                          A secure link will be sent to: {{ maskEmail(queryEmail()!) }}
-                        </p>
-                      }
-                    }
-                  </div>
-                }
-
                 <!-- Edit link section for draft / changes_requested -->
                 @if (result.status === 'draft' || result.status === 'changes_requested') {
                   <div class="mt-6 border-t border-border pt-6 text-left">
@@ -223,6 +192,37 @@ const STATUS_FG: Record<string, string> = {
                         class="bg-gold hover:bg-[#d49925] text-white"
                       >
                         {{ isSendingEditLink() ? 'Sending...' : 'Send me an editing link' }}
+                      </button>
+                      @if (queryEmail()) {
+                        <p class="text-[13px] text-text-muted mt-3">
+                          A secure link will be sent to: {{ maskEmail(queryEmail()!) }}
+                        </p>
+                      }
+                    }
+                  </div>
+                }
+
+                <!-- View link section for any submitted application -->
+                @if (result.status !== 'draft') {
+                  <div class="mt-6 border-t border-border pt-6 text-left">
+                    <h3 class="font-serif text-[18px] font-bold text-navy mb-3">View your submitted application</h3>
+                    <p class="text-[14px] text-text-mid mb-5">
+                      We can email you a secure link to a read-only copy of the application you submitted.
+                    </p>
+
+                    @if (viewLinkSent()) {
+                      <div class="p-4 bg-[#eaf3de] text-[#3b6d11] rounded-lg text-[14px] font-medium border border-[#c4e1a4]">
+                        ✓ Link sent! Check your email inbox (and spam folder).
+                      </div>
+                    } @else {
+                      <button
+                        appButton
+                        variant="ghost"
+                        (click)="handleRequestViewLink()"
+                        [disabled]="isSendingViewLink()"
+                        class="border-navy text-navy hover:bg-navy hover:text-white"
+                      >
+                        {{ isSendingViewLink() ? 'Sending...' : 'Email me a link to view my application' }}
                       </button>
                       @if (queryEmail()) {
                         <p class="text-[13px] text-text-muted mt-3">

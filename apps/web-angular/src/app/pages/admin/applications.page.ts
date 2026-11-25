@@ -30,10 +30,11 @@ const STATUS_OPTIONS: { value: string; label: string; statKey: string }[] = [
 
       <div class="bg-white p-4 rounded-lg shadow-sm border border-border flex flex-wrap gap-4 items-end">
         <div class="flex-1 min-w-[200px]">
-          <label class="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5"
+          <label class="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5" for="filter-search"
             >Search Name / Reference No.</label
           >
           <input
+            id="filter-search"
             type="text"
             placeholder="Search..."
             [value]="search()"
@@ -42,8 +43,8 @@ const STATUS_OPTIONS: { value: string; label: string; statKey: string }[] = [
           />
         </div>
         <div class="w-[180px]">
-          <label class="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5">Status</label>
-          <select
+          <label class="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5" for="filter-status">Status</label>
+          <select id="filter-status"
             [value]="status()"
             (change)="status.set($any($event.target).value)"
             class="w-full border border-border rounded h-[38px] px-3 text-[13px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy bg-white truncate"
@@ -55,8 +56,8 @@ const STATUS_OPTIONS: { value: string; label: string; statKey: string }[] = [
           </select>
         </div>
         <div class="w-[180px]">
-          <label class="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5">Country</label>
-          <select
+          <label class="block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5" for="filter-country">Country</label>
+          <select id="filter-country"
             [value]="country()"
             (change)="country.set($any($event.target).value)"
             class="w-full border border-border rounded h-[38px] px-3 text-[13px] focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy bg-white"
