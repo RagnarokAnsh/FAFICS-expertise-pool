@@ -455,6 +455,7 @@ export class ApplicationsService {
         educations: true,
         languages: true,
         unExperiences: true,
+        expertise: true,
       },
     });
 
@@ -499,6 +500,11 @@ export class ApplicationsService {
     if (application.unExperiences.length === 0) {
       throw new BadRequestException(
         'At least one UN experience entry is required.',
+      );
+    }
+    if (!application.expertise.some((e) => e.expertiseLevel)) {
+      throw new BadRequestException(
+        'Please rate your level in at least one area of expertise.',
       );
     }
 
@@ -583,7 +589,7 @@ export class ApplicationsService {
   }> {
     const application = await this.prisma.application.findFirst({
       where: {
-        email: query.email,
+        email: { equals: query.email, mode: 'insensitive' },
         referenceNumber: query.referenceNumber,
       },
       select: {
@@ -623,7 +629,7 @@ export class ApplicationsService {
 
     const application = await this.prisma.application.findFirst({
       where: {
-        email: dto.email,
+        email: { equals: dto.email, mode: 'insensitive' },
         referenceNumber: dto.referenceNumber,
       },
     });
@@ -679,7 +685,7 @@ export class ApplicationsService {
     };
 
     const application = await this.prisma.application.findFirst({
-      where: { email: dto.email, referenceNumber: dto.referenceNumber },
+      where: { email: { equals: dto.email, mode: 'insensitive' }, referenceNumber: dto.referenceNumber },
       select: { id: true, status: true },
     });
 
@@ -823,7 +829,7 @@ export class ApplicationsService {
    */
   async requestDraftLink(email: string): Promise<void> {
     const application = await this.prisma.application.findFirst({
-      where: { email, status: 'draft' },
+      where: { email: { equals: email, mode: 'insensitive' }, status: 'draft' },
       orderBy: { createdAt: 'desc' },
     });
 

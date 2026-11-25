@@ -53,7 +53,9 @@ export class TokensService {
   async validate(rawToken: string, purpose: TokenPurpose, markUsed: boolean = true): Promise<MagicToken> {
     const magicToken = await this.findForPurpose(rawToken, purpose);
 
-    if (markUsed && magicToken.usedAt !== null) {
+    // A used link is dead even for checks that don't consume it: reissue()
+    // marks older links used, and that has to actually switch them off.
+    if (magicToken.usedAt !== null) {
       throw new GoneException('This link has already been used');
     }
 
