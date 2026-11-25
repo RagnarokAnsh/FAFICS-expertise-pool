@@ -15,10 +15,32 @@ import { formatDate } from '../../lib/utils/date';
       <div class="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto">
         <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <p class="text-text-mid">Profiles expiring within the next 90 days.</p>
+            <p class="text-text-mid mb-3">
+              Profiles are removed when they expire; the member then has to apply again. Members are emailed 90 and 30
+              days before.
+            </p>
+            <div class="inline-flex rounded-lg border border-border bg-white p-1" role="group" aria-label="Expiring within">
+              @for (w of windows; track w) {
+                <button
+                  (click)="windowDays.set(w)"
+                  [attr.aria-pressed]="windowDays() === w"
+                  [class]="
+                    'rounded-md px-3 py-1.5 text-[13px] font-semibold transition-colors ' +
+                    (windowDays() === w ? 'bg-navy text-white' : 'text-navy hover:bg-navy-light')
+                  "
+                >
+                  Within {{ w }} days
+                </button>
+              }
+            </div>
           </div>
-          <button appButton (click)="handleSendReminder(allIds())" [disabled]="applications().length === 0 || isSending()">
-            {{ isSending() ? 'Sending...' : 'Send All Reminders' }}
+          <button
+            appButton
+            class="shrink-0 whitespace-nowrap"
+            (click)="handleSendReminder(allIds())"
+            [disabled]="applications().length === 0 || isSending()"
+          >
+            {{ isSending() ? 'Sending...' : 'Send ' + applications().length + (applications().length === 1 ? ' Reminder' : ' Reminders') }}
           </button>
         </div>
 
@@ -37,7 +59,7 @@ import { formatDate } from '../../lib/utils/date';
 
         @if (applications().length === 0) {
           <div class="bg-white border border-border p-8 rounded-lg text-center text-text-mid">
-            No profiles are expiring in the next 90 days.
+            No profiles are expiring in the next {{ windowDays() }} days.
           </div>
         } @else {
           <div class="bg-white border border-border rounded-lg overflow-hidden shadow-sm">
@@ -101,15 +123,27 @@ export class ExpiringPage {
     queryFn: adminApi.getExpiring,
   }));
 
-  protected readonly applications = computed<any[]>(() => this.query.data() || []);
+  protected readonly windows = [30, 60, 90];
+  protected readonly windowDays = signal(90);
+  /** Profiles expiring within the chosen window, soonest first. */
+  protected readonly applications = computed<any[]>(() =>
+    ((this.query.data() as any[]) || [])
+      .filter((a: any) => this.calculateDaysLeft(a.expiresAt) <= this.windowDays())
+      .sort((a: any, b: any) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()),
+  );
   protected readonly allIds = computed(() => this.applications().map((a: any) => a.id));
 
   protected async handleSendReminder(ids: string[]): Promise<void> {
     this.isSending.set(true);
     this.message.set(null);
     try {
-      await adminApi.sendReminders(ids);
-      this.message.set({ type: 'success', text: `Sent ${ids.length} reminder(s) successfully.` });
+      const result: any = await adminApi.sendReminders(ids);
+      const sent = Number(result?.sent ?? ids.length);
+      this.message.set(
+        sent === ids.length
+          ? { type: 'success', text: `${sent} reminder ${sent === 1 ? 'email' : 'emails'} sent.` }
+          : { type: 'error', text: `${sent} of ${ids.length} reminder emails sent. Check the Email Log for the failures.` },
+      );
       this.queryClient.invalidateQueries({ queryKey: ['expiring-applications'] });
     } catch (err: any) {
       this.message.set({ type: 'error', text: err.response?.data?.message || 'Failed to send reminders.' });

@@ -23,7 +23,11 @@ export class BadgeComponent {
 
   /** Same wording as the dashboard and filters. */
   protected readonly label = computed(
-    () => STATUS_LABELS[this.status().toLowerCase()] ?? this.status().replace(/_/g, ' '),
+    () => {
+      const s = this.status();
+      const fallback = s.replace(/_/g, ' ');
+      return STATUS_LABELS[s.toLowerCase()] ?? fallback.charAt(0).toUpperCase() + fallback.slice(1);
+    },
   );
 
   protected readonly classes = computed(() => {
@@ -64,6 +68,6 @@ export class BadgeComponent {
         text = 'text-gray-600';
         break;
     }
-    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${bg} ${text}`;
+    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bg} ${text}`;
   });
 }

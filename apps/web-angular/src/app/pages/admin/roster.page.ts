@@ -20,48 +20,62 @@ import { FIXED_EXPERTISE_AREAS } from '../../lib/constants/expertise';
           [disabled]="exporting() || filtered().length === 0"
           class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
         >
-          {{ exporting() ? 'Preparing Excel…' : (search() || areaFilter() ? 'Export these ' + filtered().length + ' to Excel' : '↓ Export to Excel') }}
+          {{ exporting() ? 'Preparing Excel…' : (filtersActive() ? 'Export these ' + filtered().length + ' to Excel' : '↓ Export to Excel') }}
         </button>
       </div>
 
-      <!-- Controls -->
-      <div class="mb-4 flex flex-wrap items-center gap-2.5 rounded-theme border border-border bg-white px-4 py-3.5">
-        <div class="relative min-w-[200px] flex-1">
-          <svg
-            class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+      <!-- Controls: what officers look for when choosing an expert -->
+      <div class="mb-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.4fr)_repeat(3,minmax(0,1fr))] gap-3 items-end rounded-theme border border-border bg-white px-4 py-3.5">
+        <div>
+          <label [class]="label" for="pool-search">Search</label>
           <input
+            id="pool-search"
             type="text"
             [value]="search()"
             (input)="search.set($any($event.target).value)"
-            placeholder="Search by name, nationality, association…"
-            class="h-[38px] w-full rounded-md border border-border bg-off-white pl-9 pr-3 text-[13px] text-text outline-none transition-colors focus:border-navy-mid focus:bg-white"
+            placeholder="Name, nationality or association"
+            [class]="field"
           />
         </div>
-        <select
-          [value]="areaFilter()"
-          (change)="areaFilter.set($any($event.target).value)"
-          class="h-[38px] cursor-pointer rounded-md border border-border bg-off-white px-3 text-[12.5px] text-text outline-none focus:border-navy-mid"
-        >
-          <option value="">All Expertise Areas</option>
-          @for (a of areas; track a.key) {
-            <option [value]="a.label" [selected]="a.label === areaFilter()">{{ a.label }}</option>
-          }
-        </select>
-        @if (search() || areaFilter()) {
-          <button
-            (click)="clearFilters()"
-            class="text-[12.5px] text-text-muted underline underline-offset-2 hover:text-navy"
-          >
-            Clear filters
-          </button>
+        <div>
+          <label [class]="label" for="pool-area">Expertise area</label>
+          <select id="pool-area" (change)="areaKey.set($any($event.target).value)" [class]="field">
+            <option value="">Any area</option>
+            @for (a of areas; track a.key) {
+              <option [value]="a.key" [selected]="a.key === areaKey()">{{ a.label }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label [class]="label" for="pool-level">{{ areaKey() ? 'Level in this area' : 'Level (any area)' }}</label>
+          <select id="pool-level" (change)="level.set($any($event.target).value)" [class]="field">
+            @for (l of levels; track l.value) {
+              <option [value]="l.value" [selected]="l.value === level()">{{ l.label }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label [class]="label" for="pool-language">Language</label>
+          <select id="pool-language" (change)="language.set($any($event.target).value)" [class]="field">
+            <option value="">Any language</option>
+            @for (l of languageOptions(); track l) {
+              <option [value]="l" [selected]="l === language()">{{ l }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label [class]="label" for="pool-nationality">Nationality</label>
+          <select id="pool-nationality" (change)="nationality.set($any($event.target).value)" [class]="field">
+            <option value="">Any nationality</option>
+            @for (n of nationalityOptions(); track n) {
+              <option [value]="n" [selected]="n === nationality()">{{ n }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="mb-4 flex min-h-[22px] items-center justify-end text-[12.5px] text-text-muted">
+        @if (filtersActive()) {
+          <button (click)="clearFilters()" class="underline underline-offset-2 hover:text-navy">Clear filters</button>
         }
       </div>
 
@@ -95,40 +109,75 @@ import { FIXED_EXPERTISE_AREAS } from '../../lib/constants/expertise';
   host: { class: 'contents' },
 })
 export class RosterPage {
-  protected readonly search = signal('');
-  protected readonly areaFilter = signal('');
-  protected readonly selectedId = signal<string | null>(null);
+  protected readonly field =
+    'h-[38px] w-full rounded-md border border-border bg-off-white px-3 text-[13px] text-text outline-none transition-colors focus:border-navy-mid focus:bg-white';
+  protected readonly label = 'block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5';
   protected readonly areas = FIXED_EXPERTISE_AREAS;
+  protected readonly levels = [
+    { value: '', label: 'Any rating' },
+    { value: 'advanced', label: 'Advanced or Expert' },
+    { value: 'expert', label: 'Expert only' },
+    { value: 'preferred', label: 'Marked as preferred' },
+  ];
   protected readonly skeletons = Array.from({ length: 9 }, (_, i) => i);
+
+  protected readonly search = signal('');
+  protected readonly areaKey = signal('');
+  protected readonly level = signal('');
+  protected readonly language = signal('');
+  protected readonly nationality = signal('');
+  protected readonly selectedId = signal<string | null>(null);
 
   protected readonly query = injectQuery(() => ({
     queryKey: ['roster'],
-    queryFn: () => adminApi.listApplications({ status: 'approved', limit: 500 }),
+    queryFn: () => adminApi.listApplications({ status: 'approved', limit: 1000, sort: 'name' }),
   }));
 
-  private readonly applications = computed<any[]>(() => this.query.data()?.data ?? []);
+  private readonly applications = computed<any[]>(() => (this.query.data() as any)?.data ?? []);
+
+  /** Choices built from the pool itself, so every option finds someone. */
+  protected readonly languageOptions = computed(() =>
+    [...new Set(this.applications().flatMap((a) => a.languages ?? []))].sort((x, y) => x.localeCompare(y)),
+  );
+  protected readonly nationalityOptions = computed(() =>
+    [...new Set(this.applications().map((a) => a.nationality).filter(Boolean))].sort((x, y) => x.localeCompare(y)),
+  );
+
+  protected readonly filtersActive = computed(
+    () => !!(this.search().trim() || this.areaKey() || this.level() || this.language() || this.nationality()),
+  );
 
   protected readonly filtered = computed(() => {
-    let list = this.applications();
-    const search = this.search();
-    const areaFilter = this.areaFilter();
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (a: any) =>
-          `${a.firstName} ${a.lastName}`.toLowerCase().includes(q) ||
-          (a.associationName ?? '').toLowerCase().includes(q) ||
-          (a.associationCountry ?? '').toLowerCase().includes(q) ||
-          (a.nationality ?? '').toLowerCase().includes(q) ||
-          (a.referenceNumber ?? '').toLowerCase().includes(q),
-      );
-    }
-    if (areaFilter) {
-      list = list.filter((a: any) =>
-        a.preferredAreas?.some((area: string) => area.toLowerCase().includes(areaFilter.toLowerCase())),
-      );
-    }
-    return list;
+    const q = this.search().trim().toLowerCase();
+    const areaKey = this.areaKey();
+    const level = this.level();
+    const language = this.language();
+    const nationality = this.nationality();
+
+    // Does an area rating satisfy the chosen level?
+    const meetsLevel = (e: any): boolean =>
+      level === '' ? !!e.level || e.isPreferred
+      : level === 'preferred' ? e.isPreferred
+      : level === 'expert' ? e.level === 'expert'
+      : e.level === 'advanced' || e.level === 'expert';
+
+    return this.applications().filter((a: any) => {
+      if (
+        q &&
+        ![`${a.firstName} ${a.lastName}`, a.referenceNumber, a.nationality, a.associationName, a.associationCountry].some(
+          (v) => (v ?? '').toLowerCase().includes(q),
+        )
+      ) {
+        return false;
+      }
+      if (language && !(a.languages ?? []).includes(language)) return false;
+      if (nationality && a.nationality !== nationality) return false;
+      if (areaKey || level) {
+        const rows = (a.expertise ?? []).filter((e: any) => !areaKey || e.areaKey === areaKey);
+        if (!rows.some(meetsLevel)) return false;
+      }
+      return true;
+    });
   });
 
   protected readonly subtitle = computed(() => {
@@ -144,7 +193,7 @@ export class RosterPage {
   protected async exportRoster(): Promise<void> {
     this.exporting.set(true);
     try {
-      const filteredIds = this.search() || this.areaFilter() ? this.filtered().map((a: any) => a.id) : undefined;
+      const filteredIds = this.filtersActive() ? this.filtered().map((a: any) => a.id) : undefined;
       await adminApi.exportRoster(filteredIds);
     } catch {
       this.toast.showToast('The Excel file could not be created. Please try again.', 'error');
@@ -155,6 +204,9 @@ export class RosterPage {
 
   protected clearFilters(): void {
     this.search.set('');
-    this.areaFilter.set('');
+    this.areaKey.set('');
+    this.level.set('');
+    this.language.set('');
+    this.nationality.set('');
   }
 }
