@@ -1,17 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { DistributionPieChartComponent, ExpertiseBarChartComponent } from '../../components/admin/charts/charts';
 import { ReportCardComponent, StatusBadgeComponent } from '../../components/admin/ui';
+import { WAITING_WARN_DAYS, WaitingFlagComponent, daysWaiting } from '../../components/admin/waiting-flag';
 import { adminApi } from '../../lib/api/admin.api';
 import { formatDate } from '../../lib/utils/date';
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
-  submitted: 'Pending Endorsement',
-  endorsed: 'Pending Review',
+  submitted: 'Awaiting President',
+  endorsed: 'Endorsed',
   under_review: 'Under Review',
-  changes_requested: 'Changes Requested',
-  approved: 'Approved',
+  changes_requested: 'Returned for Changes',
+  approved: 'Active in Pool',
   rejected: 'Rejected',
   expired: 'Expired',
 };
@@ -57,7 +59,7 @@ function activityLine(app: any): string {
 /** app/admin/dashboard/page.tsx */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [ReportCardComponent, StatusBadgeComponent, DistributionPieChartComponent, ExpertiseBarChartComponent],
+  imports: [ReportCardComponent, StatusBadgeComponent, DistributionPieChartComponent, ExpertiseBarChartComponent, RouterLink, WaitingFlagComponent],
   template: `
     @if (statsQ.isLoading()) {
       <div class="flex min-h-[50vh] items-center justify-center text-text-muted">Loading dashboard…</div>
@@ -65,6 +67,53 @@ function activityLine(app: any): string {
       <div class="flex min-h-[50vh] items-center justify-center text-danger">Failed to load dashboard statistics.</div>
     } @else {
       <div class="mx-auto max-w-[1200px] p-6">
+        @if (failedEmails() > 0) {
+          <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p class="text-[14px] text-red-800">
+              <strong>{{ failedEmails() }} {{ failedEmails() === 1 ? 'email' : 'emails' }} failed to send.</strong>
+              The people concerned have not been notified.
+            </p>
+            <a routerLink="/admin/emails" class="text-[13px] font-semibold text-red-800 underline hover:no-underline"
+              >Open Email Log</a
+            >
+          </div>
+        }
+
+        <!-- Applications waiting for their President, oldest first -->
+        @if (waiting().length > 0) {
+          <div class="mb-5" appReportCard [heading]="'Waiting on President (' + waiting().length + ')'">
+            @if (needsAttention() > 0) {
+              <p class="-mt-1 mb-3 text-[13px] text-amber-800">
+                {{ needsAttention() }} {{ needsAttention() === 1 ? 'application has' : 'applications have' }} been waiting 7
+                days or more. Both automatic reminders have gone out; consider contacting the association.
+              </p>
+            }
+            <ul class="divide-y divide-border">
+              @for (app of waiting().slice(0, 8); track app.id) {
+                <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
+                  <div class="min-w-0">
+                    <a
+                      [routerLink]="'/admin/applications/' + app.id"
+                      class="text-[14px] font-semibold text-navy hover:text-gold hover:underline"
+                      >{{ app.firstName }} {{ app.lastName }}</a
+                    >
+                    <p class="text-[12px] text-text-light [overflow-wrap:anywhere]">
+                      <span class="font-mono">{{ app.referenceNumber }}</span> · {{ app.associationName }} · President:
+                      {{ app.presidentEmail }}
+                    </p>
+                  </div>
+                  <span appWaitingFlag [submittedAt]="app.submittedAt"></span>
+                </li>
+              }
+            </ul>
+            @if (waiting().length > 8) {
+              <a routerLink="/admin/applications" class="mt-2 inline-block text-[13px] font-semibold text-gold hover:underline"
+                >See all {{ waiting().length }} in Applications →</a
+              >
+            }
+          </div>
+        }
+
         <!-- Distribution pie charts -->
         <div class="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div appReportCard heading="Application Status">
@@ -143,6 +192,26 @@ export class DashboardPage {
     refetchInterval: 60000,
   }));
   protected readonly analyticsQ = injectQuery(() => ({ queryKey: ['analytics'], queryFn: adminApi.getAnalytics }));
+  protected readonly waitingQ = injectQuery(() => ({
+    queryKey: ['applications', 'waiting-on-president'],
+    queryFn: () => adminApi.listApplications({ status: 'submitted', limit: 100 }),
+    refetchInterval: 60000,
+  }));
+  protected readonly failedEmailsQ = injectQuery(() => ({
+    queryKey: ['notifications', 'failed-count'],
+    queryFn: () => adminApi.listNotifications({ failedOnly: true, page: 1, limit: 1 }),
+    refetchInterval: 60000,
+  }));
+  protected readonly failedEmails = computed(() => (this.failedEmailsQ.data() as any)?.total ?? 0);
+  /** Applications awaiting their President, longest wait first. */
+  protected readonly waiting = computed(() =>
+    [...((this.waitingQ.data() as any)?.data ?? [])].sort(
+      (a: any, b: any) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
+    ),
+  );
+  protected readonly needsAttention = computed(
+    () => this.waiting().filter((a: any) => daysWaiting(a.submittedAt) >= WAITING_WARN_DAYS).length,
+  );
   protected readonly recentQ = injectQuery(() => ({
     queryKey: ['recent-activity'],
     queryFn: () => adminApi.listApplications({ limit: 7 }),

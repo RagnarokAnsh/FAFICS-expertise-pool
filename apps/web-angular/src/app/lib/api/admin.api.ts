@@ -50,6 +50,19 @@ export const adminApi = {
     return unwrap(response);
   },
   
+  /** The email log. failedOnly lists failures not yet fixed by a later send. */
+  listNotifications: async (params: { failedOnly?: boolean; page?: number; limit?: number }) => {
+    const response = await adminApiClient.get('/admin/notifications', {
+      params: { failedOnly: params.failedOnly ? 'true' : undefined, page: params.page, limit: params.limit },
+    });
+    return unwrap(response);
+  },
+
+  retryNotification: async (id: string) => {
+    const response = await adminApiClient.post(`/admin/notifications/${id}/retry`);
+    return unwrap(response);
+  },
+
   getStats: async () => {
     const response = await adminApiClient.get('/admin/stats');
     return unwrap(response);
@@ -72,6 +85,15 @@ export const adminApi = {
 
   approve: async (id: string, notes?: string) => {
     const response = await adminApiClient.patch(`/admin/applications/${id}/approve`, { secretaryNotes: notes });
+    return unwrap(response);
+  },
+
+  /** Deletes an approved profile and its data; optionally emails the applicant. */
+  removeFromPool: async (id: string, reason: string, notifyApplicant: boolean): Promise<{ message: string }> => {
+    const response = await adminApiClient.post(`/admin/applications/${id}/remove-from-pool`, {
+      reason: reason.trim() || undefined,
+      notifyApplicant,
+    });
     return unwrap(response);
   },
 
@@ -102,16 +124,21 @@ export const adminApi = {
     return unwrap(response);
   },
 
-  exportRoster: async () => {
-    const response = await adminApiClient.get('/admin/export/roster', { responseType: 'blob' });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'FAFICS_Expertise_Pool.xlsx');
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode?.removeChild(link);
-    window.URL.revokeObjectURL(url);
+  /**
+   * Downloads the Expertise Pool as Excel. With `ids`, only those profiles
+   * (e.g. the filtered list on screen); otherwise the whole pool.
+   */
+  exportRoster: async (ids?: string[]) => {
+    const response = ids
+      ? await adminApiClient.post('/admin/export/roster', { ids }, { responseType: 'blob' })
+      : await adminApiClient.get('/admin/export/roster', { responseType: 'blob' });
+    saveDownload(response, `FAFICS_Expertise_Pool_${todayStamp()}.xlsx`);
+  },
+
+  /** Downloads one application's full profile (with its timeline) as Excel. */
+  exportApplication: async (id: string, referenceNumber?: string | null) => {
+    const response = await adminApiClient.get(`/admin/export/application/${id}`, { responseType: 'blob' });
+    saveDownload(response, `FAFICS_Profile_${referenceNumber || 'Draft'}_${todayStamp()}.xlsx`);
   },
 
   getExpiring: async () => {
@@ -215,3 +242,21 @@ export const authApi = {
     return unwrap(response);
   },
 };
+
+function todayStamp(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/** Saves a blob response, preferring the file name the server sends. */
+function saveDownload(response: { data: Blob; headers: any }, fallbackName: string): void {
+  const disposition: string = response.headers?.['content-disposition'] ?? '';
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? fallbackName;
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', name);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode?.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}

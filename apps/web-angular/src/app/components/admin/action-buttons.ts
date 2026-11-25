@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { QueryClient } from '@tanstack/angular-query-experimental';
 import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
@@ -47,8 +48,16 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       @if (status() === 'approved') {
         <div class="bg-green-50 text-green-800 p-4 rounded text-sm mb-2 border border-green-100">
-          <strong>Active in Pool</strong><br />This application has been fully approved.
+          <strong>Active in Pool</strong><br />Endorsed by the Association President.
         </div>
+        <button
+          appButton
+          variant="ghost"
+          (click)="openRemove()"
+          class="w-full border-danger/40 text-danger hover:bg-danger hover:text-white"
+        >
+          Remove from Pool
+        </button>
       }
 
       @if (status() === 'submitted') {
@@ -96,6 +105,62 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             <button appButton variant="ghost" (click)="modalType.set(null)" [disabled]="isSubmitting()">Cancel</button>
             <button appButton (click)="handleAction()" [disabled]="isSubmitting()" [class]="c.btnClass">
               {{ isSubmitting() ? 'Processing...' : c.btnText }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (removeOpen()) {
+      <div class="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-lg w-full p-6" role="dialog" aria-modal="true" aria-labelledby="remove-title">
+          <h3 id="remove-title" class="text-xl font-serif font-bold text-navy mb-3">Remove from the Expertise Pool?</h3>
+          <p class="text-[14px] text-text-mid mb-4">
+            This permanently deletes <strong class="text-navy">{{ referenceNumber() }}</strong> and all of its data. It cannot
+            be undone. The applicant can submit a new application later.
+          </p>
+          <label for="remove-reason" class="block text-[11px] text-text-light font-medium uppercase mb-1">Reason (optional)</label>
+          <textarea
+            id="remove-reason"
+            rows="3"
+            class="w-full border border-border rounded p-2 text-[14px] mb-3"
+            [value]="removeReason()"
+            (input)="removeReason.set($any($event.target).value)"
+          ></textarea>
+          <label class="flex items-start gap-2 text-[14px] text-text mb-4 cursor-pointer">
+            <input
+              type="checkbox"
+              class="mt-0.5 w-4 h-4 accent-navy"
+              [checked]="removeNotify()"
+              (change)="removeNotify.set($any($event.target).checked)"
+            />
+            Email the applicant that their profile was removed (the reason is included)
+          </label>
+          <label for="remove-confirm" class="block text-[11px] text-text-light font-medium uppercase mb-1"
+            >Type {{ referenceNumber() }} to confirm</label
+          >
+          <input
+            id="remove-confirm"
+            class="w-full border border-border rounded p-2 text-[14px] mb-3 font-mono"
+            [placeholder]="referenceNumber()"
+            [value]="removeConfirm()"
+            (input)="removeConfirm.set($any($event.target).value)"
+          />
+          @if (removeError()) {
+            <p class="text-danger text-sm mb-3">{{ removeError() }}</p>
+          }
+          <div class="flex justify-end gap-3">
+            <button appButton variant="ghost" type="button" (click)="removeOpen.set(false)" [disabled]="removeBusy()">
+              Cancel
+            </button>
+            <button
+              appButton
+              type="button"
+              class="!bg-danger hover:!bg-red-700 text-white disabled:opacity-50"
+              [disabled]="removeBusy() || removeConfirm().trim().toUpperCase() !== (referenceNumber() || '').toUpperCase()"
+              (click)="handleRemove()"
+            >
+              {{ removeBusy() ? 'Removing...' : 'Remove Permanently' }}
             </button>
           </div>
         </div>
@@ -186,9 +251,11 @@ export class ActionButtonsComponent {
   readonly applicationId = input.required<string>();
   readonly status = input.required<string>();
   readonly presidentEmail = input<string>('');
+  readonly referenceNumber = input<string | null>(null);
 
   private readonly queryClient = inject(QueryClient);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
   protected readonly modalType = signal<ModalType | null>(null);
   protected readonly notes = signal('');
   protected readonly isSubmitting = signal(false);
@@ -198,6 +265,14 @@ export class ActionButtonsComponent {
   protected readonly presidentDialog = signal<PresidentDialog | null>(null);
   protected readonly emailDraft = signal('');
   protected readonly presidentBusy = signal(false);
+
+  // Remove from pool
+  protected readonly removeOpen = signal(false);
+  protected readonly removeReason = signal('');
+  protected readonly removeNotify = signal(false);
+  protected readonly removeConfirm = signal('');
+  protected readonly removeBusy = signal(false);
+  protected readonly removeError = signal<string | null>(null);
   protected readonly presidentError = signal<string | null>(null);
 
   protected readonly config = computed(() => {
@@ -265,6 +340,33 @@ export class ActionButtonsComponent {
       this.isSubmitting.set(false);
     }
   }
+  protected openRemove(): void {
+    this.removeReason.set('');
+    this.removeNotify.set(false);
+    this.removeConfirm.set('');
+    this.removeError.set(null);
+    this.removeOpen.set(true);
+  }
+
+  protected async handleRemove(): Promise<void> {
+    if (this.removeBusy()) return;
+    this.removeBusy.set(true);
+    this.removeError.set(null);
+    try {
+      const result = await adminApi.removeFromPool(this.applicationId(), this.removeReason(), this.removeNotify());
+      this.queryClient.invalidateQueries({ queryKey: ['applications'] });
+      this.queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      this.queryClient.removeQueries({ queryKey: ['application', this.applicationId()] });
+      this.toast.showToast(result.message, 'success');
+      this.removeOpen.set(false);
+      await this.router.navigateByUrl('/admin/applications');
+    } catch (err: any) {
+      this.removeError.set(apiMessage(err, 'The profile could not be removed. Please try again.'));
+    } finally {
+      this.removeBusy.set(false);
+    }
+  }
+
   protected openPresidentDialog(dialog: PresidentDialog): void {
     this.presidentError.set(null);
     this.emailDraft.set(this.presidentEmail());

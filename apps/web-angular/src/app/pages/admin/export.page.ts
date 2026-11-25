@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ButtonComponent } from '../../components/ui/button';
 import { adminApi } from '../../lib/api/admin.api';
+import { formatDateTime } from '../../lib/utils/date';
 
 /** app/admin/export/page.tsx */
 @Component({
@@ -27,9 +28,9 @@ import { adminApi } from '../../lib/api/admin.api';
             <div>
               <h2 class="text-lg font-serif font-bold text-navy mb-2">Excel Export</h2>
               <p class="text-sm text-text-mid leading-relaxed">
-                The export contains a complete spreadsheet of all <strong>Approved</strong> applications currently active in
-                the Expertise Pool. It includes personal details, association info, full experience histories, and the
-                complete expertise assessment.
+                One Excel workbook with every profile currently active in the Expertise Pool. Each sheet is a table you
+                can sort and filter: Members, Details, Statements, Education, the four experience types, Languages and
+                Expertise (rated and preferred areas only).
               </p>
             </div>
           </div>
@@ -41,7 +42,7 @@ import { adminApi } from '../../lib/api/admin.api';
           <div class="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-gray-100">
             <div class="text-sm text-text-light mb-4 sm:mb-0">
               @if (lastExport()) {
-                <span>Last exported: {{ lastExport()!.toLocaleString() }}</span>
+                <span>Last exported: {{ formatDateTime(lastExport()) }}</span>
               } @else {
                 <span>Ready to download</span>
               }
@@ -64,6 +65,7 @@ import { adminApi } from '../../lib/api/admin.api';
   host: { class: 'contents' },
 })
 export class ExportPage {
+  protected readonly formatDateTime = formatDateTime;
   protected readonly isExporting = signal(false);
   protected readonly lastExport = signal<Date | null>(null);
   protected readonly error = signal<string | null>(null);

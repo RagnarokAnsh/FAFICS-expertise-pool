@@ -137,14 +137,15 @@ const STATUS_FG: Record<string, string> = {
                   }
                   @if (result.status === 'endorsed' || result.status === 'under_review') {
                     <p class="mt-4 text-text-mid leading-relaxed">
-                      Your application is currently being reviewed by the FAFICS Secretary. Editing is not available during
-                      this stage.
+                      Your application has been endorsed by your Association President. Editing is not available at this
+                      stage.
                     </p>
                   }
                   @if (result.status === 'approved') {
                     <p class="mt-4 text-text-mid leading-relaxed">
                       Your application has been approved. Your profile is active in the FAFICS Expertise Pool until
-                      {{ computeExpiry(result.approvedAt) }}.
+                      {{ computeExpiry(result.approvedAt) }}. After that date you can submit a new application to stay in the
+                      pool.
                     </p>
                   }
                   @if (result.status === 'rejected') {

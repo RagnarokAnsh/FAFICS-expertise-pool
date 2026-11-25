@@ -3,11 +3,12 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { formatDate } from '../../lib/utils/date';
 import { BadgeComponent } from '../ui/badge';
+import { WaitingFlagComponent } from './waiting-flag';
 
 /** components/admin/ApplicationTable.tsx */
 @Component({
   selector: 'app-application-table',
-  imports: [NgTemplateOutlet, RouterLink, BadgeComponent],
+  imports: [NgTemplateOutlet, RouterLink, BadgeComponent, WaitingFlagComponent],
   template: `
     <ng-template #refreshButton>
       <button
@@ -76,7 +77,12 @@ import { BadgeComponent } from '../ui/badge';
                   <td class="hidden md:table-cell py-3 px-4 text-[14px] text-text-mid">{{ app.associationName }}</td>
                   <td class="hidden md:table-cell py-3 px-4 text-[14px] text-text-mid">{{ app.associationCountry }}</td>
                   <td class="py-3 px-2 md:px-4">
-                    <span appBadge [status]="app.status"></span>
+                    <div class="flex flex-col items-start gap-1">
+                      <span appBadge [status]="app.status"></span>
+                      @if (app.status === 'submitted') {
+                        <span appWaitingFlag [submittedAt]="app.submittedAt"></span>
+                      }
+                    </div>
                   </td>
                   <td class="hidden md:table-cell py-3 px-4 text-[14px] text-text-light">{{ formatDate(app.submittedAt) }}</td>
                   <td class="py-3 px-2 md:px-4 text-right">

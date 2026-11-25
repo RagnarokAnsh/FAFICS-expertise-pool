@@ -28,10 +28,10 @@ import { formatDate } from '../../lib/utils/date';
           </p>
         }
         @case ('endorsed') {
-          <p class="text-[14px] text-text-mid">Your application is being reviewed by the FAFICS Secretary.</p>
+          <p class="text-[14px] text-text-mid">Your application has been endorsed by your Association President.</p>
         }
         @case ('under_review') {
-          <p class="text-[14px] text-text-mid">Your application is being reviewed by the FAFICS Secretary.</p>
+          <p class="text-[14px] text-text-mid">Your application has been endorsed by your Association President.</p>
         }
         @case ('approved') {
           <p class="text-[14px] text-text-mid">

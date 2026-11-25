@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import {
   ExpertiseBarChartComponent,
@@ -8,6 +8,7 @@ import {
   NationalityBarChartComponent,
 } from '../../components/admin/charts/charts';
 import { ReportCardComponent, SectionHeaderComponent } from '../../components/admin/ui';
+import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
 
 /**
@@ -34,9 +35,10 @@ import { adminApi } from '../../lib/api/admin.api';
           <button
             sectionAction
             (click)="exportRoster()"
-            class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid"
+            [disabled]="exporting()"
+            class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
           >
-            ↓ Export CSV
+            {{ exporting() ? 'Preparing Excel…' : '↓ Export to Excel' }}
           </button>
         </div>
 
@@ -81,7 +83,17 @@ export class ReportsPage {
   protected readonly skeletons = [0, 1, 2, 3, 4];
   protected readonly query = injectQuery(() => ({ queryKey: ['analytics'], queryFn: adminApi.getAnalytics }));
 
-  protected exportRoster(): void {
-    adminApi.exportRoster();
+  protected readonly exporting = signal(false);
+  private readonly toast = inject(ToastService);
+
+  protected async exportRoster(): Promise<void> {
+    this.exporting.set(true);
+    try {
+      await adminApi.exportRoster();
+    } catch {
+      this.toast.showToast('The Excel file could not be created. Please try again.', 'error');
+    } finally {
+      this.exporting.set(false);
+    }
   }
 }

@@ -7,11 +7,11 @@ import { adminApi } from '../../lib/api/admin.api';
 // holds its count so the dropdown only lists statuses that actually occur.
 const STATUS_OPTIONS: { value: string; label: string; statKey: string }[] = [
   { value: 'draft', label: 'Draft', statKey: 'drafts' },
-  { value: 'submitted', label: 'Submitted (Pending President)', statKey: 'pendingEndorsement' },
-  { value: 'endorsed', label: 'Endorsed (Pending Review)', statKey: 'pendingReview' },
+  { value: 'submitted', label: 'Awaiting President', statKey: 'pendingEndorsement' },
+  { value: 'endorsed', label: 'Endorsed', statKey: 'pendingReview' },
   { value: 'under_review', label: 'Under Review', statKey: 'underReview' },
-  { value: 'changes_requested', label: 'Changes Requested', statKey: 'changesRequested' },
-  { value: 'approved', label: 'Approved (Active in Pool)', statKey: 'activeInPool' },
+  { value: 'changes_requested', label: 'Returned for Changes', statKey: 'changesRequested' },
+  { value: 'approved', label: 'Active in Pool', statKey: 'activeInPool' },
   { value: 'rejected', label: 'Rejected', statKey: 'rejected' },
   { value: 'expired', label: 'Expired', statKey: 'expired' },
 ];

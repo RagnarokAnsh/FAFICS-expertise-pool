@@ -16,18 +16,31 @@ function toDate(value: string | Date): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-/** App-wide display format for dates: MM/DD/YYYY. */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * The one date format used everywhere (app, emails, Excel): 22 Nov 2026.
+ * Unambiguous for an international audience, unlike 11/22/2026 or 22/11/2026.
+ */
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
   const d = toDate(value);
   if (!d) return '—';
-  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()}`;
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-/** MM/DD/YYYY, h:mm AM/PM in the viewer's local timezone. */
+/** 24-hour time in the viewer's timezone: 14:05. */
+export function formatTime(value: string | Date | null | undefined): string {
+  if (!value) return '—';
+  const d = toDate(value);
+  if (!d) return '—';
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** 22 Nov 2026, 14:05 in the viewer's timezone. */
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
   const d = toDate(value);
   if (!d) return '—';
-  return `${formatDate(d)}, ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  return `${formatDate(d)}, ${formatTime(d)}`;
 }

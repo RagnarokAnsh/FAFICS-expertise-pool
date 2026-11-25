@@ -35,7 +35,7 @@ export class NotEditableMessageComponent {
     if (status === 'submitted') {
       return 'Your application is awaiting endorsement from your Association President. You cannot edit it at this stage.';
     } else if (status === 'endorsed' || status === 'under_review') {
-      return 'Your application is currently being reviewed by the FAFICS Secretary. Editing is not available during this stage.';
+      return 'Your application has been endorsed by your Association President. Editing is not available at this stage.';
     } else if (status === 'approved') {
       return 'Your application has been approved. Your profile is active in the FAFICS Expertise Pool.';
     } else if (status === 'rejected') {

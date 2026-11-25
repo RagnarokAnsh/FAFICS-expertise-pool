@@ -12,10 +12,8 @@ import { Step2EducationComponent } from './steps/step2-education';
 import { Step3WorkExperienceComponent } from './steps/step3-work-experience';
 import { Step4SelfAssessmentComponent } from './steps/step4-self-assessment';
 import { Step5ConsentSubmitComponent } from './steps/step5-consent-submit';
+import { formatTime } from '../../lib/utils/date';
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
 
 /** components/form/ApplicationForm.tsx */
 @Component({

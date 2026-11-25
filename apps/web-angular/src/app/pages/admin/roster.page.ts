@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { ProfileModalComponent } from '../../components/admin/profile-modal';
 import { RosterGridComponent } from '../../components/admin/roster-grid';
 import { SectionHeaderComponent } from '../../components/admin/ui';
+import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
 import { FIXED_EXPERTISE_AREAS } from '../../lib/constants/expertise';
 
@@ -16,9 +17,10 @@ import { FIXED_EXPERTISE_AREAS } from '../../lib/constants/expertise';
         <button
           sectionAction
           (click)="exportRoster()"
-          class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid"
+          [disabled]="exporting() || filtered().length === 0"
+          class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
         >
-          ↓ Export CSV
+          {{ exporting() ? 'Preparing Excel…' : (search() || areaFilter() ? 'Export these ' + filtered().length + ' to Excel' : '↓ Export to Excel') }}
         </button>
       </div>
 
@@ -135,8 +137,20 @@ export class RosterPage {
     return `Showing ${count} active profile${count !== 1 ? 's' : ''}`;
   });
 
-  protected exportRoster(): void {
-    adminApi.exportRoster();
+  protected readonly exporting = signal(false);
+  private readonly toast = inject(ToastService);
+
+  /** Exports exactly the profiles on screen (the whole pool when unfiltered). */
+  protected async exportRoster(): Promise<void> {
+    this.exporting.set(true);
+    try {
+      const filteredIds = this.search() || this.areaFilter() ? this.filtered().map((a: any) => a.id) : undefined;
+      await adminApi.exportRoster(filteredIds);
+    } catch {
+      this.toast.showToast('The Excel file could not be created. Please try again.', 'error');
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   protected clearFilters(): void {

@@ -62,11 +62,11 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  approved: 'Active',
-  submitted: 'Pending',
+  approved: 'Active in Pool',
+  submitted: 'Awaiting President',
   endorsed: 'Endorsed',
-  under_review: 'In Review',
-  changes_requested: 'Changes',
+  under_review: 'Under Review',
+  changes_requested: 'Returned for Changes',
   rejected: 'Rejected',
   expired: 'Expired',
   draft: 'Draft',

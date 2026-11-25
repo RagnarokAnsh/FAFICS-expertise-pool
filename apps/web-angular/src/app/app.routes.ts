@@ -64,6 +64,7 @@ export const routes: Routes = [
           { path: 'reports', loadComponent: () => import('./pages/admin/reports.page').then((m) => m.ReportsPage) },
           { path: 'users', loadComponent: () => import('./pages/admin/users.page').then((m) => m.UsersPage) },
           { path: 'account', loadComponent: () => import('./pages/admin/account.page').then((m) => m.AccountPage) },
+          { path: 'emails', loadComponent: () => import('./pages/admin/emails.page').then((m) => m.EmailsPage) },
         ],
       },
     ],

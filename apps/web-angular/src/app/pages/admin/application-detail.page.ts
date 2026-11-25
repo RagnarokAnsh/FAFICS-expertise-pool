@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { ActionButtonsComponent } from '../../components/admin/action-buttons';
@@ -7,6 +7,7 @@ import { ApplicationProfileComponent } from '../../components/admin/application-
 import { AuditTimelineComponent } from '../../components/admin/audit-timeline';
 import { BadgeComponent } from '../../components/ui/badge';
 import { CardComponent } from '../../components/ui/card';
+import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
 import { formatDate } from '../../lib/utils/date';
 
@@ -58,6 +59,14 @@ import { formatDate } from '../../lib/utils/date';
           <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h1 class="font-serif text-[22px] sm:text-[28px] font-bold leading-tight text-navy">{{ fullName(app) }}</h1>
             <span appBadge [status]="app.status"></span>
+            <button
+              type="button"
+              (click)="downloadProfile(app)"
+              [disabled]="downloading()"
+              class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-[12.5px] font-semibold text-navy transition-colors hover:bg-navy-light disabled:opacity-60"
+            >
+              {{ downloading() ? 'Preparing…' : '↓ Download profile (Excel)' }}
+            </button>
           </div>
           <p class="mt-1.5 flex flex-col items-start gap-y-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 text-[13.5px] text-text-mid">
             <span class="font-mono text-navy">{{ app.referenceNumber || 'Draft' }}</span>
@@ -109,7 +118,12 @@ import { formatDate } from '../../lib/utils/date';
                 </div>
               </dl>
 
-              <app-action-buttons [applicationId]="app.id" [status]="app.status" [presidentEmail]="app.presidentEmail" />
+              <app-action-buttons
+                [applicationId]="app.id"
+                [status]="app.status"
+                [presidentEmail]="app.presidentEmail"
+                [referenceNumber]="app.referenceNumber"
+              />
             </div>
 
             <div class="hidden xl:block">
@@ -128,7 +142,7 @@ import { formatDate } from '../../lib/utils/date';
 
             @if (app.secretaryNotes) {
               <div class="mb-5 border border-navy bg-navy/5 p-5 rounded-theme">
-                <h3 class="text-[12px] font-semibold text-navy uppercase mb-2">Secretary's / Internal Notes</h3>
+                <h3 class="text-[12px] font-semibold text-navy uppercase mb-2">Officer Notes</h3>
                 <p class="text-[14px] text-navy italic break-words">"{{ app.secretaryNotes }}"</p>
               </div>
             }
@@ -163,6 +177,20 @@ export class ApplicationDetailPage {
     queryKey: ['application', this.id],
     queryFn: () => adminApi.getApplication(this.id),
   }));
+
+  protected readonly downloading = signal(false);
+  private readonly toast = inject(ToastService);
+
+  protected async downloadProfile(app: any): Promise<void> {
+    this.downloading.set(true);
+    try {
+      await adminApi.exportApplication(app.id, app.referenceNumber);
+    } catch {
+      this.toast.showToast('The Excel file could not be created. Please try again.', 'error');
+    } finally {
+      this.downloading.set(false);
+    }
+  }
 
   protected fullName(app: any): string {
     return [app.firstName, app.middleName, app.lastName].filter(Boolean).join(' ');

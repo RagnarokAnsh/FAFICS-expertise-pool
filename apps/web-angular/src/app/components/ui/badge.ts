@@ -1,5 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  submitted: 'Awaiting President',
+  changes_requested: 'Returned for Changes',
+  endorsed: 'Endorsed',
+  under_review: 'Under Review',
+  approved: 'Active in Pool',
+  rejected: 'Rejected',
+  expired: 'Expired',
+};
+
 /** <span appBadge [status]="…"> — components/ui/Badge.tsx. */
 @Component({
   selector: 'span[appBadge]',
@@ -10,7 +21,10 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export class BadgeComponent {
   readonly status = input.required<string>();
 
-  protected readonly label = computed(() => this.status().replace('_', ' '));
+  /** Same wording as the dashboard and filters. */
+  protected readonly label = computed(
+    () => STATUS_LABELS[this.status().toLowerCase()] ?? this.status().replace(/_/g, ' '),
+  );
 
   protected readonly classes = computed(() => {
     const normalized = this.status().toLowerCase();
