@@ -68,12 +68,23 @@ export const adminApi = {
     return unwrap(response);
   },
 
+  getDistinctAssociations: async (): Promise<{ name: string; country: string }[]> => {
+    const response = await adminApiClient.get('/admin/associations');
+    return unwrap(response);
+  },
+
+  /** Downloads every application matching the Applications page filters, as Excel. */
+  exportApplications: async (filters: ApplicationFilters) => {
+    const response = await adminApiClient.get('/admin/export/applications', { params: filters, responseType: 'blob' });
+    saveDownload(response, `FAFICS_Applications_${todayStamp()}.xlsx`);
+  },
+
   getDistinctCountries: async (): Promise<string[]> => {
     const response = await adminApiClient.get('/admin/countries');
     return unwrap(response);
   },
 
-  listApplications: async (params?: { page?: number; limit?: number; status?: string; search?: string; country?: string }) => {
+  listApplications: async (params?: ApplicationFilters & { page?: number; limit?: number }) => {
     const response = await adminApiClient.get('/admin/applications', { params });
     return unwrap(response);
   },
@@ -259,4 +270,15 @@ function saveDownload(response: { data: Blob; headers: any }, fallbackName: stri
   link.click();
   link.parentNode?.removeChild(link);
   window.URL.revokeObjectURL(url);
+}
+
+/** The Applications list filters, as the API takes them. */
+export interface ApplicationFilters {
+  search?: string;
+  status?: string;
+  excludeDrafts?: boolean;
+  waitingMinDays?: number;
+  association?: string;
+  country?: string;
+  sort?: string;
 }

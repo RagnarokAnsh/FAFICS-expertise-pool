@@ -8,7 +8,8 @@ import { Routes } from '@angular/router';
  *   /admin                     → /admin/dashboard
  *   /admin/login, /admin/forgot-password, /admin/reset-password/:token
  *     (rendered without the dashboard shell, like PUBLIC_ADMIN_ROUTES)
- *   /admin/{dashboard,applications,applications/:id,roster,expiring,export,reports,users,account}
+ *   /admin/{dashboard,applications,applications/:id,roster,expiring,reports,emails,users,account}
+ *   /admin/export              → /admin/roster (the pool export lives there now)
  *   anything else              → the Next.js-style 404 page
  *
  * Pages load on demand (one chunk per page, as Next.js splits per route), so an
@@ -60,7 +61,8 @@ export const routes: Routes = [
           },
           { path: 'roster', loadComponent: () => import('./pages/admin/roster.page').then((m) => m.RosterPage) },
           { path: 'expiring', loadComponent: () => import('./pages/admin/expiring.page').then((m) => m.ExpiringPage) },
-          { path: 'export', loadComponent: () => import('./pages/admin/export.page').then((m) => m.ExportPage) },
+          // The pool export now lives on the Expertise Pool page; keep old links working.
+          { path: 'export', pathMatch: 'full', redirectTo: 'roster' },
           { path: 'reports', loadComponent: () => import('./pages/admin/reports.page').then((m) => m.ReportsPage) },
           { path: 'users', loadComponent: () => import('./pages/admin/users.page').then((m) => m.UsersPage) },
           { path: 'account', loadComponent: () => import('./pages/admin/account.page').then((m) => m.AccountPage) },

@@ -19,6 +19,11 @@ export interface ApplicationSummary {
   approvedAt: string | null;
   expiresAt: string | null;
   preferredAreas: string[];
+  /** Filled for list views that filter by them (Expertise Pool page). */
+  nationality?: string;
+  languages?: string[];
+  /** Rated or preferred areas only. */
+  expertise?: { areaKey: string; areaLabel: string; level: 'average' | 'advanced' | 'expert' | null; isPreferred: boolean }[];
 }
 
 /**

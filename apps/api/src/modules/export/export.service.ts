@@ -14,10 +14,10 @@ const LEVEL_LABELS: Record<string, string> = { average: 'Average', advanced: 'Ad
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
   submitted: 'Awaiting President',
-  changes_requested: 'Returned for changes',
+  changes_requested: 'Returned for Changes',
   endorsed: 'Endorsed',
-  under_review: 'Under review',
-  approved: 'Active in pool',
+  under_review: 'Under Review',
+  approved: 'Active in Pool',
   rejected: 'Rejected',
   expired: 'Expired',
 };
@@ -121,68 +121,69 @@ export class ExportService {
       'No profiles are active in the Expertise Pool.',
     );
 
-    // ── Details: the remaining personal and association fields ───────────
-    this.addTableSheet(
-      workbook,
-      'Details',
-      [
-        { header: 'Reference No', width: 13 },
-        { header: 'Name', width: 26 },
-        { header: 'Date of Birth', width: 13, kind: 'date' },
-        { header: 'Second Nationality', width: 18 },
-        { header: 'WhatsApp', width: 19 },
-        { header: 'Separation Date', width: 15, kind: 'date' },
-        { header: 'Association Email', width: 30 },
-        { header: 'President Email', width: 30 },
-        { header: 'President Phone', width: 19 },
-        { header: 'Other Association Country', width: 22 },
-        { header: 'Submitted', width: 13, kind: 'date' },
-        { header: 'UID', width: 8 },
-      ],
-      apps.map((app) => [
-        ...key(app),
-        app.dateOfBirth,
-        app.secondNationality,
-        app.whatsapp,
-        app.separationDate,
-        app.associationGeneralEmail,
-        app.presidentEmail,
-        app.presidentPhone,
-        app.associateMemberCountry,
-        app.submittedAt,
-        app.uidNumber,
-      ]),
-    );
-
-    // ── Statements: the long written answers, wrapped ────────────────────
-    this.addTableSheet(
-      workbook,
-      'Statements',
-      [
-        { header: 'Reference No', width: 13 },
-        { header: 'Name', width: 26 },
-        { header: 'UN Experience', width: 50, kind: 'wrap' },
-        { header: 'Non-UN Experience', width: 50, kind: 'wrap' },
-        { header: 'FAFICS Experience', width: 50, kind: 'wrap' },
-        { header: 'Local Association Experience', width: 50, kind: 'wrap' },
-        { header: 'Why This Position / Committee', width: 50, kind: 'wrap' },
-      ],
-      apps
-        .map((app) => [
-          ...key(app),
-          app.unExperienceSummary,
-          app.nonUnExperienceSummary,
-          app.faficsExperienceSummary,
-          app.localExperienceSummary,
-          app.positionPreferenceRationale,
-        ])
-        .filter((row) => row.slice(2).some(hasText)),
-    );
-
-    this.addChildSheets(workbook, apps, true);
+    this.addProfileSheets(workbook, apps);
 
     const buffer = await workbook.xlsx.writeBuffer();
     this.logger.log(`Expertise Pool Excel generated: ${apps.length} members`);
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * Applications of any status, exactly as filtered and sorted on the
+   * Applications page: an "Applications" sheet with where each one stands,
+   * then the same Details, Statements and per-entry sheets as the pool export.
+   */
+  async generateApplicationsExcel(
+    where: Prisma.ApplicationWhereInput,
+    orderBy: Prisma.ApplicationOrderByWithRelationInput[],
+  ): Promise<Buffer> {
+    const apps = await this.prisma.application.findMany({ where, orderBy, include: INCLUDE });
+    const workbook = this.newWorkbook('FAFICS Expertise Pool — Applications');
+    const now = Date.now();
+
+    this.addTableSheet(
+      workbook,
+      'Applications',
+      [
+        { header: 'Reference No', width: 13 },
+        { header: 'Name', width: 26 },
+        { header: 'Status', width: 21 },
+        { header: 'Email', width: 32 },
+        { header: 'Phone', width: 19 },
+        { header: 'Association', width: 24 },
+        { header: 'Association Country', width: 19 },
+        { header: 'President Email', width: 30 },
+        { header: 'Submitted', width: 13, kind: 'date' },
+        { header: 'Days Waiting', width: 13 },
+        { header: 'Approved', width: 13, kind: 'date' },
+        { header: 'Expires', width: 13, kind: 'date' },
+        { header: 'Last Updated', width: 14, kind: 'date' },
+      ],
+      apps.map((app) => [
+        app.referenceNumber,
+        this.fullName(app),
+        STATUS_LABELS[app.status] ?? app.status,
+        app.email,
+        app.phone,
+        app.associationName,
+        app.associationCountry,
+        app.presidentEmail,
+        app.submittedAt,
+        // Only meaningful while the President has not acted.
+        app.status === 'submitted' && app.submittedAt
+          ? Math.floor((now - app.submittedAt.getTime()) / 86_400_000)
+          : null,
+        app.approvedAt,
+        app.expiresAt,
+        app.updatedAt,
+      ]),
+      'No applications match the filters.',
+    );
+
+    this.addProfileSheets(workbook, apps);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    this.logger.log(`Applications Excel generated: ${apps.length} applications`);
     return Buffer.from(buffer);
   }
 
@@ -270,6 +271,76 @@ export class ExportService {
   }
 
   // ─── Sheets shared by both exports ─────────────────────────────────────
+
+  /**
+   * Details, Statements and the per-entry sheets (education, experience,
+   * languages, expertise), with Reference No + Name in front of every row.
+   * Shared by the pool export and the Applications export.
+   */
+  private addProfileSheets(workbook: ExcelJS.Workbook, apps: FullApplication[]): void {
+    const key = (app: FullApplication): CellValue[] => [app.referenceNumber, this.fullName(app)];
+
+    // ── Details: the remaining personal and association fields ───────────
+    this.addTableSheet(
+      workbook,
+      'Details',
+      [
+        { header: 'Reference No', width: 13 },
+        { header: 'Name', width: 26 },
+        { header: 'Date of Birth', width: 13, kind: 'date' },
+        { header: 'Second Nationality', width: 18 },
+        { header: 'WhatsApp', width: 19 },
+        { header: 'Separation Date', width: 15, kind: 'date' },
+        { header: 'Association Email', width: 30 },
+        { header: 'President Email', width: 30 },
+        { header: 'President Phone', width: 19 },
+        { header: 'Other Association Country', width: 22 },
+        { header: 'Submitted', width: 13, kind: 'date' },
+        { header: 'UID', width: 8 },
+      ],
+      apps.map((app) => [
+        ...key(app),
+        app.dateOfBirth,
+        app.secondNationality,
+        app.whatsapp,
+        app.separationDate,
+        app.associationGeneralEmail,
+        app.presidentEmail,
+        app.presidentPhone,
+        app.associateMemberCountry,
+        app.submittedAt,
+        app.uidNumber,
+      ]),
+    );
+
+    // ── Statements: the long written answers, wrapped ────────────────────
+    this.addTableSheet(
+      workbook,
+      'Statements',
+      [
+        { header: 'Reference No', width: 13 },
+        { header: 'Name', width: 26 },
+        { header: 'UN Experience', width: 50, kind: 'wrap' },
+        { header: 'Non-UN Experience', width: 50, kind: 'wrap' },
+        { header: 'FAFICS Experience', width: 50, kind: 'wrap' },
+        { header: 'Local Association Experience', width: 50, kind: 'wrap' },
+        { header: 'Why This Position / Committee', width: 50, kind: 'wrap' },
+      ],
+      apps
+        .map((app) => [
+          ...key(app),
+          app.unExperienceSummary,
+          app.nonUnExperienceSummary,
+          app.faficsExperienceSummary,
+          app.localExperienceSummary,
+          app.positionPreferenceRationale,
+        ])
+        .filter((row) => row.slice(2).some(hasText)),
+    );
+
+    this.addChildSheets(workbook, apps, true);
+  }
+
 
   /**
    * Education, experience, languages and expertise, one row per entry.

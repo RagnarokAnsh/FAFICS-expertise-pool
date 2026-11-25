@@ -31,6 +31,7 @@ import { ApproveDto } from './dto/approve.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RemoveFromPoolDto } from './dto/remove-from-pool.dto';
 import { ExportRosterDto } from './dto/export-roster.dto';
+import { applicationsOrderBy, applicationsWhere } from './application-filters';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -65,6 +66,13 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Analytics data returned' })
   async getAnalytics() {
     return this.adminService.getAnalytics();
+  }
+
+  @Get('associations')
+  @Roles('secretary', 'committee', 'admin')
+  @ApiOperation({ summary: 'Distinct associations for filter dropdowns' })
+  async getDistinctAssociations() {
+    return this.adminService.getDistinctAssociations();
   }
 
   @Get('countries')
@@ -223,6 +231,18 @@ export class AdminController {
   async exportRosterSelection(@Body() dto: ExportRosterDto, @Res() res: Response) {
     const buffer = await this.exportService.generateRosterExcel(dto.ids);
     this.sendExcel(res, buffer, `FAFICS_Expertise_Pool_${this.today()}.xlsx`);
+  }
+
+  @Get('export/applications')
+  @Roles('secretary', 'admin')
+  @ApiOperation({ summary: 'Download applications (any status) as Excel, with the Applications page filters' })
+  @ApiResponse({ status: 200, description: 'Excel file download' })
+  async exportApplications(@Query() dto: ListApplicationsDto, @Res() res: Response) {
+    const buffer = await this.exportService.generateApplicationsExcel(
+      applicationsWhere(dto),
+      applicationsOrderBy(dto.sort),
+    );
+    this.sendExcel(res, buffer, `FAFICS_Applications_${this.today()}.xlsx`);
   }
 
   @Get('export/application/:id')

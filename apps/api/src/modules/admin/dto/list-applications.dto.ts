@@ -1,7 +1,8 @@
-import { IsOptional, IsInt, IsEnum, IsString, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, IsEnum, IsString, IsBoolean, IsIn, Min, Max } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ApplicationStatus } from '@fafics/shared';
+import { APPLICATION_SORTS, ApplicationSort } from '../application-filters';
 
 export class ListApplicationsDto {
   @ApiPropertyOptional({ default: 1 })
@@ -42,4 +43,30 @@ export class ListApplicationsDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsString()
   areaKey?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by association name (exact, any case)' })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsString()
+  association?: string;
+
+  @ApiPropertyOptional({ description: 'Only applications awaiting the President for at least this many days' })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  waitingMinDays?: number;
+
+  @ApiPropertyOptional({ description: 'Leave out drafts (applications not submitted yet)' })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  excludeDrafts?: boolean;
+
+  @ApiPropertyOptional({ enum: APPLICATION_SORTS, default: 'updated' })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsIn(APPLICATION_SORTS)
+  sort?: ApplicationSort;
 }

@@ -36,11 +36,6 @@ const NAV_SECTIONS: {
         label: 'Email Log',
         icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
       },
-      {
-        href: '/admin/export',
-        label: 'Export',
-        icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
-      },
     ],
   },
 ];
@@ -51,7 +46,6 @@ const TITLES: { match: string; title: string }[] = [
   { match: '/admin/roster', title: 'Expertise Pool' },
   { match: '/admin/expiring', title: 'Expiring Profiles' },
   { match: '/admin/reports', title: 'Reports & Analytics' },
-  { match: '/admin/export', title: 'Export' },
   { match: '/admin/users', title: 'User Management' },
   { match: '/admin/account', title: 'My Account' },
   { match: '/admin/emails', title: 'Email Log' },

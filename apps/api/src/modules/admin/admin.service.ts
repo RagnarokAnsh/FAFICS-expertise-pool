@@ -22,6 +22,7 @@ import type {
   DashboardStats,
 } from '@fafics/shared';
 import { ListApplicationsDto } from './dto/list-applications.dto';
+import { applicationsOrderBy, applicationsWhere } from './application-filters';
 import { ApproveDto } from './dto/approve.dto';
 import { RejectDto } from './dto/reject.dto';
 import { RemoveFromPoolDto } from './dto/remove-from-pool.dto';
@@ -53,51 +54,24 @@ export class AdminService {
   async listApplications(
     dto: ListApplicationsDto,
   ): Promise<{ data: ApplicationSummary[]; total: number; page: number; limit: number }> {
-    const { page, limit, status, country, search, areaKey } = dto;
+    const { page, limit } = dto;
     const skip = (page - 1) * limit;
-
-    // Build where clause
-    const where: Prisma.ApplicationWhereInput = {};
-
-    if (status) {
-      where.status = status as any;
-    }
-
-    if (country) {
-      where.associationCountry = {
-        contains: country,
-        mode: 'insensitive',
-      };
-    }
-
-    if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { associationName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { referenceNumber: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (areaKey) {
-      where.expertise = {
-        some: { areaKey },
-      };
-    }
+    const where = applicationsWhere(dto);
 
     const [applications, total] = await Promise.all([
       this.prisma.application.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { updatedAt: 'desc' },
+        orderBy: applicationsOrderBy(dto.sort),
         include: {
+          // Rated or preferred areas only: what the Expertise Pool filters use.
           expertise: {
-            where: { isPreferred: true },
-            select: { areaLabel: true },
+            where: { OR: [{ isPreferred: true }, { expertiseLevel: { not: null } }] },
+            select: { areaKey: true, areaLabel: true, isCustom: true, otherDescription: true, expertiseLevel: true, isPreferred: true },
             orderBy: { sortOrder: 'asc' },
           },
+          languages: { select: { language: true }, orderBy: { sortOrder: 'asc' } },
         },
       }),
       this.prisma.application.count({ where }),
@@ -117,7 +91,15 @@ export class AdminService {
       endorsedAt: app.endorsedAt?.toISOString() ?? null,
       approvedAt: app.approvedAt?.toISOString() ?? null,
       expiresAt: app.expiresAt?.toISOString() ?? null,
-      preferredAreas: app.expertise.map((e) => e.areaLabel),
+      preferredAreas: app.expertise.filter((e) => e.isPreferred).map((e) => e.areaLabel),
+      nationality: app.nationality,
+      languages: app.languages.map((l) => l.language).filter(Boolean),
+      expertise: app.expertise.map((e) => ({
+        areaKey: e.areaKey,
+        areaLabel: e.isCustom && e.otherDescription ? e.otherDescription : e.areaLabel,
+        level: e.expertiseLevel,
+        isPreferred: e.isPreferred,
+      })),
     }));
 
     return { data, total, page, limit };
@@ -963,6 +945,17 @@ export class AdminService {
   }
 
   // ─── Distinct Filter Options ────────────────────────────────────────────
+
+  /** Distinct association names (with their country) for the Applications filter. */
+  async getDistinctAssociations(): Promise<{ name: string; country: string }[]> {
+    const results = await this.prisma.application.findMany({
+      where: { associationName: { not: '' } },
+      select: { associationName: true, associationCountry: true },
+      distinct: ['associationName', 'associationCountry'],
+      orderBy: [{ associationName: 'asc' }, { associationCountry: 'asc' }],
+    });
+    return results.map((r) => ({ name: r.associationName, country: r.associationCountry }));
+  }
 
   /**
    * Returns distinct association countries from all applications for filter dropdowns.
