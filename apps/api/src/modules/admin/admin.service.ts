@@ -24,6 +24,9 @@ import type {
 import { ListApplicationsDto } from './dto/list-applications.dto';
 import { ApproveDto } from './dto/approve.dto';
 import { RejectDto } from './dto/reject.dto';
+import { RemoveFromPoolDto } from './dto/remove-from-pool.dto';
+import { MailService } from '../mail/mail.service';
+import { deleteApplicationAndData } from '../applications/application-removal';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -39,6 +42,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly notificationService: NotificationService,
+    private readonly mailService: MailService,
   ) {}
 
   // ─── Applications ──────────────────────────────────────────────────────
@@ -107,6 +111,7 @@ export class AdminService {
       email: app.email,
       associationName: app.associationName,
       associationCountry: app.associationCountry,
+      presidentEmail: app.presidentEmail,
       status: app.status as ApplicationStatus,
       submittedAt: app.submittedAt?.toISOString() ?? null,
       endorsedAt: app.endorsedAt?.toISOString() ?? null,
@@ -321,6 +326,40 @@ export class AdminService {
    * Reject an application.
    * Sets status=rejected, queues rejected email.
    */
+  /**
+   * Removes an approved profile from the pool: the application and its data
+   * are deleted (same as at expiry), leaving an anonymous audit entry with the
+   * reason. If the officer asks to notify the applicant and that email fails,
+   * nothing is deleted, so the officer can retry or untick the option.
+   */
+  async removeFromPool(id: string, dto: RemoveFromPoolDto, actorEmail: string): Promise<{ referenceNumber: string | null }> {
+    const app = await this.prisma.application.findUnique({ where: { id }, select: { status: true } });
+    if (!app) throw new NotFoundException(`Application ${id} not found`);
+    if (app.status !== 'approved') {
+      throw new BadRequestException('Only profiles that are active in the Expertise Pool can be removed.');
+    }
+
+    const reason = dto.reason?.trim() || null;
+    if (dto.notifyApplicant) {
+      try {
+        await this.mailService.sendRemovedFromPool(id, reason ?? undefined);
+      } catch (err: any) {
+        this.logger.error(`Removal email failed for ${id}: ${err.message}`);
+        throw new ServiceUnavailableException(
+          'The email to the applicant could not be sent, so the profile was not removed. Try again, or untick the email option.',
+        );
+      }
+    }
+
+    const removed = await deleteApplicationAndData(this.prisma, id, {
+      action: 'application.removed_from_pool',
+      actorEmail,
+      actorRole: 'admin',
+      metadata: { reason, applicantNotified: !!dto.notifyApplicant },
+    });
+    return { referenceNumber: removed?.referenceNumber ?? null };
+  }
+
   async reject(id: string, dto: RejectDto, actorEmail: string): Promise<void> {
     const app = await this.prisma.application.findUnique({ where: { id } });
     if (!app) throw new NotFoundException(`Application ${id} not found`);
@@ -567,6 +606,7 @@ export class AdminService {
       email: app.email,
       associationName: app.associationName,
       associationCountry: app.associationCountry,
+      presidentEmail: app.presidentEmail,
       status: app.status as ApplicationStatus,
       submittedAt: app.submittedAt?.toISOString() ?? null,
       endorsedAt: app.endorsedAt?.toISOString() ?? null,
@@ -580,10 +620,21 @@ export class AdminService {
    * Bulk send renewal reminder emails for specified application IDs.
    */
   async sendRenewalReminders(applicationIds: string[]): Promise<{ sent: number }> {
-    for (const id of applicationIds) {
-      await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_90D, id, 90);
+    const apps = await this.prisma.application.findMany({
+      where: { id: { in: applicationIds }, status: 'approved' },
+      select: { id: true, expiresAt: true },
+    });
+    const in30Days = Date.now() + 30 * 86_400_000;
+    let sent = 0;
+    for (const app of apps) {
+      // The email states the real days left; the type labels the log entry.
+      const type =
+        app.expiresAt && app.expiresAt.getTime() <= in30Days
+          ? NotificationType.RENEWAL_REMINDER_30D
+          : NotificationType.RENEWAL_REMINDER_90D;
+      if (await this.notificationService.sendEmail(type, app.id)) sent++;
     }
-    return { sent: applicationIds.length };
+    return { sent };
   }
 
   async listNotifications(filters: {

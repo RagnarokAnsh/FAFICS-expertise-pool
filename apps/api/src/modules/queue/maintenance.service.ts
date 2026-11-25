@@ -5,11 +5,15 @@ import { MailService } from '../mail/mail.service';
 import { NotificationService } from '../mail/notification.service';
 import { ConfigService } from '@nestjs/config';
 import { NotificationType, TokenPurpose } from '@fafics/shared';
+import { deleteApplicationAndData } from '../applications/application-removal';
 
 /** Days after submission on which a waiting President is reminded. */
 export const PRESIDENT_REMINDER_DAYS = [3, 7] as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Days to keep retrying the "your profile expired" email before deleting anyway. */
+const EXPIRY_EMAIL_GRACE_DAYS = 7;
 
 /** Whole calendar days (UTC) from `from` to `to`, e.g. Mon 23:00 → Tue 01:00 is 1. */
 function utcDaysBetween(from: Date, to: Date): number {
@@ -30,10 +34,44 @@ export class MaintenanceService {
     private readonly configService: ConfigService,
   ) {}
 
+  /**
+   * Profiles last three years. Past their expiry date they leave the pool
+   * (status 'expired'), the member is emailed that they can apply again, and
+   * the application and its data are deleted. If the email fails it is
+   * retried on the following nights; after a week the data is deleted anyway.
+   */
   async expireApplications(): Promise<void> {
     const result = await this.prisma.$executeRaw`SELECT fn_expire_applications()`;
     this.logger.log(`Expiry run complete. Rows affected: ${result}`);
+    await this.removeExpiredProfiles();
     await this.reissueExpiredPresidentLinks();
+  }
+
+  private async removeExpiredProfiles(): Promise<void> {
+    const graceCutoff = new Date(Date.now() - EXPIRY_EMAIL_GRACE_DAYS * DAY_MS);
+    const expired = await this.prisma.application.findMany({
+      where: { status: 'expired' },
+      select: { id: true, expiresAt: true },
+    });
+
+    let removed = 0;
+    for (const app of expired) {
+      const emailed = await this.notificationService.sendEmail(NotificationType.EXPIRED, app.id);
+      const graceOver = !app.expiresAt || app.expiresAt < graceCutoff;
+      if (!emailed && !graceOver) continue; // try the email again tomorrow
+      try {
+        await deleteApplicationAndData(this.prisma, app.id, {
+          action: 'application.expired_removed',
+          actorEmail: 'system',
+          actorRole: 'admin',
+          metadata: { expiryEmailSent: emailed },
+        });
+        removed++;
+      } catch (err) {
+        this.logger.error(`Failed to remove expired application ${app.id}:`, err as Error);
+      }
+    }
+    this.logger.log(`Expired profiles removed: ${removed}`);
   }
 
   private async reissueExpiredPresidentLinks(): Promise<void> {
@@ -153,22 +191,24 @@ export class MaintenanceService {
   async sendRenewalReminders(): Promise<void> {
     const now = new Date();
 
+    const nowPlus30 = new Date();
+    nowPlus30.setDate(nowPlus30.getDate() + 30);
+
     const nowPlus90 = new Date();
     nowPlus90.setDate(nowPlus90.getDate() + 90);
 
-    const nowPlus30 = new Date();
-    nowPlus30.setDate(nowPlus30.getDate() + 30);
 
     const apps90d = await this.prisma.application.findMany({
       where: {
         status: 'approved',
-        expiresAt: { gte: now, lte: nowPlus90 },
+        // More than 30 days left: closer than that, only the 30-day email is due.
+        expiresAt: { gt: nowPlus30, lte: nowPlus90 },
         renewalReminder90dSentAt: null,
       },
     });
 
     for (const app of apps90d) {
-      const sent = await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_90D, app.id, 90);
+      const sent = await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_90D, app.id);
       // Only mark the reminder as sent if the email actually went out, so a
       // failed send is retried on the next run instead of being lost.
       if (sent) {
@@ -188,7 +228,7 @@ export class MaintenanceService {
     });
 
     for (const app of apps30d) {
-      const sent = await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_30D, app.id, 30);
+      const sent = await this.notificationService.sendEmail(NotificationType.RENEWAL_REMINDER_30D, app.id);
       if (sent) {
         await this.prisma.application.update({
           where: { id: app.id },

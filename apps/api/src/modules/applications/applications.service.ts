@@ -18,6 +18,7 @@ import { ApplicationStatusQueryDto } from './dto/application-status-query.dto';
 import { RequestEditLinkDto } from './dto/request-edit-link.dto';
 import { RequestViewLinkDto } from './dto/request-view-link.dto';
 import { APPLICATION_VIEW_INCLUDE, toApplicantApplicationView } from './application-view.mapper';
+import { formatDisplayDate } from '../../common/utils/display-date';
 import { Prisma } from '@prisma/client';
 import { TokensService } from '../tokens/tokens.service';
 import { MailService } from '../mail/mail.service';
@@ -147,7 +148,15 @@ export class ApplicationsService {
         const editable =
           existing.status === 'draft' || existing.status === 'changes_requested';
         if (!editable) {
-          // submitted / endorsed / under_review / approved → don't duplicate.
+          // An active profile can only be replaced once it expires (it is then
+          // deleted and the member applies again from scratch).
+          if (existing.status === 'approved' && existing.expiresAt) {
+            throw new ConflictException(
+              `Your profile is already active in the Expertise Pool until ${formatDisplayDate(existing.expiresAt)}. ` +
+                'You can submit a new application after that date.',
+            );
+          }
+          // submitted / endorsed / under_review → don't duplicate.
           throw new ConflictException(
             `An application for this association already exists under ${step1Fields.email} ` +
               `(status: ${existing.status}). Please track or edit it from the status page.`,

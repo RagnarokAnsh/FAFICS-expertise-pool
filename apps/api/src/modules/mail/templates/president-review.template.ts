@@ -1,4 +1,5 @@
 import { buildEmailHtml } from './base.template';
+import { formatDisplayDate } from '../../../common/utils/display-date';
 
 export function presidentReviewTemplate(params: {
   applicantName: string;
@@ -8,7 +9,7 @@ export function presidentReviewTemplate(params: {
   preferredCommittees?: string[];
 }): { subject: string; html: string } {
   const subject = `Action Required — Please endorse ${params.applicantName}'s FAFICS Expertise Pool application`;
-  const formattedDate = params.submissionDate.toLocaleDateString('en-GB');
+  const formattedDate = formatDisplayDate(params.submissionDate);
   const committeeList = (params.preferredCommittees ?? []).map(c => `<li>${c}</li>`).join('');
   const committeeSection = committeeList
     ? `

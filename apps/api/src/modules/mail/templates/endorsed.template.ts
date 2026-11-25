@@ -9,8 +9,7 @@ export function endorsedTemplate(params: {
   const body = `
     <p>Dear ${params.applicantName},</p>
     <p>Good news! Your application (Reference: ${params.referenceNumber}) has been endorsed by ${params.presidentName}.</p>
-    <p>Your application is now under active review by the FAFICS Secretary. We will notify you once a final decision has been made.</p>
-    <p>Thank you for your patience.</p>
+    <p>We will email you as soon as your profile is active in the FAFICS Expertise Pool.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }

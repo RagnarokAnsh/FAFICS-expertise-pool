@@ -1,4 +1,5 @@
 import { buildEmailHtml } from './base.template';
+import { formatDisplayDate } from '../../../common/utils/display-date';
 
 /**
  * Sent to the applicant when their President is reminded to endorse (day 3
@@ -18,7 +19,7 @@ export function applicantReminderNoticeTemplate(params: {
   viewLinkValidFor: string;
 }): { subject: string; html: string } {
   const subject = `FAFICS Expertise Pool — We reminded your President [${params.referenceNumber}]`;
-  const formattedDate = params.submissionDate.toLocaleDateString('en-GB');
+  const formattedDate = formatDisplayDate(params.submissionDate);
   const waiting = params.daysAfterSubmission
     ? `It has been ${params.daysAfterSubmission} days since you submitted your application on ${formattedDate}, and it is still waiting for endorsement from the President of ${params.associationName}.`
     : `Your application, submitted on ${formattedDate}, is still waiting for endorsement from the President of ${params.associationName}.`;

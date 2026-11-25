@@ -1,4 +1,5 @@
 import { buildEmailHtml } from './base.template';
+import { formatDisplayDate } from '../../../common/utils/display-date';
 
 /**
  * Automatic reminder to a President who has not yet endorsed or returned an
@@ -11,7 +12,7 @@ export function presidentReminderTemplate(params: {
   magicLinkUrl: string;
 }): { subject: string; html: string } {
   const subject = `Reminder: ${params.applicantName}'s FAFICS Expertise Pool application is awaiting your endorsement`;
-  const formattedDate = params.submissionDate.toLocaleDateString('en-GB');
+  const formattedDate = formatDisplayDate(params.submissionDate);
   const body = `
     <p>Dear President of ${params.associationName},</p>
     <p>This is a friendly reminder that <strong>${params.applicantName}</strong> submitted an application to join the FAFICS Expertise Pool on ${formattedDate}, and it is still awaiting your endorsement.</p>

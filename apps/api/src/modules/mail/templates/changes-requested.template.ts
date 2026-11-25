@@ -3,7 +3,7 @@ import { buildEmailHtml } from './base.template';
 export function changesRequestedTemplate(params: {
   referenceNumber: string;
   applicantName: string;
-  reviewerName: string; // e.g., "President Name" or "FAFICS Secretary"
+  reviewerName: string; // e.g. "President of AFICS Geneva"
   reviewerNotes: string;
   resumeUrl: string; // direct single-use edit link to /apply/resume/[token]
 }): { subject: string; html: string } {

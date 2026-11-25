@@ -12,6 +12,7 @@ export interface ApplicationSummary {
   email: string;
   associationName: string;
   associationCountry: string;
+  presidentEmail: string;
   status: ApplicationStatus;
   submittedAt: string | null;
   endorsedAt: string | null;

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { formatDisplayDateTime } from '../../common/utils/display-date';
 import * as nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { submissionConfirmationTemplate } from './templates/submission-confirmation.template';
@@ -9,7 +10,6 @@ import { presidentLinkExpiredTemplate } from './templates/president-link-expired
 import { presidentReminderTemplate } from './templates/president-reminder.template';
 import { changesRequestedTemplate } from './templates/changes-requested.template';
 import { endorsedTemplate } from './templates/endorsed.template';
-import { secretaryReviewPendingTemplate } from './templates/secretary-review-pending.template';
 import { approvedTemplate } from './templates/approved.template';
 import { rejectedTemplate } from './templates/rejected.template';
 import { renewalReminderTemplate } from './templates/renewal-reminder.template';
@@ -17,6 +17,7 @@ import { expiredTemplate } from './templates/expired.template';
 import { applicantEditLinkTemplate } from './templates/applicant-edit-link.template';
 import { applicantViewLinkTemplate } from './templates/applicant-view-link.template';
 import { applicantReminderNoticeTemplate } from './templates/applicant-reminder-notice.template';
+import { removedFromPoolTemplate } from './templates/removed-from-pool.template';
 import { draftSavedTemplate } from './templates/draft-saved.template';
 import { passwordResetTemplate } from './templates/password-reset.template';
 import { passwordChangedTemplate } from './templates/password-changed.template';
@@ -189,16 +190,10 @@ export class MailService {
   async sendChangesRequested(applicationId: string, resumeUrl: string): Promise<{ messageId: string }> {
     const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
     
-    // Determine the reviewer name based on who left the most recent notes, or status context
-    let reviewerName = 'FAFICS Secretary';
+    // Applications are returned by the President (presidentNotes). Older records
+    // may instead carry an officer's notes, which are signed as from FAFICS.
+    let reviewerName = 'FAFICS';
     let notes = app.secretaryNotes || '';
-
-    // If it was returned by president (status changed to changes_requested from submitted)
-    // Actually in Phase 2 it's mostly President. For now we use President or Secretary depending on notes presence.
-    // Let's assume if it has presidentNotes, we use that for the template if it's currently at president stage.
-    // For simplicity, we just use the most recently updated notes. In EndorsementModule, presidentNotes are updated.
-    
-    // Better logic: if president returned it, presidentNotes will be present and secretary hasn't seen it yet.
     if (app.presidentNotes && !app.secretaryNotes) {
       reviewerName = `President of ${app.associationName}`;
       notes = app.presidentNotes;
@@ -229,19 +224,6 @@ export class MailService {
       presidentName,
     });
     return this.sendEmail(app.email, subject, html);
-  }
-
-  async sendSecretaryReviewPending(applicationId: string): Promise<{ messageId: string }> {
-    const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
-    const { subject, html } = secretaryReviewPendingTemplate({
-      referenceNumber: app.referenceNumber!,
-      applicantName: `${app.firstName} ${app.lastName}`,
-      associationName: app.associationName,
-      applicationId: app.id,
-      webBaseUrl: this.getWebBaseUrl(),
-    });
-    const secEmail = this.configService.get<string>('mail.secretaryEmail', 'secretary@fafics.org');
-    return this.sendEmail(secEmail, subject, html);
   }
 
   async sendApproved(applicationId: string): Promise<{ messageId: string }> {
@@ -285,12 +267,22 @@ export class MailService {
     return this.sendEmail(app.email, subject, html);
   }
 
-  async sendRenewalReminder(applicationId: string, daysLeft: 90 | 30): Promise<{ messageId: string }> {
+  async sendRenewalReminder(applicationId: string, daysLeft: number): Promise<{ messageId: string }> {
     const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
     const { subject, html } = renewalReminderTemplate({
       applicantName: `${app.firstName} ${app.lastName}`,
       daysLeft,
       expiryDate: app.expiresAt!,
+      webBaseUrl: this.getWebBaseUrl(),
+    });
+    return this.sendEmail(app.email, subject, html);
+  }
+
+  async sendRemovedFromPool(applicationId: string, reason?: string): Promise<{ messageId: string }> {
+    const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
+    const { subject, html } = removedFromPoolTemplate({
+      applicantName: `${app.firstName} ${app.lastName}`,
+      reason: reason?.trim() || undefined,
       webBaseUrl: this.getWebBaseUrl(),
     });
     return this.sendEmail(app.email, subject, html);
@@ -345,7 +337,7 @@ export class MailService {
   }): Promise<{ messageId: string }> {
     const { subject, html } = passwordChangedTemplate({
       recipientName: params.recipientName,
-      changedAt: params.changedAt.toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
+      changedAt: formatDisplayDateTime(params.changedAt),
       loginUrl: `${this.getWebBaseUrl()}/admin/login`,
     });
     return this.sendEmail(params.to, subject, html);

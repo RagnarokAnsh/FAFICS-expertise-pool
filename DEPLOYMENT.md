@@ -285,7 +285,6 @@ API_BASE_URL=https://experts.fafics.org
 WEB_BASE_URL=https://experts.fafics.org
 
 FROM_EMAIL="FAFICS Expertise Pool <fafics.experts@gmail.com>"
-SECRETARY_EMAIL=secretary@fafics.org
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -441,7 +440,7 @@ NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 Both processes must restart automatically after a crash or a reboot. systemd handles this and gives you log integration for free.
 
-The nightly maintenance job — expiring profiles, reissuing lapsed president links, sending renewal reminders — runs on a timer inside the API process at 02:00 UTC. **If the API is not running at that moment, that day's maintenance does not happen.** Keeping it under a supervisor is therefore functionally important, not just convenient.
+The nightly maintenance job — expiring profiles (the member is emailed, then the profile and its data are deleted; they can apply again), reissuing lapsed president links, sending reminders to Presidents and renewal reminders 90 and 30 days before expiry — runs on a timer inside the API process at 02:00 UTC. **If the API is not running at that moment, that day's maintenance does not happen.** Keeping it under a supervisor is therefore functionally important, not just convenient.
 
 ### 8.1 API service
 
@@ -682,7 +681,6 @@ Work through this list on the live URL before handing the system over.
 
 - [ ] The seeded administrator password has been changed
 - [ ] A backup has been taken and a restore has been tested
-- [ ] `SECRETARY_EMAIL` points at a mailbox someone actually reads
 
 If officer login appears to succeed and then immediately returns to the login page, the session cookie is being rejected. See [Troubleshooting](#16-troubleshooting).
 
@@ -1026,7 +1024,7 @@ Set on the **server**, in `/opt/fafics/app/.env`:
 | `API_BASE_URL` | | `https://experts.fafics.org` |
 | `WEB_BASE_URL` | Yes | `https://experts.fafics.org` — CORS origin and email link base |
 | `FROM_EMAIL` | Yes | The authenticated Gmail account or a verified alias |
-| `SECRETARY_EMAIL` | Yes | Mailbox for Secretariat notifications |
+| `SECRETARY_EMAIL` | No | No longer used (there is no Secretary review step); safe to leave unset |
 | `SMTP_HOST` | Yes | `smtp.gmail.com` |
 | `SMTP_PORT` | Yes | `587` |
 | `SMTP_USER` | Yes | Gmail account |

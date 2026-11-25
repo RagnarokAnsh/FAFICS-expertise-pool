@@ -25,7 +25,7 @@ export const passwordChangedTemplate = ({
     </div>
 
     <div style="background-color: #fef3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 6px;">
-      <p style="margin: 0;"><strong>Did not make this change?</strong> Contact the FAFICS secretariat at
+      <p style="margin: 0;"><strong>Did not make this change?</strong> Contact FAFICS at
       <a href="mailto:secretary@fafics.org" style="color: #856404;">secretary@fafics.org</a> immediately.</p>
     </div>
     `,

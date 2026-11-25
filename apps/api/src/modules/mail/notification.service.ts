@@ -27,7 +27,6 @@ export class NotificationService {
   async sendEmail(
     notificationType: NotificationType,
     applicationId: string,
-    daysLeft?: 90 | 30,
   ): Promise<boolean> {
     const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
     if (!application) {
@@ -66,9 +65,6 @@ export class NotificationService {
         case NotificationType.ENDORSED:
           result = await this.mailService.sendEndorsed(applicationId);
           break;
-        case NotificationType.SECRETARY_REVIEW_PENDING:
-          result = await this.mailService.sendSecretaryReviewPending(applicationId);
-          break;
         case NotificationType.APPROVED:
           result = await this.mailService.sendApproved(applicationId);
           break;
@@ -79,10 +75,14 @@ export class NotificationService {
           result = await this.mailService.sendExpired(applicationId);
           break;
         case NotificationType.RENEWAL_REMINDER_90D:
-        case NotificationType.RENEWAL_REMINDER_30D:
-          if (!daysLeft) throw new Error('daysLeft required for renewal reminders');
-          result = await this.mailService.sendRenewalReminder(applicationId, daysLeft);
+        case NotificationType.RENEWAL_REMINDER_30D: {
+          // Always state the real number of days left (an officer may send
+          // one at any point, and a retry can happen days later).
+          if (!application.expiresAt) throw new Error('Application has no expiry date');
+          const left = Math.max(0, Math.ceil((application.expiresAt.getTime() - Date.now()) / 86_400_000));
+          result = await this.mailService.sendRenewalReminder(applicationId, left);
           break;
+        }
         default:
           throw new Error(`Unsupported notification type: ${notificationType}`);
       }
@@ -564,12 +564,6 @@ export class NotificationService {
       case NotificationType.PRESIDENT_REMINDER_APPLICANT_NOTICE:
         await this.sendApplicantReminderNotice(log.applicationId);
         break;
-      case NotificationType.RENEWAL_REMINDER_90D:
-        await this.sendEmail(type, log.applicationId, 90);
-        break;
-      case NotificationType.RENEWAL_REMINDER_30D:
-        await this.sendEmail(type, log.applicationId, 30);
-        break;
       default:
         await this.sendEmail(type, log.applicationId);
     }
@@ -582,6 +576,11 @@ export class NotificationService {
     return { id: newLog?.id ?? logId };
   }
 
+  /**
+   * The email log for officers. With `failedOnly`, lists only failures that
+   * still need attention: a failure followed by a successful send of the same
+   * email (same application, type and recipient) is left out.
+   */
   async listNotifications(filters: {
     applicationId?: string;
     failedOnly?: boolean;
@@ -589,16 +588,41 @@ export class NotificationService {
     limit?: number;
   }) {
     const { applicationId, failedOnly, page = 1, limit = 50 } = filters;
-    const where: any = {};
-    if (applicationId) where.applicationId = applicationId;
-    if (failedOnly) where.failedAt = { not: null };
+    const include = {
+      application: { select: { id: true, referenceNumber: true, firstName: true, lastName: true } },
+    };
 
+    if (failedOnly) {
+      const failures = await this.prisma.notificationLog.findMany({
+        where: { failedAt: { not: null }, ...(applicationId ? { applicationId } : {}) },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+        include,
+      });
+      const open: typeof failures = [];
+      for (const f of failures) {
+        const resolved = await this.prisma.notificationLog.count({
+          where: {
+            sentAt: { not: null },
+            notificationType: f.notificationType,
+            recipientEmail: f.recipientEmail,
+            applicationId: f.applicationId,
+            createdAt: { gt: f.createdAt },
+          },
+        });
+        if (!resolved) open.push(f);
+      }
+      return { data: open.slice((page - 1) * limit, page * limit), total: open.length, page, limit };
+    }
+
+    const where = applicationId ? { applicationId } : {};
     const [data, total] = await Promise.all([
       this.prisma.notificationLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
+        include,
       }),
       this.prisma.notificationLog.count({ where }),
     ]);

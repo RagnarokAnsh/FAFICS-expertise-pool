@@ -1,4 +1,5 @@
 import { buildEmailHtml } from './base.template';
+import { formatDisplayDate } from '../../../common/utils/display-date';
 
 export function approvedTemplate(params: {
   applicantName: string;
@@ -8,7 +9,7 @@ export function approvedTemplate(params: {
   preferredCommittees?: string[];
 }): { subject: string; html: string } {
   const subject = `Congratulations — You have been added to the FAFICS Expertise Pool`;
-  const formattedDate = params.expiryDate.toLocaleDateString('en-GB');
+  const formattedDate = formatDisplayDate(params.expiryDate);
 
   const expertList = params.expertAreas.map(area => `<li>${area}</li>`).join('');
   const preferredList = params.preferredAreas.map(area => `<li>${area}</li>`).join('');

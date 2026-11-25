@@ -29,6 +29,8 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ListApplicationsDto } from './dto/list-applications.dto';
 import { ApproveDto } from './dto/approve.dto';
 import { RejectDto } from './dto/reject.dto';
+import { RemoveFromPoolDto } from './dto/remove-from-pool.dto';
+import { ExportRosterDto } from './dto/export-roster.dto';
 import { RequestChangesDto } from './dto/request-changes.dto';
 import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -106,6 +108,21 @@ export class AdminController {
   ) {
     await this.adminService.approve(id, dto, actorEmail);
     return { message: 'Application approved successfully' };
+  }
+
+  @Post('applications/:id/remove-from-pool')
+  @Roles('secretary', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove an approved profile from the pool (deletes its data)' })
+  @ApiParam({ name: 'id', description: 'Application UUID' })
+  @ApiResponse({ status: 200, description: 'Profile removed' })
+  async removeFromPool(
+    @Param('id') id: string,
+    @Body() dto: RemoveFromPoolDto,
+    @CurrentUser('email') actorEmail: string,
+  ) {
+    const { referenceNumber } = await this.adminService.removeFromPool(id, dto, actorEmail);
+    return { message: `${referenceNumber ?? 'The profile'} was removed from the Expertise Pool.` };
   }
 
   @Patch('applications/:id/reject')
@@ -191,40 +208,40 @@ export class AdminController {
 
   @Get('export/roster')
   @Roles('secretary', 'admin')
-  @ApiOperation({ summary: 'Download full Expertise Pool as Excel file' })
+  @ApiOperation({ summary: 'Download the whole Expertise Pool as an Excel file' })
   @ApiResponse({ status: 200, description: 'Excel file download' })
   async exportRoster(@Res() res: Response) {
     const buffer = await this.exportService.generateRosterExcel();
-    const date = new Date().toISOString().split('T')[0];
+    this.sendExcel(res, buffer, `FAFICS_Expertise_Pool_${this.today()}.xlsx`);
+  }
 
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="fafics-expertise-pool-${date}.xlsx"`,
-    );
-    res.send(buffer);
+  @Post('export/roster')
+  @Roles('secretary', 'admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Download selected Expertise Pool profiles as an Excel file' })
+  @ApiResponse({ status: 200, description: 'Excel file download' })
+  async exportRosterSelection(@Body() dto: ExportRosterDto, @Res() res: Response) {
+    const buffer = await this.exportService.generateRosterExcel(dto.ids);
+    this.sendExcel(res, buffer, `FAFICS_Expertise_Pool_${this.today()}.xlsx`);
   }
 
   @Get('export/application/:id')
   @Roles('secretary', 'admin')
-  @ApiOperation({ summary: 'Download single application as Excel file' })
+  @ApiOperation({ summary: 'Download one application as an Excel file' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Excel file download' })
   async exportApplication(@Param('id') id: string, @Res() res: Response) {
-    const buffer = await this.exportService.generateSingleApplicationExcel(id);
-    const date = new Date().toISOString().split('T')[0];
+    const { buffer, referenceNumber } = await this.exportService.generateSingleApplicationExcel(id);
+    this.sendExcel(res, buffer, `FAFICS_Profile_${referenceNumber ?? 'Draft'}_${this.today()}.xlsx`);
+  }
 
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="fafics-application-${id.slice(0, 8)}-${date}.xlsx"`,
-    );
+  private today(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  private sendExcel(res: Response, buffer: Buffer, filename: string): void {
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
   }
 

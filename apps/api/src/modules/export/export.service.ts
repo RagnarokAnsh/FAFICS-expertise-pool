@@ -1,16 +1,54 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
-import { format } from 'date-fns';
-import { formatDuration } from '../../common/utils/duration.util';
+import { PrismaService } from '../../prisma/prisma.service';
 
-/** Mirrors the proficiency dropdown labels in Step 2 of the application form. */
+/** Labels the applicant saw in the form. */
 const PROFICIENCY_LABELS: Record<string, string> = {
   mother_tongue: 'Mother tongue',
   proficient: 'Proficient',
-  working_level: 'Working-level',
+  working_level: 'Working level',
   basic: 'Basic',
 };
+const LEVEL_LABELS: Record<string, string> = { average: 'Average', advanced: 'Advanced', expert: 'Expert' };
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  submitted: 'Awaiting President',
+  changes_requested: 'Returned for changes',
+  endorsed: 'Endorsed',
+  under_review: 'Under review',
+  approved: 'Active in pool',
+  rejected: 'Rejected',
+  expired: 'Expired',
+};
+
+/** Excel display format matching the app and emails: 22 Nov 2026. */
+const DATE_FORMAT = 'd mmm yyyy';
+const DATETIME_FORMAT = 'd mmm yyyy hh:mm';
+/** Durations are stored in years; 99 is the "30+ years" choice. */
+const YEARS_30_PLUS = 99;
+
+const INCLUDE = {
+  educations: { orderBy: { sortOrder: 'asc' } },
+  languages: { orderBy: { sortOrder: 'asc' } },
+  unExperiences: { orderBy: { sortOrder: 'asc' } },
+  nonUnExperiences: { orderBy: { sortOrder: 'asc' } },
+  faficsExperiences: { orderBy: { sortOrder: 'asc' } },
+  localExperiences: { orderBy: { sortOrder: 'asc' } },
+  expertise: { orderBy: { sortOrder: 'asc' } },
+} satisfies Prisma.ApplicationInclude;
+
+type FullApplication = Prisma.ApplicationGetPayload<{ include: typeof INCLUDE }>;
+type CellValue = string | number | Date | null;
+
+/** How a column is shown: plain text, a date, a long wrapped text, or years. */
+interface Column {
+  header: string;
+  width: number;
+  kind?: 'date' | 'datetime' | 'wrap' | 'years';
+}
+
+const hasText = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
 
 @Injectable()
 export class ExportService {
@@ -19,565 +57,440 @@ export class ExportService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Generates the full FAFICS Expertise Pool data as an Excel workbook.
+   * The Expertise Pool (approved profiles) as an Excel workbook.
    *
-   * Sheet 1 ("Members") holds one row per approved application with every
-   * scalar field from the application form. The one-to-many sections
-   * (education, the four experience types, languages, expertise) each get
-   * their own sheet, keyed by Reference No + Name so rows can be filtered or
-   * pivoted back to a member. Only approved applications are included; the
-   * consent fields and the audit trail are deliberately excluded.
+   * Every sheet is a real Excel table: header filters, sorting, banded rows
+   * that stay correct after sorting, frozen header, no merged cells. Dates
+   * are real dates (sortable, filterable by year/month) shown as 22 Nov 2026.
+   * Only filled-in information is listed — no empty rows or empty sheets.
+   *
+   * `ids` limits the export to those profiles (e.g. the filtered list on the
+   * Expertise Pool page); without it, the whole pool is exported.
    */
-  async generateRosterExcel(): Promise<Buffer> {
+  async generateRosterExcel(ids?: string[]): Promise<Buffer> {
     const apps = await this.prisma.application.findMany({
-      where: { status: 'approved' },
-      include: {
-        educations: { orderBy: { sortOrder: 'asc' } },
-        languages: { orderBy: { sortOrder: 'asc' } },
-        unExperiences: { orderBy: { sortOrder: 'asc' } },
-        nonUnExperiences: { orderBy: { sortOrder: 'asc' } },
-        faficsExperiences: { orderBy: { sortOrder: 'asc' } },
-        localExperiences: { orderBy: { sortOrder: 'asc' } },
-        expertise: { orderBy: { sortOrder: 'asc' } },
-      },
-      orderBy: { referenceNumber: 'asc' },
+      where: { status: 'approved', ...(ids ? { id: { in: ids } } : {}) },
+      include: INCLUDE,
     });
+    apps.sort(
+      (a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName),
+    );
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'FAFICS Expertise Pool';
-    workbook.created = new Date();
+    const workbook = this.newWorkbook('FAFICS Expertise Pool');
+    const key = (app: FullApplication): CellValue[] => [app.referenceNumber, this.fullName(app)];
 
-    const today = format(new Date(), 'dd/MM/yyyy');
-    // Reference No + member name lead every child sheet so a row can always be
-    // traced back to the Members sheet.
-    const key = (app: (typeof apps)[number]) => [
-      app.referenceNumber ?? '',
-      `${app.firstName} ${app.lastName}`,
-    ];
-    const areaName = this.areaName;
-
-    // ── Sheet 1: Members (one row per person) ─────────────────────────
-    this.buildSheet(
+    // ── Members: one row per person, the columns people search on ────────
+    this.addTableSheet(
       workbook,
       'Members',
-      `FAFICS Expertise Pool — Active Members — Generated: ${today}`,
       [
-        'Reference No', 'UID', 'First Name', 'Middle Name', 'Last Name',
-        'Date of Birth', 'Gender', 'Nationality', 'Second Nationality',
-        'Email', 'Phone', 'WhatsApp', 'Separation Date',
-        'Association', 'Association Country', 'Association General Email',
-        'President Email', 'President Phone',
-        'Associate Member Name', 'Associate Member Country',
-        'Core Competencies', 'Preferred Committees', 'Preference Rationale',
-        'UN Experience Summary', 'Non-UN Experience Summary',
-        'FAFICS Experience Summary', 'Local Experience Summary',
-        'Languages', 'Preferred Areas', 'Expert-Level Areas',
-        'Submitted Date', 'Endorsed Date', 'Approved Date', 'Expiry Date',
+        { header: 'Reference No', width: 13 },
+        { header: 'Name', width: 26 },
+        { header: 'Email', width: 32 },
+        { header: 'Phone', width: 19 },
+        { header: 'Nationality', width: 16 },
+        { header: 'Gender', width: 10 },
+        { header: 'Association', width: 24 },
+        { header: 'Association Country', width: 19 },
+        { header: 'Languages', width: 36, kind: 'wrap' },
+        { header: 'Expert Areas', width: 40, kind: 'wrap' },
+        { header: 'Advanced Areas', width: 40, kind: 'wrap' },
+        { header: 'Preferred Areas', width: 40, kind: 'wrap' },
+        { header: 'Core Competencies', width: 40, kind: 'wrap' },
+        { header: 'Preferred Committees', width: 40, kind: 'wrap' },
+        { header: 'Approved', width: 13, kind: 'date' },
+        { header: 'Expires', width: 13, kind: 'date' },
       ],
       apps.map((app) => [
-        app.referenceNumber ?? '',
-        app.uidNumber ?? '',
-        app.firstName,
-        app.middleName ?? '',
-        app.lastName,
-        this.formatDate(app.dateOfBirth),
-        app.gender,
-        app.nationality,
-        app.secondNationality ?? '',
+        ...key(app),
         app.email,
         app.phone,
-        app.whatsapp ?? '',
-        this.formatDate(app.separationDate),
+        app.nationality,
+        app.gender,
         app.associationName,
         app.associationCountry,
-        app.associationGeneralEmail ?? '',
+        this.list(app.languages.filter((l) => hasText(l.language)).map((l) => `${l.language} (${this.proficiency(l.proficiency)})`)),
+        this.list(app.expertise.filter((e) => e.expertiseLevel === 'expert').map(this.areaName)),
+        this.list(app.expertise.filter((e) => e.expertiseLevel === 'advanced').map(this.areaName)),
+        this.list(app.expertise.filter((e) => e.isPreferred).map(this.areaName)),
+        this.list(app.competencies ?? []),
+        this.list(this.withOther(app.preferredCommittees ?? [], app.preferredCommitteesOther)),
+        app.approvedAt,
+        app.expiresAt,
+      ]),
+      'No profiles are active in the Expertise Pool.',
+    );
+
+    // ── Details: the remaining personal and association fields ───────────
+    this.addTableSheet(
+      workbook,
+      'Details',
+      [
+        { header: 'Reference No', width: 13 },
+        { header: 'Name', width: 26 },
+        { header: 'Date of Birth', width: 13, kind: 'date' },
+        { header: 'Second Nationality', width: 18 },
+        { header: 'WhatsApp', width: 19 },
+        { header: 'Separation Date', width: 15, kind: 'date' },
+        { header: 'Association Email', width: 30 },
+        { header: 'President Email', width: 30 },
+        { header: 'President Phone', width: 19 },
+        { header: 'Other Association Country', width: 22 },
+        { header: 'Submitted', width: 13, kind: 'date' },
+        { header: 'UID', width: 8 },
+      ],
+      apps.map((app) => [
+        ...key(app),
+        app.dateOfBirth,
+        app.secondNationality,
+        app.whatsapp,
+        app.separationDate,
+        app.associationGeneralEmail,
         app.presidentEmail,
         app.presidentPhone,
-        app.associateMemberName ?? '',
-        app.associateMemberCountry ?? '',
-        (app.competencies ?? []).join('; '),
-        this.withOther(app.preferredCommittees ?? [], app.preferredCommitteesOther).join('; '),
-        app.positionPreferenceRationale ?? '',
-        app.unExperienceSummary ?? '',
-        app.nonUnExperienceSummary ?? '',
-        app.faficsExperienceSummary ?? '',
-        app.localExperienceSummary ?? '',
-        app.languages.map((l) => `${l.language} (${this.proficiencyLabel(l.proficiency)})`).join('; '),
-        app.expertise.filter((e) => e.isPreferred).map(areaName).join('; '),
-        app.expertise.filter((e) => e.expertiseLevel === 'expert').map(areaName).join('; '),
-        this.formatDate(app.submittedAt),
-        this.formatDate(app.endorsedAt),
-        this.formatDate(app.approvedAt),
-        this.formatDate(app.expiresAt),
+        app.associateMemberCountry,
+        app.submittedAt,
+        app.uidNumber,
       ]),
     );
 
-    // ── Sheet 2: Education ────────────────────────────────────────────
-    this.buildSheet(
+    // ── Statements: the long written answers, wrapped ────────────────────
+    this.addTableSheet(
       workbook,
-      'Education',
-      'Education',
-      ['Reference No', 'Member', 'Degree', 'Institution'],
-      apps.flatMap((app) =>
-        app.educations.map((e) => [...key(app), e.degreeName, e.institution]),
-      ),
+      'Statements',
+      [
+        { header: 'Reference No', width: 13 },
+        { header: 'Name', width: 26 },
+        { header: 'UN Experience', width: 50, kind: 'wrap' },
+        { header: 'Non-UN Experience', width: 50, kind: 'wrap' },
+        { header: 'FAFICS Experience', width: 50, kind: 'wrap' },
+        { header: 'Local Association Experience', width: 50, kind: 'wrap' },
+        { header: 'Why This Position / Committee', width: 50, kind: 'wrap' },
+      ],
+      apps
+        .map((app) => [
+          ...key(app),
+          app.unExperienceSummary,
+          app.nonUnExperienceSummary,
+          app.faficsExperienceSummary,
+          app.localExperienceSummary,
+          app.positionPreferenceRationale,
+        ])
+        .filter((row) => row.slice(2).some(hasText)),
     );
 
-    // ── Sheet 3: UN Experience ────────────────────────────────────────
-    this.buildSheet(
-      workbook,
-      'UN Experience',
-      'UN Experience',
-      ['Reference No', 'Member', 'Agency', 'Position', 'Grade', 'Area of Expertise', 'Duration'],
-      apps.flatMap((app) =>
-        app.unExperiences.map((e) => [
-          ...key(app), e.agency, e.positionTitle,
-          e.grade ?? '', e.areaOfExpertise ?? '', this.formatYears(e.durationYears),
-        ]),
-      ),
-    );
-
-    // ── Sheet 4: Non-UN Experience ────────────────────────────────────
-    this.buildSheet(
-      workbook,
-      'Non-UN Experience',
-      'Non-UN Experience',
-      ['Reference No', 'Member', 'Organization', 'Position', 'Area of Expertise', 'Duration'],
-      apps.flatMap((app) =>
-        app.nonUnExperiences.map((e) => [
-          ...key(app), e.organization, e.positionTitle,
-          e.areaOfExpertise ?? '', this.formatYears(e.durationYears),
-        ]),
-      ),
-    );
-
-    // ── Sheet 5: FAFICS Experience ────────────────────────────────────
-    this.buildSheet(
-      workbook,
-      'FAFICS Experience',
-      'FAFICS Experience',
-      ['Reference No', 'Member', 'Position Held', 'Area of Contribution', 'Duration'],
-      apps.flatMap((app) =>
-        app.faficsExperiences.map((e) => [
-          ...key(app), e.positionHeld,
-          this.withOther((e.areaOfContribution ?? '').split('; '), e.areaOfContributionOther).join('; '),
-          this.formatYears(e.durationYears),
-        ]),
-      ),
-    );
-
-    // ── Sheet 6: Local Experience ─────────────────────────────────────
-    this.buildSheet(
-      workbook,
-      'Local Experience',
-      'Local Association Experience',
-      ['Reference No', 'Member', 'Position Held', 'Area of Contribution', 'Duration'],
-      apps.flatMap((app) =>
-        app.localExperiences.map((e) => [
-          ...key(app), e.positionHeld,
-          e.areaOfContribution ?? '', this.formatYears(e.durationYears),
-        ]),
-      ),
-    );
-
-    // ── Sheet 7: Languages ────────────────────────────────────────────
-    this.buildSheet(
-      workbook,
-      'Languages',
-      'Languages',
-      ['Reference No', 'Member', 'Language', 'Proficiency'],
-      apps.flatMap((app) =>
-        app.languages.map((l) => [
-          ...key(app), l.language, this.proficiencyLabel(l.proficiency),
-        ]),
-      ),
-    );
-
-    // ── Sheet 8: Expertise assessment ─────────────────────────────────
-    this.buildSheet(
-      workbook,
-      'Expertise',
-      'Expertise Assessment',
-      ['Reference No', 'Member', 'Area', 'Level', 'Preferred', 'Custom', 'Description'],
-      apps.flatMap((app) =>
-        app.expertise.map((e) => [
-          ...key(app), areaName(e), e.expertiseLevel ?? '',
-          e.isPreferred ? 'Yes' : 'No', e.isCustom ? 'Yes' : 'No', e.otherDescription ?? '',
-        ]),
-      ),
-    );
+    this.addChildSheets(workbook, apps, true);
 
     const buffer = await workbook.xlsx.writeBuffer();
-    this.logger.log(`Expertise Pool Excel generated: ${apps.length} members across 8 sheets`);
+    this.logger.log(`Expertise Pool Excel generated: ${apps.length} members`);
     return Buffer.from(buffer);
   }
 
-  /**
-   * Generates an Excel file for a single application's full profile.
-   */
-  async generateSingleApplicationExcel(id: string): Promise<Buffer> {
+  /** One application's full profile, with its history, for the officer view. */
+  async generateSingleApplicationExcel(id: string): Promise<{ buffer: Buffer; referenceNumber: string | null }> {
     const app = await this.prisma.application.findUnique({
       where: { id },
-      include: {
-        educations: { orderBy: { sortOrder: 'asc' } },
-        languages: { orderBy: { sortOrder: 'asc' } },
-        unExperiences: { orderBy: { sortOrder: 'asc' } },
-        nonUnExperiences: { orderBy: { sortOrder: 'asc' } },
-        faficsExperiences: { orderBy: { sortOrder: 'asc' } },
-        localExperiences: { orderBy: { sortOrder: 'asc' } },
-        expertise: { orderBy: { sortOrder: 'asc' } },
-        auditLogs: { orderBy: { createdAt: 'asc' } },
-      },
+      include: { ...INCLUDE, auditLogs: { orderBy: { createdAt: 'asc' } } },
     });
-
     if (!app) {
       throw new NotFoundException(`Application ${id} not found`);
     }
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'FAFICS Expertise Pool';
-    workbook.created = new Date();
+    const workbook = this.newWorkbook(`FAFICS Expertise Pool — ${app.referenceNumber ?? 'Draft'}`);
 
-    // ── Personal Info Sheet ───────────────────────────────────────────
-    const personalSheet = workbook.addWorksheet('Personal Information');
-
-    // Title row
-    personalSheet.mergeCells('A1:D1');
-    const pTitleCell = personalSheet.getCell('A1');
-    pTitleCell.value = `FAFICS Expertise Pool — Application: ${app.referenceNumber || 'DRAFT'}`;
-    pTitleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC8973A' } };
-    pTitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2240' } };
-    pTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    personalSheet.getRow(1).height = 36;
-
-    // Field headers styling
-    const fieldHeaderStyle: Partial<ExcelJS.Style> = {
-      font: { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2240' } },
-      alignment: { horizontal: 'left', vertical: 'middle' },
-    };
-
-    const fieldValueStyle: Partial<ExcelJS.Style> = {
-      font: { name: 'Calibri', size: 11 },
-      alignment: { horizontal: 'left', vertical: 'middle', wrapText: true },
-    };
-
-    // Personal fields
-    const personalFields = [
-      ['Status', app.status],
-      ['Reference Number', app.referenceNumber || 'N/A'],
-      ['UID Number', app.uidNumber || 'N/A'],
-      ['First Name', app.firstName],
-      ['Middle Name', app.middleName || ''],
-      ['Last Name', app.lastName],
-      ['Date of Birth', this.formatDate(app.dateOfBirth)],
-      ['Nationality', app.nationality],
-      ['Second Nationality', app.secondNationality || ''],
-      ['Gender', app.gender],
-      ['Phone', app.phone],
-      ['WhatsApp', app.whatsapp || ''],
+    // ── Profile: label / value pairs ──────────────────────────────────────
+    const fields: [string, CellValue, Column['kind']?][] = [
+      ['Reference No', app.referenceNumber],
+      ['Status', STATUS_LABELS[app.status] ?? app.status],
+      ['Name', this.fullName(app)],
       ['Email', app.email],
-      ['Separation Date', this.formatDate(app.separationDate)],
+      ['Phone', app.phone],
+      ['WhatsApp', app.whatsapp],
+      ['Date of Birth', app.dateOfBirth, 'date'],
+      ['Gender', app.gender],
+      ['Nationality', app.nationality],
+      ['Second Nationality', app.secondNationality],
+      ['Separation Date', app.separationDate, 'date'],
       ['Association', app.associationName],
       ['Association Country', app.associationCountry],
-      ['Association General Email', app.associationGeneralEmail || ''],
+      ['Association Email', app.associationGeneralEmail],
       ['President Email', app.presidentEmail],
       ['President Phone', app.presidentPhone],
-      ['Associate Member Name', app.associateMemberName || ''],
-      ['Associate Member Country', app.associateMemberCountry || ''],
-      ['Submitted At', app.submittedAt ? this.formatDate(app.submittedAt) : 'N/A'],
-      ['Endorsed At', app.endorsedAt ? this.formatDate(app.endorsedAt) : 'N/A'],
-      ['Approved At', app.approvedAt ? this.formatDate(app.approvedAt) : 'N/A'],
-      ['Expires At', app.expiresAt ? this.formatDate(app.expiresAt) : 'N/A'],
-      ['Core Competencies', app.competencies?.join('; ') || ''],
-      ['Preferred Committees', [
-        ...(app.preferredCommittees ?? []).filter((c) => c !== 'Other'),
-        ...(app.preferredCommitteesOther ? [app.preferredCommitteesOther] : []),
-      ].join('; ')],
-      ['Preference Rationale', app.positionPreferenceRationale || ''],
-      ['UN Experience Summary', app.unExperienceSummary || ''],
-      ['Non-UN Experience Summary', app.nonUnExperienceSummary || ''],
-      ['FAFICS Experience Summary', app.faficsExperienceSummary || ''],
-      ['Local Experience Summary', app.localExperienceSummary || ''],
-      ['President Notes', app.presidentNotes || ''],
-      ['Secretary Notes', app.secretaryNotes || ''],
+      ['Other Association Country', app.associateMemberCountry],
+      ['Core Competencies', this.list(app.competencies ?? [])],
+      ['Preferred Committees', this.list(this.withOther(app.preferredCommittees ?? [], app.preferredCommitteesOther))],
+      ['Why This Position / Committee', app.positionPreferenceRationale],
+      ['UN Experience', app.unExperienceSummary],
+      ['Non-UN Experience', app.nonUnExperienceSummary],
+      ['FAFICS Experience', app.faficsExperienceSummary],
+      ['Local Association Experience', app.localExperienceSummary],
+      ["President's Comments", app.presidentNotes],
+      ['Officer Notes', app.secretaryNotes],
+      ['Submitted', app.submittedAt, 'date'],
+      ['Approved', app.approvedAt, 'date'],
+      ['Expires', app.expiresAt, 'date'],
+      ['UID', app.uidNumber],
     ];
-
-    personalFields.forEach(([label, value], idx) => {
-      const row = personalSheet.getRow(idx + 3);
-      const labelCell = row.getCell(1);
-      labelCell.value = label;
-      Object.assign(labelCell, { style: fieldHeaderStyle });
-
-      const valueCell = row.getCell(2);
-      valueCell.value = value;
-      Object.assign(valueCell, { style: fieldValueStyle });
-    });
-
-    personalSheet.getColumn(1).width = 22;
-    personalSheet.getColumn(2).width = 45;
-
-    // ── Education Sheet ───────────────────────────────────────────────
-    if (app.educations.length > 0) {
-      const eduSheet = workbook.addWorksheet('Education');
-      this.addSectionHeader(eduSheet, 'Education', 2);
-      const eduHeaders = ['Degree', 'Institution'];
-      this.addHeaderRow(eduSheet, 3, eduHeaders);
-      app.educations.forEach((e, idx) => {
-        eduSheet.getRow(idx + 4).values = [e.degreeName, e.institution];
-      });
-      this.autoWidthColumns(eduSheet);
+    const profile = workbook.addWorksheet('Profile');
+    profile.columns = [
+      { width: 28, style: { font: { bold: true }, alignment: { vertical: 'top' } } },
+      { width: 70, style: { alignment: { vertical: 'top', wrapText: true } } },
+    ];
+    for (const [label, value, kind] of fields.filter(([, v]) => v instanceof Date || hasText(v))) {
+      const row = profile.addRow([label, value]);
+      if (kind === 'date') row.getCell(2).numFmt = DATE_FORMAT;
+      row.getCell(2).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
     }
 
-    // ── Languages Sheet ───────────────────────────────────────────────
-    if (app.languages.length > 0) {
-      const langSheet = workbook.addWorksheet('Languages');
-      this.addSectionHeader(langSheet, 'Languages', 2);
-      this.addHeaderRow(langSheet, 3, ['Language', 'Proficiency']);
-      app.languages.forEach((l, idx) => {
-        langSheet.getRow(idx + 4).values = [l.language, this.proficiencyLabel(l.proficiency)];
-      });
-      this.autoWidthColumns(langSheet);
-    }
+    this.addChildSheets(workbook, [app], false);
 
-    // ── UN Experience Sheet ───────────────────────────────────────────
-    if (app.unExperiences.length > 0) {
-      const unSheet = workbook.addWorksheet('UN Experience');
-      this.addSectionHeader(unSheet, 'UN Experience', 5);
-      this.addHeaderRow(unSheet, 3, ['Agency', 'Position', 'Grade', 'Area of Expertise', 'Duration']);
-      app.unExperiences.forEach((e, idx) => {
-        unSheet.getRow(idx + 4).values = [
-          e.agency, e.positionTitle, e.grade || '',
-          e.areaOfExpertise || '', this.formatYears(e.durationYears),
-        ];
-      });
-      this.autoWidthColumns(unSheet);
-    }
-
-    // ── Non-UN Experience Sheet ───────────────────────────────────────
-    if (app.nonUnExperiences.length > 0) {
-      const nonUnSheet = workbook.addWorksheet('Non-UN Experience');
-      this.addSectionHeader(nonUnSheet, 'Non-UN Experience', 4);
-      this.addHeaderRow(nonUnSheet, 3, ['Organization', 'Position', 'Area of Expertise', 'Duration']);
-      app.nonUnExperiences.forEach((e, idx) => {
-        nonUnSheet.getRow(idx + 4).values = [
-          e.organization, e.positionTitle,
-          e.areaOfExpertise || '', this.formatYears(e.durationYears),
-        ];
-      });
-      this.autoWidthColumns(nonUnSheet);
-    }
-
-    // ── FAFICS Experience Sheet ───────────────────────────────────────
-    if (app.faficsExperiences.length > 0) {
-      const fxSheet = workbook.addWorksheet('FAFICS Experience');
-      this.addSectionHeader(fxSheet, 'FAFICS Experience', 3);
-      this.addHeaderRow(fxSheet, 3, ['Position Held', 'Area of Contribution', 'Duration']);
-      app.faficsExperiences.forEach((e, idx) => {
-        fxSheet.getRow(idx + 4).values = [
-          e.positionHeld,
-          this.withOther((e.areaOfContribution || '').split('; '), e.areaOfContributionOther).join('; '),
-          this.formatYears(e.durationYears),
-        ];
-      });
-      this.autoWidthColumns(fxSheet);
-    }
-
-    // ── Local Association Experience Sheet ────────────────────────────
-    if (app.localExperiences.length > 0) {
-      const localSheet = workbook.addWorksheet('Local Experience');
-      this.addSectionHeader(localSheet, 'Local Association Experience', 3);
-      this.addHeaderRow(localSheet, 3, ['Position Held', 'Area of Contribution', 'Duration']);
-      app.localExperiences.forEach((e, idx) => {
-        localSheet.getRow(idx + 4).values = [
-          e.positionHeld, e.areaOfContribution || '', this.formatYears(e.durationYears),
-        ];
-      });
-      this.autoWidthColumns(localSheet);
-    }
-
-    // ── Expertise Sheet ───────────────────────────────────────────────
-    if (app.expertise.length > 0) {
-      const expSheet = workbook.addWorksheet('Expertise');
-      this.addSectionHeader(expSheet, 'Expertise Assessment', 5);
-      this.addHeaderRow(expSheet, 3, ['Area', 'Level', 'Preferred', 'Custom', 'Description']);
-      app.expertise.forEach((e, idx) => {
-        expSheet.getRow(idx + 4).values = [
-          this.areaName(e), e.expertiseLevel || '', e.isPreferred ? 'Yes' : 'No',
-          e.isCustom ? 'Yes' : 'No', e.otherDescription || '',
-        ];
-      });
-      this.autoWidthColumns(expSheet);
-    }
-
-    // ── Audit Log Sheet ───────────────────────────────────────────────
-    if (app.auditLogs.length > 0) {
-      const auditSheet = workbook.addWorksheet('Audit Log');
-      this.addSectionHeader(auditSheet, 'Audit Trail', 5);
-      this.addHeaderRow(auditSheet, 3, ['Date', 'Action', 'Actor', 'Role', 'Status Change']);
-      app.auditLogs.forEach((log, idx) => {
-        auditSheet.getRow(idx + 4).values = [
-          this.formatDate(log.createdAt),
-          log.action,
-          log.actorEmail,
-          log.actorRole,
-          log.oldStatus && log.newStatus
-            ? `${log.oldStatus} → ${log.newStatus}`
-            : log.newStatus || '',
-        ];
-      });
-      this.autoWidthColumns(auditSheet);
-    }
+    // ── Timeline: what happened, when, by whom ("History" is reserved by Excel) ──
+    this.addTableSheet(
+      workbook,
+      'Timeline',
+      [
+        { header: 'Date', width: 18, kind: 'datetime' },
+        { header: 'Event', width: 40 },
+        { header: 'By', width: 32 },
+        { header: 'Status Change', width: 36 },
+      ],
+      app.auditLogs.map((log) => [
+        log.createdAt,
+        this.readableAction(log.action),
+        log.actorEmail,
+        log.oldStatus && log.newStatus
+          ? `${STATUS_LABELS[log.oldStatus] ?? log.oldStatus} → ${STATUS_LABELS[log.newStatus] ?? log.newStatus}`
+          : null,
+      ]),
+    );
 
     const buffer = await workbook.xlsx.writeBuffer();
     this.logger.log(`Single application Excel generated for ${app.referenceNumber || id}`);
-    return Buffer.from(buffer);
+    return { buffer: Buffer.from(buffer), referenceNumber: app.referenceNumber };
+  }
+
+  // ─── Sheets shared by both exports ─────────────────────────────────────
+
+  /**
+   * Education, experience, languages and expertise, one row per entry.
+   * `withMember` puts Reference No + Name in front (the pool export; a
+   * single profile doesn't need them). Partly-filled leftovers from drafts
+   * and unrated expertise areas are left out.
+   */
+  private addChildSheets(workbook: ExcelJS.Workbook, apps: FullApplication[], withMember: boolean): void {
+    const keyCols: Column[] = withMember
+      ? [{ header: 'Reference No', width: 13 }, { header: 'Name', width: 26 }]
+      : [];
+    const key = (app: FullApplication): CellValue[] =>
+      withMember ? [app.referenceNumber, this.fullName(app)] : [];
+
+    this.addTableSheet(
+      workbook,
+      'Education',
+      [...keyCols, { header: 'Degree', width: 40, kind: 'wrap' }, { header: 'Institution', width: 40, kind: 'wrap' }],
+      apps.flatMap((app) =>
+        app.educations
+          .filter((e) => hasText(e.degreeName) || hasText(e.institution))
+          .map((e) => [...key(app), e.degreeName, e.institution]),
+      ),
+    );
+    this.addTableSheet(
+      workbook,
+      'UN Experience',
+      [
+        ...keyCols,
+        { header: 'Agency', width: 22 },
+        { header: 'Position', width: 32, kind: 'wrap' },
+        { header: 'Grade', width: 9 },
+        { header: 'Area of Expertise', width: 30, kind: 'wrap' },
+        { header: 'Years', width: 8, kind: 'years' },
+      ],
+      apps.flatMap((app) =>
+        app.unExperiences
+          .filter((e) => hasText(e.agency) || hasText(e.positionTitle))
+          .map((e) => [...key(app), e.agency, e.positionTitle, e.grade, e.areaOfExpertise, this.years(e.durationYears)]),
+      ),
+    );
+    this.addTableSheet(
+      workbook,
+      'Non-UN Experience',
+      [
+        ...keyCols,
+        { header: 'Organization', width: 30, kind: 'wrap' },
+        { header: 'Position', width: 32, kind: 'wrap' },
+        { header: 'Area of Expertise', width: 30, kind: 'wrap' },
+        { header: 'Years', width: 8, kind: 'years' },
+      ],
+      apps.flatMap((app) =>
+        app.nonUnExperiences
+          .filter((e) => hasText(e.organization) || hasText(e.positionTitle))
+          .map((e) => [...key(app), e.organization, e.positionTitle, e.areaOfExpertise, this.years(e.durationYears)]),
+      ),
+    );
+    this.addTableSheet(
+      workbook,
+      'FAFICS Experience',
+      [
+        ...keyCols,
+        { header: 'Position Held', width: 32, kind: 'wrap' },
+        { header: 'Area of Contribution', width: 45, kind: 'wrap' },
+        { header: 'Years', width: 8, kind: 'years' },
+      ],
+      apps.flatMap((app) =>
+        app.faficsExperiences
+          .filter((e) => hasText(e.positionHeld))
+          .map((e) => [
+            ...key(app),
+            e.positionHeld,
+            this.list(this.withOther((e.areaOfContribution ?? '').split('; '), e.areaOfContributionOther)),
+            this.years(e.durationYears),
+          ]),
+      ),
+    );
+    this.addTableSheet(
+      workbook,
+      'Local Experience',
+      [
+        ...keyCols,
+        { header: 'Position Held', width: 32, kind: 'wrap' },
+        { header: 'Area of Contribution', width: 45, kind: 'wrap' },
+        { header: 'Years', width: 8, kind: 'years' },
+      ],
+      apps.flatMap((app) =>
+        app.localExperiences
+          .filter((e) => hasText(e.positionHeld))
+          .map((e) => [...key(app), e.positionHeld, e.areaOfContribution, this.years(e.durationYears)]),
+      ),
+    );
+    this.addTableSheet(
+      workbook,
+      'Languages',
+      [...keyCols, { header: 'Language', width: 20 }, { header: 'Proficiency', width: 16 }],
+      apps.flatMap((app) =>
+        app.languages
+          .filter((l) => hasText(l.language))
+          .map((l) => [...key(app), l.language, this.proficiency(l.proficiency)]),
+      ),
+    );
+    this.addTableSheet(
+      workbook,
+      'Expertise',
+      [
+        ...keyCols,
+        { header: 'Area', width: 40, kind: 'wrap' },
+        { header: 'Level', width: 11 },
+        { header: 'Preferred', width: 11 },
+      ],
+      apps.flatMap((app) =>
+        app.expertise
+          // Only areas the applicant rated or chose as preferred.
+          .filter((e) => e.expertiseLevel || e.isPreferred)
+          .map((e) => [
+            ...key(app),
+            this.areaName(e),
+            e.expertiseLevel ? LEVEL_LABELS[e.expertiseLevel] ?? e.expertiseLevel : null,
+            e.isPreferred ? 'Yes' : 'No',
+          ]),
+      ),
+    );
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────
 
-  private formatDate(value: any): string {
-    if (!value) return '';
-    const d = value instanceof Date ? value : new Date(value);
-    if (isNaN(d.getTime())) return String(value);
-    return format(d, 'dd/MM/yyyy');
+  private newWorkbook(title: string): ExcelJS.Workbook {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'FAFICS Expertise Pool';
+    workbook.title = title;
+    workbook.created = new Date();
+    return workbook;
   }
 
-  /** Enum value → the label the applicant saw in the form's dropdown. */
-  private proficiencyLabel(value: string): string {
+  /**
+   * Adds a sheet holding one Excel table. Skipped when there are no rows
+   * (no empty sheets), unless `emptyMessage` asks for a sheet saying so.
+   */
+  private addTableSheet(
+    workbook: ExcelJS.Workbook,
+    sheetName: string,
+    columns: Column[],
+    rows: CellValue[][],
+    emptyMessage?: string,
+  ): void {
+    if (rows.length === 0 && !emptyMessage) return;
+    const sheet = workbook.addWorksheet(sheetName, { views: [{ state: 'frozen', ySplit: 1 }] });
+    if (rows.length === 0) {
+      sheet.getCell('A1').value = emptyMessage;
+      sheet.getColumn(1).width = 60;
+      return;
+    }
+
+    sheet.addTable({
+      name: sheetName.replace(/[^A-Za-z]/g, ''),
+      ref: 'A1',
+      headerRow: true,
+      style: { theme: 'TableStyleMedium2', showRowStripes: true },
+      columns: columns.map((c) => ({ name: c.header, filterButton: true })),
+      rows: rows.map((row) => row.map((v) => (v === '' ? null : v))),
+    });
+
+    columns.forEach((c, index) => {
+      const column = sheet.getColumn(index + 1);
+      column.width = c.width;
+      column.eachCell((cell, rowNumber) => {
+        cell.alignment = { vertical: 'top', wrapText: c.kind === 'wrap' || rowNumber === 1 };
+        if (rowNumber === 1) return;
+        if (c.kind === 'date') cell.numFmt = DATE_FORMAT;
+        if (c.kind === 'datetime') cell.numFmt = DATETIME_FORMAT;
+        if (c.kind === 'years') {
+          cell.alignment = { vertical: 'top', horizontal: 'right' };
+          // Sorts as the largest value but reads "30+".
+          if (cell.value === YEARS_30_PLUS) cell.numFmt = '"30+"';
+        }
+      });
+    });
+    // Styled directly as well as by the table style, so the header reads the
+    // same in Excel, LibreOffice and Google Sheets.
+    sheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2240' } };
+      cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+    sheet.getRow(1).height = 30;
+    sheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '1:1' };
+  }
+
+  private fullName(app: { firstName: string; middleName: string | null; lastName: string }): string {
+    return [app.firstName, app.middleName, app.lastName].filter(hasText).join(' ');
+  }
+
+  /** "a; b; c", or null when empty so the cell stays blank. */
+  private list(values: string[]): string | null {
+    const items = values.filter(hasText);
+    return items.length ? items.join('; ') : null;
+  }
+
+  private proficiency(value: string): string {
     return PROFICIENCY_LABELS[value] ?? value;
   }
 
-  /**
-   * Custom ("Other") expertise rows carry the literal label "Other" — show what
-   * the applicant actually typed instead. Bound as a field so it can be passed
-   * straight to `.map()` without losing `this`.
-   */
-  private readonly areaName = (e: {
-    areaLabel: string;
-    isCustom: boolean;
-    otherDescription: string | null;
-  }): string => (e.isCustom && e.otherDescription ? e.otherDescription : e.areaLabel);
-
-  /** Decimal(4,1) years → display string, mapping the 99.0 sentinel to "30+ years". */
-  private formatYears(value: any): string {
-    if (value == null) return '';
-    return formatDuration(Number(value));
+  private years(value: Prisma.Decimal | number | null): number | null {
+    return value == null ? null : Number(value);
   }
 
+  /** Custom ("Other") areas show what the applicant typed. */
+  private readonly areaName = (e: { areaLabel: string; isCustom: boolean; otherDescription: string | null }): string =>
+    e.isCustom && e.otherDescription ? e.otherDescription : e.areaLabel;
 
-  /**
-   * Drops the literal "Other" placeholder from a multi-select and appends the
-   * free-text value the applicant typed in its place.
-   */
+  /** Drops the literal "Other" choice and adds the text typed in its place. */
   private withOther(values: string[], other?: string | null): string[] {
     const cleaned = values.filter((v) => v && v !== 'Other');
-    if (other) cleaned.push(other);
+    if (hasText(other)) cleaned.push(other);
     return cleaned;
   }
 
-  /**
-   * Creates a styled worksheet: merged navy/gold title on row 1, header row on
-   * row 2 (frozen + auto-filtered), data from row 3 with zebra striping.
-   */
-  private buildSheet(
-    workbook: ExcelJS.Workbook,
-    sheetName: string,
-    title: string,
-    headers: string[],
-    rows: (string | number)[][],
-  ): void {
-    const sheet = workbook.addWorksheet(sheetName);
-
-    sheet.mergeCells(1, 1, 1, headers.length);
-    const titleCell = sheet.getCell('A1');
-    titleCell.value = title;
-    titleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC8973A' } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2240' } };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    sheet.getRow(1).height = 36;
-
-    const headerRow = sheet.getRow(2);
-    headers.forEach((header, idx) => {
-      const cell = headerRow.getCell(idx + 1);
-      cell.value = header;
-      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2240' } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      cell.border = {
-        top: { style: 'thin' },
-        bottom: { style: 'thin' },
-        left: { style: 'thin' },
-        right: { style: 'thin' },
-      };
-    });
-    headerRow.height = 24;
-
-    rows.forEach((values, idx) => {
-      const dataRow = sheet.getRow(idx + 3);
-      dataRow.values = values;
-
-      for (let col = 1; col <= headers.length; col++) {
-        const cell = dataRow.getCell(col);
-        if (idx % 2 === 1) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7FA' } };
-        }
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'FFDDE3EF' } },
-          bottom: { style: 'thin', color: { argb: 'FFDDE3EF' } },
-          left: { style: 'thin', color: { argb: 'FFDDE3EF' } },
-          right: { style: 'thin', color: { argb: 'FFDDE3EF' } },
-        };
-      }
-    });
-
-    sheet.columns.forEach((column) => {
-      let maxLength = 10;
-      column.eachCell?.({ includeEmpty: true }, (cell) => {
-        const cellValue = cell.value ? String(cell.value) : '';
-        // Ignore the merged title row — it would stretch column A to the full width.
-        maxLength = Math.max(maxLength, Math.min(cellValue.length, 60));
-      });
-      column.width = Math.min(maxLength + 4, 50);
-    });
-
-    sheet.views = [{ state: 'frozen', ySplit: 2 }];
-    sheet.autoFilter = {
-      from: { row: 2, column: 1 },
-      to: { row: 2, column: headers.length },
-    };
-  }
-
-  private addSectionHeader(sheet: ExcelJS.Worksheet, title: string, colSpan: number): void {
-    sheet.mergeCells(1, 1, 1, colSpan);
-    const cell = sheet.getCell('A1');
-    cell.value = title;
-    cell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFC8973A' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2240' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    sheet.getRow(1).height = 32;
-  }
-
-  private addHeaderRow(sheet: ExcelJS.Worksheet, rowNum: number, headers: string[]): void {
-    const row = sheet.getRow(rowNum);
-    headers.forEach((header, idx) => {
-      const cell = row.getCell(idx + 1);
-      cell.value = header;
-      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2240' } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    });
-    row.height = 22;
-  }
-
-  private autoWidthColumns(sheet: ExcelJS.Worksheet): void {
-    sheet.columns.forEach((column) => {
-      let maxLength = 10;
-      column.eachCell?.({ includeEmpty: true }, (cell) => {
-        const cellValue = cell.value ? String(cell.value) : '';
-        maxLength = Math.max(maxLength, cellValue.length);
-      });
-      column.width = Math.min(maxLength + 4, 45);
-    });
+  /** "president.endorsed_and_approved" → "President endorsed and approved". */
+  private readableAction(action: string): string {
+    const text = action.replace(/[._]/g, ' ').trim();
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 }
