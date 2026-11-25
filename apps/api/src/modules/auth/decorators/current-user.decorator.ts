@@ -1,5 +1,12 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
+/** What JwtStrategy.validate() attaches to req.user. */
+export interface AuthenticatedUser {
+  userId: string;
+  email: string;
+  role: string;
+}
+
 /**
  * Extracts the authenticated user from the request object.
  * The user is attached by the JwtStrategy after token validation.

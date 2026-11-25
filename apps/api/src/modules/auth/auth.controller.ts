@@ -31,16 +31,25 @@ export const AUTH_COOKIE = 'fafics_token';
 
 /**
  * Cookie options for the auth cookie. HttpOnly keeps the JWT out of reach of
- * JavaScript (so XSS cannot steal the session). In production it is also Secure
- * and SameSite=None so it works over HTTPS when the web app and API are on
- * different sites; in dev it is SameSite=Lax over plain localhost.
+ * JavaScript (so XSS cannot steal the session); Secure in production.
+ *
+ * SameSite=Lax stops the browser attaching the cookie to POST/PATCH/DELETE
+ * requests started by another site, which is the CSRF defence for the admin
+ * API. fafics.com and api.fafics.com are the same site, so Lax still works
+ * for the dashboard. Only if the web app ever moves to a different domain
+ * than the API, set AUTH_COOKIE_SAMESITE=none (which reopens that CSRF risk).
  */
 function authCookieOptions(): CookieOptions {
   const isProd = process.env.NODE_ENV === 'production';
+  const sameSite = (process.env.AUTH_COOKIE_SAMESITE ?? 'lax').toLowerCase() as
+    | 'lax'
+    | 'strict'
+    | 'none';
   return {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
+    // SameSite=None is only accepted by browsers together with Secure.
+    secure: isProd || sameSite === 'none',
+    sameSite,
     maxAge: 8 * 60 * 60 * 1000, // 8h — matches JWT_EXPIRES_IN default
     path: '/',
   };
@@ -78,6 +87,7 @@ export class AuthController {
 
     // Audit log for successful login
     await this.auditService.log({
+      actorId: req.user.id,
       actorEmail: req.user.email,
       actorRole: req.user.role,
       action: 'user.login',
@@ -162,11 +172,12 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password updated' })
   @ApiResponse({ status: 410, description: 'Link expired or already used' })
   async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
-    const { email } = await this.authService.resetPassword(dto.token, dto.password);
+    const user = await this.authService.resetPassword(dto.token, dto.password);
 
     await this.auditService.log({
-      actorEmail: email,
-      actorRole: 'admin',
+      actorId: user.id,
+      actorEmail: user.email,
+      actorRole: user.role,
       action: 'user.password_reset',
     });
 

@@ -1,5 +1,5 @@
-import { UserRole } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import { UserRole } from '@fafics/shared';
+import { DatabaseService } from '../../database/database.service';
 
 /**
  * Permanently deletes an application: its data, its history and its email
@@ -11,12 +11,12 @@ import { PrismaService } from '../../prisma/prisma.service';
  * Returns null when the application no longer exists.
  */
 export async function deleteApplicationAndData(
-  prisma: PrismaService,
+  prisma: DatabaseService,
   id: string,
   record: {
     action: string;
     actorEmail: string;
-    actorRole: UserRole;
+    actorRole: UserRole | `${UserRole}`;
     actorId?: string;
     metadata?: Record<string, string | number | boolean | null>;
   },
@@ -27,11 +27,11 @@ export async function deleteApplicationAndData(
   });
   if (!app) return null;
 
-  await prisma.$transaction([
-    prisma.auditLog.deleteMany({ where: { applicationId: id } }),
-    prisma.notificationLog.deleteMany({ where: { applicationId: id } }),
-    prisma.application.delete({ where: { id } }),
-    prisma.auditLog.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.auditLog.deleteMany({ where: { applicationId: id } });
+    await tx.notificationLog.deleteMany({ where: { applicationId: id } });
+    await tx.application.delete({ where: { id } });
+    await tx.auditLog.create({
       data: {
         actorEmail: record.actorEmail,
         actorRole: record.actorRole,
@@ -44,8 +44,8 @@ export async function deleteApplicationAndData(
           ...(record.metadata ?? {}),
         },
       },
-    }),
-  ]);
+    });
+  });
 
   await prisma.user.deleteMany({
     where: { id: app.userId, role: 'member', applications: { none: {} } },

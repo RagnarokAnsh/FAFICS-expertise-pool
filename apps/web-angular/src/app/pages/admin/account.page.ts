@@ -9,6 +9,7 @@ import {
 } from '../../components/admin/password-field';
 import { ToastService } from '../../core/toast.service';
 import { authApi } from '../../lib/api/admin.api';
+import { roleLabel } from '../../lib/auth/roles';
 
 /** app/admin/account/page.tsx */
 @Component({
@@ -27,7 +28,7 @@ import { authApi } from '../../lib/api/admin.api';
           <dt class="text-text-light">Email</dt>
           <dd class="font-medium text-navy">{{ me.data()?.email ?? '—' }}</dd>
           <dt class="text-text-light">Role</dt>
-          <dd class="capitalize text-text-mid">{{ me.data()?.role ?? '—' }}</dd>
+          <dd class="text-text-mid">{{ me.data()?.role ? roleLabel(me.data()?.role) : '—' }}</dd>
         </dl>
       </div>
 
@@ -105,6 +106,7 @@ import { authApi } from '../../lib/api/admin.api';
   host: { class: 'contents' },
 })
 export class AccountPage {
+  protected readonly roleLabel = roleLabel;
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 

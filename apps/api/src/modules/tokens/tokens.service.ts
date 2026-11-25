@@ -1,12 +1,36 @@
 import { Injectable, NotFoundException, GoneException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DatabaseService } from '../../database/database.service';
 import { TokenPurpose } from '@fafics/shared';
 import * as crypto from 'crypto';
-import { MagicToken } from '@prisma/client';
+
+type MagicToken = {
+  id: string;
+  tokenHash: string;
+  purpose: string;
+  applicationId?: string | null;
+  userId?: string | null;
+  recipientEmail: string;
+  expiresAt: Date;
+  usedAt?: Date | null;
+  createdAt: Date;
+};
 
 @Injectable()
 export class TokensService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly database: DatabaseService) {}
+
+  private mapMagicToken(row: any): MagicToken {
+    return {
+      ...row,
+      tokenHash: row.token_hash ?? row.tokenHash,
+      applicationId: row.application_id ?? row.applicationId ?? null,
+      userId: row.user_id ?? row.userId ?? null,
+      recipientEmail: row.recipient_email ?? row.recipientEmail,
+      expiresAt: row.expires_at ?? row.expiresAt,
+      usedAt: row.used_at ?? row.usedAt ?? null,
+      createdAt: row.created_at ?? row.createdAt,
+    };
+  }
 
   async generate(params: {
     purpose: TokenPurpose;
@@ -26,65 +50,65 @@ export class TokensService {
     }
     const expiresAt = new Date(Date.now() + ttlMs);
 
-    await this.prisma.magicToken.create({
-      data: {
-        // Only the SHA-256 hash is persisted — the raw token is never stored,
-        // so a database leak cannot reveal live magic links.
+    await this.database.query(
+      `
+        INSERT INTO magic_tokens (
+          id,
+          token_hash,
+          purpose,
+          application_id,
+          user_id,
+          recipient_email,
+          expires_at,
+          created_at
+        )
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW())
+      `,
+      [
         tokenHash,
-        purpose: params.purpose as any, // Cast to Prisma enum if needed
-        applicationId: params.applicationId,
-        userId: params.userId,
-        recipientEmail: params.recipientEmail,
+        params.purpose,
+        params.applicationId ?? null,
+        params.userId ?? null,
+        params.recipientEmail,
         expiresAt,
-      },
-    });
+      ],
+    );
 
     return { rawToken, tokenHash };
   }
 
   /**
-   * Checks a magic link and, by default, consumes it.
+   * Checks a link token and, when `markUsed` is true, consumes it.
    *
    * `purpose` is required: a link only works for what it was issued for. A
    * link of another purpose fails exactly like an unknown one (404) and is not
    * consumed, so an applicant's own edit or view link can never open the
    * President's endorsement endpoints, and the reverse.
+   *
+   * A token that was invalidated (used_at set) is rejected even when
+   * `markUsed` is false, so reissuing or cancelling a link really revokes it.
    */
   async validate(rawToken: string, purpose: TokenPurpose, markUsed: boolean = true): Promise<MagicToken> {
-    const magicToken = await this.findForPurpose(rawToken, purpose);
+    const magicToken = await this.peek(rawToken, purpose);
+    if (!markUsed) return magicToken;
 
-    // A used link is dead even for checks that don't consume it: reissue()
-    // marks older links used, and that has to actually switch them off.
-    if (magicToken.usedAt !== null) {
+    // Conditional update: of two concurrent requests presenting the same link,
+    // only one can consume it.
+    const updated = await this.database.query<any>(
+      'UPDATE magic_tokens SET used_at = NOW() WHERE id = $1 AND used_at IS NULL RETURNING *',
+      [magicToken.id],
+    );
+    if (!updated.rows[0]) {
       throw new GoneException('This link has already been used');
     }
-
-    if (magicToken.expiresAt.getTime() < Date.now()) {
-      throw new GoneException('This link has expired');
-    }
-
-    if (markUsed) {
-      const updatedToken = await this.prisma.magicToken.update({
-        where: { id: magicToken.id },
-        data: { usedAt: new Date() },
-      });
-      return updatedToken;
-    }
-
-    return magicToken;
+    return this.mapMagicToken(updated.rows[0]);
   }
 
   async invalidateForApplication(applicationId: string, purpose: TokenPurpose): Promise<void> {
-    await this.prisma.magicToken.updateMany({
-      where: {
-        applicationId,
-        purpose: purpose as any,
-        usedAt: null,
-      },
-      data: {
-        usedAt: new Date(),
-      },
-    });
+    await this.database.query(
+      'UPDATE magic_tokens SET used_at = NOW() WHERE application_id = $1 AND purpose = $2 AND used_at IS NULL',
+      [applicationId, purpose],
+    );
   }
 
   /**
@@ -93,7 +117,21 @@ export class TokensService {
    * The token remains valid for a subsequent validate() call.
    */
   async peek(rawToken: string, purpose: TokenPurpose): Promise<MagicToken> {
-    const magicToken = await this.findForPurpose(rawToken, purpose);
+    // Tokens are 32 random bytes in hex; anything else cannot match.
+    if (typeof rawToken !== 'string' || !/^[0-9a-f]{64}$/i.test(rawToken)) {
+      throw new NotFoundException('Invalid or expired link');
+    }
+    const tokenHash = crypto.createHash('sha256').update(rawToken.toLowerCase()).digest('hex');
+
+    const result = await this.database.query<any>(
+      'SELECT * FROM magic_tokens WHERE token_hash = $1 LIMIT 1',
+      [tokenHash],
+    );
+    const magicToken = result.rows[0] ? this.mapMagicToken(result.rows[0]) : null;
+
+    if (!magicToken || (magicToken.purpose as string) !== purpose) {
+      throw new NotFoundException('Invalid or expired link');
+    }
 
     if (magicToken.usedAt !== null) {
       throw new GoneException('This link has already been used');
@@ -101,21 +139,6 @@ export class TokensService {
 
     if (magicToken.expiresAt.getTime() < Date.now()) {
       throw new GoneException('This link has expired');
-    }
-
-    return magicToken;
-  }
-
-  /** Looks a raw token up by its hash; a missing token or another purpose is a 404. */
-  private async findForPurpose(rawToken: string, purpose: TokenPurpose): Promise<MagicToken> {
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-    const magicToken = await this.prisma.magicToken.findUnique({
-      where: { tokenHash },
-    });
-
-    if (!magicToken || (magicToken.purpose as string) !== purpose) {
-      throw new NotFoundException('Invalid or expired link');
     }
 
     return magicToken;

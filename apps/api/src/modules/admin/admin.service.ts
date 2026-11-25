@@ -6,7 +6,7 @@ import {
   ConflictException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DatabaseService } from '../../database/database.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../mail/notification.service';
 import * as bcrypt from 'bcrypt';
@@ -33,14 +33,15 @@ import { AddNotesDto } from './dto/add-notes.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AnalyticsResponse } from './dto/analytics-response.dto';
-import { Prisma } from '@prisma/client';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
+import { OFFICER_ROLES, isOfficerRole } from '../auth/roles';
 
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: DatabaseService,
     private readonly auditService: AuditService,
     private readonly notificationService: NotificationService,
     private readonly mailService: MailService,
@@ -266,7 +267,8 @@ export class AdminService {
    * Approve an endorsed application.
    * Sets status=approved, expiresAt=+3 years, queues approved email.
    */
-  async approve(id: string, dto: ApproveDto, actorEmail: string): Promise<void> {
+  async approve(id: string, dto: ApproveDto, actor: AuthenticatedUser): Promise<void> {
+    const actorEmail = actor.email;
     const app = await this.prisma.application.findUnique({ where: { id } });
     if (!app) throw new NotFoundException(`Application ${id} not found`);
 
@@ -291,8 +293,9 @@ export class AdminService {
 
       await this.auditService.log({
         applicationId: id,
+        actorId: actor.userId,
         actorEmail,
-        actorRole: UserRole.SECRETARY,
+        actorRole: actor.role,
         action: 'application.approved',
         oldStatus: oldStatus as any,
         newStatus: 'approved' as any,
@@ -342,7 +345,8 @@ export class AdminService {
     return { referenceNumber: removed?.referenceNumber ?? null };
   }
 
-  async reject(id: string, dto: RejectDto, actorEmail: string): Promise<void> {
+  async reject(id: string, dto: RejectDto, actor: AuthenticatedUser): Promise<void> {
+    const actorEmail = actor.email;
     const app = await this.prisma.application.findUnique({ where: { id } });
     if (!app) throw new NotFoundException(`Application ${id} not found`);
 
@@ -366,8 +370,9 @@ export class AdminService {
 
       await this.auditService.log({
         applicationId: id,
+        actorId: actor.userId,
         actorEmail,
-        actorRole: UserRole.SECRETARY,
+        actorRole: actor.role,
         action: 'application.rejected',
         oldStatus: oldStatus as any,
         newStatus: 'rejected' as any,
@@ -386,8 +391,9 @@ export class AdminService {
   async requestChanges(
     id: string,
     dto: RequestChangesDto,
-    actorEmail: string,
+    actor: AuthenticatedUser,
   ): Promise<void> {
+    const actorEmail = actor.email;
     const app = await this.prisma.application.findUnique({ where: { id } });
     if (!app) throw new NotFoundException(`Application ${id} not found`);
 
@@ -404,8 +410,9 @@ export class AdminService {
 
       await this.auditService.log({
         applicationId: id,
+        actorId: actor.userId,
         actorEmail,
-        actorRole: UserRole.SECRETARY,
+        actorRole: actor.role,
         action: 'application.changes_requested',
         oldStatus: oldStatus as any,
         newStatus: 'changes_requested' as any,
@@ -497,7 +504,8 @@ export class AdminService {
   /**
    * Add internal notes without changing status.
    */
-  async addNotes(id: string, dto: AddNotesDto, actorEmail: string): Promise<void> {
+  async addNotes(id: string, dto: AddNotesDto, actor: AuthenticatedUser): Promise<void> {
+    const actorEmail = actor.email;
     const app = await this.prisma.application.findUnique({ where: { id } });
     if (!app) throw new NotFoundException(`Application ${id} not found`);
 
@@ -508,8 +516,9 @@ export class AdminService {
 
     await this.auditService.log({
       applicationId: id,
+      actorId: actor.userId,
       actorEmail,
-      actorRole: UserRole.SECRETARY,
+      actorRole: actor.role,
       action: 'secretary.notes_added',
     });
 
@@ -637,36 +646,47 @@ export class AdminService {
   /**
    * Create a new officer user (admin only).
    */
-  async createUser(dto: CreateUserDto, actorEmail: string): Promise<{ id: string }> {
-    // Check for existing user
-    const existing = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
+  async createUser(dto: CreateUserDto, actor: AuthenticatedUser): Promise<{ id: string }> {
+    const email = dto.email.trim().toLowerCase();
+    // Case-insensitive: applicant rows keep the address as it was typed.
+    const existing = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
     });
-    if (existing) {
+    if (existing && (isOfficerRole(existing.role) || existing.passwordHash)) {
       throw new ConflictException(`User with email ${dto.email} already exists`);
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
+    const data = {
+      email,
+      passwordHash,
+      role: dto.role,
+      firstName: dto.firstName.trim(),
+      lastName: dto.lastName.trim(),
+      isActive: true,
+    };
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email.toLowerCase(),
-        passwordHash,
-        role: dto.role as any,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        isActive: true,
+    // Someone who has applied to the pool already has an applicant row under
+    // this address. Turn that row into the dashboard account, so their
+    // applications stay linked to the same person, instead of refusing it.
+    const user = existing
+      ? await this.prisma.user.update({ where: { id: existing.id }, data })
+      : await this.prisma.user.create({ data });
+
+    await this.auditService.log({
+      actorId: actor.userId,
+      actorEmail: actor.email,
+      actorRole: UserRole.ADMIN,
+      action: 'user.created',
+      metadata: {
+        createdUserId: user.id,
+        createdUserEmail: user.email,
+        role: dto.role,
+        ...(existing ? { convertedFromRole: existing.role } : {}),
       },
     });
 
-    await this.auditService.log({
-      actorEmail,
-      actorRole: UserRole.ADMIN,
-      action: 'user.created',
-      metadata: { createdUserId: user.id, createdUserEmail: user.email, role: dto.role },
-    });
-
-    this.logger.log(`User ${dto.email} created by ${actorEmail}`);
+    this.logger.log(`User ${email} created by ${actor.email}`);
     return { id: user.id };
   }
 
@@ -691,7 +711,7 @@ export class AdminService {
         // Dashboard accounts only. Presidents are excluded deliberately: they
         // authenticate by single-use magic link, have no password to reset, and
         // deleting one would orphan its association. Members are applicants.
-        role: { in: ['admin', 'secretary', 'committee'] as any },
+        role: { in: [...OFFICER_ROLES] },
       },
       select: {
         id: true,
@@ -726,32 +746,26 @@ export class AdminService {
   async updateUserRole(
     userId: string,
     role: string,
-    actorEmail: string,
+    actor: AuthenticatedUser,
   ): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException(`User ${userId} not found`);
+    const actorEmail = actor.email;
+    const user = await this.findOfficer(userId);
 
     const oldRole = user.role;
 
     // Prevent removing the last active administrator — doing so would lock
     // everyone out of admin-only functions (user management, etc.).
-    if (oldRole === 'admin' && role !== 'admin') {
-      const activeAdmins = await this.prisma.user.count({
-        where: { role: 'admin' as any, isActive: true },
-      });
-      if (activeAdmins <= 1) {
-        throw new BadRequestException(
-          'Cannot change the role of the last active administrator.',
-        );
-      }
+    if (oldRole === 'admin' && role !== 'admin' && user.isActive) {
+      await this.assertNotLastActiveAdmin(userId);
     }
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { role: role as any },
+      data: { role },
     });
 
     await this.auditService.log({
+      actorId: actor.userId,
       actorEmail,
       actorRole: UserRole.ADMIN,
       action: 'user.role_changed',
@@ -771,15 +785,16 @@ export class AdminService {
     actorEmail: string,
     actorId?: string,
   ): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException(`User ${userId} not found`);
+    const user = await this.findOfficer(userId);
 
-    const data: Prisma.UserUpdateInput = {};
+    const data: Record<string, any> = {};
 
     if (dto.email !== undefined) {
       const email = dto.email.toLowerCase().trim();
       if (email !== user.email) {
-        const clash = await this.prisma.user.findUnique({ where: { email } });
+        const clash = await this.prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' }, id: { not: userId } },
+        });
         if (clash) throw new ConflictException(`User with email ${dto.email} already exists`);
         data.email = email;
       }
@@ -791,6 +806,7 @@ export class AdminService {
     // to manage users, so both are blocked while this is the last one standing.
     const losingAdmin =
       user.role === 'admin' &&
+      user.isActive &&
       ((dto.role !== undefined && dto.role !== 'admin') || dto.isActive === false);
     if (losingAdmin) {
       await this.assertNotLastActiveAdmin(userId);
@@ -848,7 +864,7 @@ export class AdminService {
         presidedAssociation: { select: { id: true, name: true } },
       },
     });
-    if (!user) throw new NotFoundException(`User ${userId} not found`);
+    if (!user || !isOfficerRole(user.role)) throw new NotFoundException(`User ${userId} not found`);
 
     if (userId === actorId) {
       throw new BadRequestException('You cannot delete your own account.');
@@ -899,8 +915,7 @@ export class AdminService {
     actorEmail: string,
     actorId?: string,
   ): Promise<{ email: string }> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException(`User ${userId} not found`);
+    const user = await this.findOfficer(userId);
     if (!user.isActive) {
       throw new BadRequestException(
         'This account is deactivated. Reactivate it before sending a reset link.',
@@ -933,6 +948,19 @@ export class AdminService {
    * role change, deactivation, and delete paths so none of them can lock every
    * administrator out of the dashboard.
    */
+  /**
+   * User management only ever acts on dashboard accounts. Applicant (member)
+   * and president rows are invisible to it: otherwise an applicant row could be
+   * promoted to admin and sent a password-reset link.
+   */
+  private async findOfficer(userId: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !isOfficerRole(user.role)) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+    return user;
+  }
+
   private async assertNotLastActiveAdmin(userId: string): Promise<void> {
     const otherActiveAdmins = await this.prisma.user.count({
       where: { role: 'admin' as any, isActive: true, id: { not: userId } },
@@ -961,18 +989,13 @@ export class AdminService {
    * Returns distinct association countries from all applications for filter dropdowns.
    */
   async getDistinctCountries(): Promise<string[]> {
-    const results = await this.prisma.application.findMany({
-      where: {
-        associationCountry: { not: '' },
-      },
-      select: { associationCountry: true },
-      distinct: ['associationCountry'],
-      orderBy: { associationCountry: 'asc' },
-    });
-
-    return results
-      .map((r) => r.associationCountry)
-      .filter((c): c is string => !!c);
+    const rows = await this.prisma.$queryRaw<{ country: string }[]>`
+      SELECT DISTINCT association_country AS country
+      FROM applications
+      WHERE association_country <> ''
+      ORDER BY association_country ASC
+    `;
+    return rows.map((r) => r.country).filter((c): c is string => !!c);
   }
 
   // ─── Analytics ─────────────────────────────────────────────────────────

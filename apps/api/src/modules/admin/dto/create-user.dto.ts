@@ -1,4 +1,5 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength, IsIn } from 'class-validator';
+import { OFFICER_ROLES } from '../../auth/roles';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   PASSWORD_MAX_LENGTH,
@@ -21,9 +22,9 @@ export class CreateUserDto {
   @Matches(PASSWORD_PATTERN, { message: PASSWORD_RULE_MESSAGE })
   password!: string;
 
-  @ApiProperty({ enum: ['secretary', 'committee', 'admin'] })
-  @IsEnum(['secretary', 'committee', 'admin'], {
-    message: 'role must be one of: secretary, committee, admin',
+  @ApiProperty({ enum: OFFICER_ROLES })
+  @IsIn(OFFICER_ROLES, {
+    message: `role must be one of: ${OFFICER_ROLES.join(', ')}`,
   })
   role!: string;
 

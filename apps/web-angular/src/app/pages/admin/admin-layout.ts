@@ -2,11 +2,19 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import Cookies from 'js-cookie';
 import { RoutePath } from '../../core/route-path.service';
-import { adminApi } from '../../lib/api/admin.api';
+import { adminApi, authApi } from '../../lib/api/admin.api';
+import { canReview, canViewExpiring, roleLabel } from '../../lib/auth/roles';
 
 const NAV_SECTIONS: {
   label: string;
-  links: { href: string; label: string; icon: string; badge?: 'pending' }[];
+  links: {
+    href: string;
+    label: string;
+    icon: string;
+    badge?: 'pending';
+    /** Shown only to roles the API allows on that page. */
+    visible?: (role: string | null) => boolean;
+  }[];
 }[] = [
   {
     label: 'Main',
@@ -28,13 +36,19 @@ const NAV_SECTIONS: {
   {
     label: 'Insights',
     links: [
-      { href: '/admin/expiring', label: 'Expiring Profiles', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+      {
+        href: '/admin/expiring',
+        label: 'Expiring Profiles',
+        icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+        visible: canViewExpiring,
+      },
       // Hidden per client feedback — re-enable when ready
       // { href: '/admin/reports', label: 'Reports & Analytics', icon: 'M18 20V10M12 20V4M6 20v-6' },
       {
         href: '/admin/emails',
         label: 'Email Log',
         icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+        visible: canReview,
       },
     ],
   },
@@ -86,7 +100,7 @@ const LINK_IDLE = 'text-white/55 hover:bg-white/[0.08] hover:text-white';
     </div>
 
     <nav class="flex-1 px-3 py-4" (click)="navigated.emit()">
-      @for (section of sections; track section.label) {
+      @for (section of sections(); track section.label) {
         <div>
           @for (link of section.links; track link.href) {
             <a [routerLink]="link.href" [class]="linkClass(pathname().startsWith(link.href))">
@@ -133,7 +147,7 @@ const LINK_IDLE = 'text-white/55 hover:bg-white/[0.08] hover:text-white';
     </nav>
 
     <div class="border-t border-white/10 px-5 py-3.5">
-      <div class="mb-2 text-[11.5px] capitalize text-white/40">Signed in as {{ role() ?? 'Officer' }}</div>
+      <div class="mb-2 text-[11.5px] text-white/40">Signed in as {{ roleLabel(role()) }}</div>
       <button (click)="logout.emit()" class="flex items-center gap-1.5 text-[12px] text-white/40 transition-colors hover:text-gold">
         <svg class="h-[13px] w-[13px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
@@ -150,7 +164,13 @@ export class AdminSidebarComponent {
   readonly pathname = input.required<string>();
   readonly logout = output<void>();
   readonly navigated = output<void>();
-  protected readonly sections = NAV_SECTIONS;
+  protected readonly roleLabel = roleLabel;
+  protected readonly sections = computed(() =>
+    NAV_SECTIONS.map((section) => ({
+      ...section,
+      links: section.links.filter((link) => !link.visible || link.visible(this.role())),
+    })).filter((section) => section.links.length > 0),
+  );
 
   protected linkClass(active: boolean): string {
     return `${LINK_BASE} ${active ? LINK_ACTIVE : LINK_IDLE}`;
@@ -251,6 +271,21 @@ export class AdminLayout {
         }
       });
     });
+
+    // The API reads the role from the database on every request, so an
+    // administrator's change applies at once. Refresh the UI's hint to match
+    // (a deactivated account gets a 401 here and is sent to the login page).
+    authApi
+      .me()
+      .then((me: { role?: string } | null) => {
+        if (me?.role && me.role !== Cookies.get('fafics_role')) {
+          Cookies.set('fafics_role', me.role, { expires: 1 });
+          this.role.set(me.role);
+        }
+      })
+      .catch(() => {
+        // Network errors are ignored; a 401 is handled by the API interceptor.
+      });
   }
 
   protected async handleLogout(): Promise<void> {

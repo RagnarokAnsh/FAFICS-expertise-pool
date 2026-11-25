@@ -1,4 +1,4 @@
-import { buildEmailHtml } from './base.template';
+import { buildEmailHtml, esc } from './base.template';
 import { formatDisplayDate } from '../../../common/utils/display-date';
 
 /**
@@ -14,17 +14,17 @@ export function presidentReminderTemplate(params: {
   const subject = `Reminder: ${params.applicantName}'s FAFICS Expertise Pool application is awaiting your endorsement`;
   const formattedDate = formatDisplayDate(params.submissionDate);
   const body = `
-    <p>Dear President of ${params.associationName},</p>
-    <p>This is a friendly reminder that <strong>${params.applicantName}</strong> submitted an application to join the FAFICS Expertise Pool on ${formattedDate}, and it is still awaiting your endorsement.</p>
+    <p>Dear President of ${esc(params.associationName)},</p>
+    <p>This is a friendly reminder that <strong>${esc(params.applicantName)}</strong> submitted an application to join the FAFICS Expertise Pool on ${formattedDate}, and it is still awaiting your endorsement.</p>
     <p>The application cannot proceed to the Expertise Pool until you have reviewed it.</p>
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${params.magicLinkUrl}" style="display: inline-block; background-color: #C8973A; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-size: 16px;">Review & Endorse Application</a>
+      <a href="${esc(params.magicLinkUrl)}" style="display: inline-block; background-color: #C8973A; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-size: 16px;">Review & Endorse Application</a>
     </div>
     <ul>
       <li>This link will expire in 14 days. Links in earlier emails about this application also still work.</li>
       <li>If you notice any issues with the application, you can return it to the applicant with your comments.</li>
     </ul>
-    <p>If you are not the President of ${params.associationName}, or have any questions, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
+    <p>If you are not the President of ${esc(params.associationName)}, or have any questions, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }

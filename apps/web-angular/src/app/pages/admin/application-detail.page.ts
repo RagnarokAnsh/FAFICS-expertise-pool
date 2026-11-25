@@ -9,6 +9,7 @@ import { BadgeComponent } from '../../components/ui/badge';
 import { CardComponent } from '../../components/ui/card';
 import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
+import { canExport, canReview, currentRole } from '../../lib/auth/roles';
 import { formatDate } from '../../lib/utils/date';
 
 /**
@@ -59,14 +60,16 @@ import { formatDate } from '../../lib/utils/date';
           <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h1 class="font-serif text-[22px] sm:text-[28px] font-bold leading-tight text-navy">{{ fullName(app) }}</h1>
             <span appBadge [status]="app.status"></span>
-            <button
-              type="button"
-              (click)="downloadProfile(app)"
-              [disabled]="downloading()"
-              class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-[12.5px] font-semibold text-navy transition-colors hover:bg-navy-light disabled:opacity-60"
-            >
-              {{ downloading() ? 'Preparing…' : '↓ Download profile (Excel)' }}
-            </button>
+            @if (canExport) {
+              <button
+                type="button"
+                (click)="downloadProfile(app)"
+                [disabled]="downloading()"
+                class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-[12.5px] font-semibold text-navy transition-colors hover:bg-navy-light disabled:opacity-60"
+              >
+                {{ downloading() ? 'Preparing…' : '↓ Download profile (Excel)' }}
+              </button>
+            }
           </div>
           <p class="mt-1.5 flex flex-col items-start gap-y-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 text-[13.5px] text-text-mid">
             <span class="font-mono text-navy">{{ app.referenceNumber || 'Draft' }}</span>
@@ -118,12 +121,18 @@ import { formatDate } from '../../lib/utils/date';
                 </div>
               </dl>
 
-              <app-action-buttons
-                [applicationId]="app.id"
-                [status]="app.status"
-                [presidentEmail]="app.presidentEmail"
-                [referenceNumber]="app.referenceNumber"
-              />
+              @if (canReview) {
+                <app-action-buttons
+                  [applicationId]="app.id"
+                  [status]="app.status"
+                  [presidentEmail]="app.presidentEmail"
+                  [referenceNumber]="app.referenceNumber"
+                />
+              } @else {
+                <div class="rounded border border-border bg-gray-50 p-3 text-[12.5px] text-text-mid">
+                  <strong class="text-navy">View only.</strong> Your role can read applications but not change them.
+                </div>
+              }
             </div>
 
             <div class="hidden xl:block">
@@ -172,6 +181,8 @@ export class ApplicationDetailPage {
   protected readonly formatDate = formatDate;
   protected readonly labelClass = 'text-[11px] font-medium uppercase tracking-[0.03em] text-text-light';
   protected readonly valueClass = 'text-[14px] font-semibold text-navy';
+  protected readonly canReview = canReview(currentRole());
+  protected readonly canExport = canExport(currentRole());
 
   protected readonly query = injectQuery(() => ({
     queryKey: ['application', this.id],

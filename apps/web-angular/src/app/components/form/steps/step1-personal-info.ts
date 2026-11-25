@@ -311,7 +311,7 @@ const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
     <div class="flex justify-between items-center pt-5 border-t border-border mt-2">
       <span></span>
       <button appButton variant="primary" (click)="handleNext()">
-        Next: Education &amp; Languages
+        Save and Next
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>

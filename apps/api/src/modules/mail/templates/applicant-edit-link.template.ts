@@ -1,4 +1,4 @@
-import { buildEmailHtml } from './base.template';
+import { buildEmailHtml, esc } from './base.template';
 
 export interface ApplicantEditLinkTemplateParams {
   applicantName: string;
@@ -38,7 +38,7 @@ export const applicantEditLinkTemplate = ({
   const html = buildEmailHtml(
     `Resume editing your application`,
     `
-    <p>Dear ${applicantName},</p>
+    <p>Dear ${esc(applicantName)},</p>
     ${
       reason === 'started_again'
         ? '<p>A new application was just started with your email address and association, but you already have an application in progress. To keep your saved details safe, please continue it from the link below.</p>'
@@ -48,7 +48,7 @@ export const applicantEditLinkTemplate = ({
     ${changesRequestedNotice}
     
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${resumeUrl}" style="background-color: #1a3a6b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Continue Editing My Application</a>
+      <a href="${esc(resumeUrl)}" style="background-color: #1a3a6b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Continue Editing My Application</a>
     </div>
     
     <p style="font-size: 13px; color: #666; background-color: #f8f9fa; padding: 12px; border-radius: 6px;">
@@ -56,7 +56,7 @@ export const applicantEditLinkTemplate = ({
     </p>
     
     <p style="font-size: 14px; margin-top: 20px;">
-      Reference Number: <strong>${referenceNumber}</strong>
+      Reference Number: <strong>${esc(referenceNumber)}</strong>
     </p>
     `
   );

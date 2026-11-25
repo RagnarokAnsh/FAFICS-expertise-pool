@@ -97,9 +97,12 @@ The Secretariat can additionally reject an application, or request changes on on
 | --- | --- | --- |
 | **Applicant** | No account | Fill in, save, submit, and revise their own application; check status |
 | **President** | Single-use email link | View and endorse or return applications from their association |
-| **Committee** | Email + password | Read-only: dashboard, applications, roster |
+| **Management** | Email + password | Read-only: dashboard, applications, roster, expiring profiles, plus every Excel export. Cannot change anything, no email log, no user management |
+| **Committee** | Email + password | Read-only: dashboard, applications, roster (not offered in User Management) |
 | **Secretary** | Email + password | Everything Committee can do, plus approve/reject/request changes, exports, renewal reminders, notification log |
 | **Admin** | Email + password | Everything, plus creating officer accounts and changing roles |
+
+The API enforces these rules (`apps/api/src/modules/auth/roles.ts`) and reads the role from the database on every request, so a role change or deactivation applies at once. The Angular dashboard mirrors them in `lib/auth/roles.ts` to hide what a role cannot use. User Management offers Administrator and Management.
 
 Officer sessions use a JSON Web Token held in an `HttpOnly` cookie, so the token is never readable by JavaScript in the browser. Sessions last 8 hours. Login is rate-limited to 5 attempts per minute per IP address, and the email-sending endpoints to 5 requests per minute per IP; everything else is capped at 100 requests per minute per IP.
 
@@ -115,7 +118,7 @@ Officer sessions use a JSON Web Token held in an `HttpOnly` cookie, so the token
 | Data fetching | TanStack Query |
 | Charts | Recharts |
 | Backend | NestJS 10, TypeScript |
-| Database access | Prisma 5 |
+| Database access | `node-postgres` (`pg`) through a small query layer in `apps/api/src/database`; plain SQL migrations |
 | Database | PostgreSQL 16+ |
 | Authentication | Passport (local and JWT strategies), bcrypt, HttpOnly cookies |
 | Email | Nodemailer over SMTP (Gmail in production); Resend supported as an alternative |
@@ -135,11 +138,10 @@ There is no Redis, no message queue, and no container runtime. The system is two
 fafics-expertise-pool/
 ├── apps/
 │   ├── api/                    NestJS API — port 3001, all routes under /api
-│   │   ├── prisma/
-│   │   │   ├── schema.prisma   Data model
-│   │   │   ├── migrations/     Ordered SQL migrations, including custom
-│   │   │   │                   functions, triggers, indexes, and views
-│   │   │   └── seed.ts         Initial admin user + test association
+│   │   ├── database/
+│   │   │   └── migrations/     Ordered SQL migrations (0000_baseline.sql creates
+│   │   │                       the whole schema, functions, triggers, views)
+│   │   ├── scripts/            migrate.js, create-admin.js, import-data.js, seed-dev.ts
 │   │   └── src/
 │   │       ├── common/         Global filters, interceptors, utilities
 │   │       ├── config/         Typed configuration namespaces
@@ -200,12 +202,12 @@ Edit `.env` and set at minimum `DATABASE_URL` and `JWT_SECRET`.
 
 ```bash
 cd apps/api
-npx prisma migrate deploy
-npx prisma db seed
+npm run db:migrate
+ADMIN_EMAIL="you@example.org" ADMIN_PASSWORD="Choose-A-Strong-Passw0rd" npm run create-admin
 cd ../..
 ```
 
-The seed creates one administrator using `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`, plus a test association. **Change that password after the first sign-in.**
+`db:migrate` applies the SQL files in `apps/api/database/migrations/` that have not run yet (it records them in `schema_migrations`). `create-admin` creates the first administrator (12+ characters, upper, lower and a digit). For sample data on a development database, `npm run db:seed:dev` in `apps/api` (destructive: it wipes the data first).
 
 ### Start both apps
 
@@ -232,10 +234,10 @@ To run just one side, use `npm run start:dev` in `apps/api` or `npm run dev` in 
 | `npm run build` | root | Build shared package, API, and frontend in order |
 | `npm run lint` | root | Lint every workspace |
 | `npm run format` | root | Prettier across the repo |
-| `npx prisma migrate dev --name <name>` | `apps/api` | Create and apply a new migration |
-| `npx prisma studio` | `apps/api` | Browse the database in a GUI |
-| `npx prisma generate` | `apps/api` | Regenerate the Prisma client after a schema change |
-| `npm run db:seed:dev` | `apps/api` | Load sample applications for testing |
+| `npm run db:migrate` / `db:migrate:status` | `apps/api` | Apply / list SQL migrations. A new migration is a new `database/migrations/NNNN_name.sql` file; add any new column to `src/database/schema.ts` too |
+| `npm run create-admin` | `apps/api` | Create an administrator from `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
+| `npm run db:seed:dev` | `apps/api` | Wipe and load sample applications (development only) |
+| `npm run package:deploy` | root | Build and lay out `deploy/api` + `deploy/web` for the shared host (DEPLOYMENT.md, Appendix E) |
 
 > **Note on tests.** The API is wired for Jest (`npm run test`, `npm run test:cov`), but no test suites have been written yet — the commands will report zero tests found. Verification to date has been manual QA against the running application. The Angular frontend has end-to-end checks against the Next.js one in `apps/web-angular/tools/parity` (screenshots, complete user journeys, API calls and accessibility); the header of each script explains how to run it.
 
@@ -288,13 +290,13 @@ Points worth knowing:
 
 - **Reference numbers and UID numbers are generated inside PostgreSQL**, by `fn_generate_reference_number()` and `fn_generate_uid()`, called within the submission transaction. They are `null` while an application is still a draft.
 - **`experience.duration_years` is a `Decimal(4,1)`** in which `99.0` is a sentinel meaning "30+ years". `duration.util.ts` maps it back for display.
-- **The sixteen fixed expertise areas use a partial unique index** defined in raw SQL rather than in the Prisma schema, so repeated saves upsert cleanly. Custom "other" areas are flagged `isCustom = true` and are always inserted.
+- **The sixteen fixed expertise areas use a partial unique index** defined in raw SQL, so repeated saves upsert cleanly. Custom "other" areas are flagged `isCustom = true` and are always inserted.
 - **A database trigger caps preferred areas of contribution at three per application**, so the limit holds even if a request bypasses the form.
 - **Full-text and trigram indexes** back the roster search. These require the `pg_trgm`, `unaccent`, and `uuid-ossp` extensions, which the migrations create automatically.
 - **Two views** — `vw_active_roster` and `vw_dashboard_stats` — serve the roster and overview screens.
 - All timestamps are `timestamptz`; date-only fields are `date`.
 
-Migrations live in `apps/api/prisma/migrations/` and are applied with `npx prisma migrate deploy`. The custom functions, triggers, indexes, and views ship as a migration too, so a deployment never requires manually running SQL.
+Migrations live in `apps/api/database/migrations/` and are applied with `npm run db:migrate`, which runs each pending file once, in its own transaction. The API refuses to start while one is pending. The custom functions, triggers, indexes, and views are part of the migrations, so a deployment never requires manually running SQL.
 
 ---
 
@@ -340,6 +342,9 @@ All routes are prefixed with `/api`. Every successful response is wrapped in `{ 
 | `POST` | `/api/applications/request-edit-link` | Email an edit link |
 | `POST` | `/api/applications/request-draft-link` | Email a draft resume link |
 | `GET` | `/api/applications/resume/:token` | Resume from an emailed token |
+| `POST` | `/api/applications/request-view-link` | Email a read-only view link for a submitted application |
+| `GET` | `/api/applications/view/:token` | Read-only view of the applicant's own application |
+| `POST` | `/api/contact` | Contact Us form; emails support@fafics.com (5 per minute per IP) |
 
 **President — single-use token in the URL**
 
@@ -354,11 +359,12 @@ All routes are prefixed with `/api`. Every successful response is wrapped in `{ 
 | Method | Path | Minimum role |
 | --- | --- | --- |
 | `POST` | `/api/auth/login` · `/api/auth/logout` | — |
-| `GET` | `/api/admin/stats` · `/analytics` · `/countries` | committee |
-| `GET` | `/api/admin/applications` · `/applications/:id` | committee |
-| `PATCH` | `/api/admin/applications/:id/approve` · `/reject` · `/request-changes` · `/notes` | secretary |
-| `GET` | `/api/admin/export/roster` · `/export/application/:id` | secretary |
-| `GET` | `/api/admin/expiring` | secretary |
+| `GET` | `/api/admin/stats` · `/analytics` · `/countries` · `/associations` | committee, management |
+| `GET` | `/api/admin/applications` · `/applications/:id` | committee, management |
+| `PATCH` | `/api/admin/applications/:id/approve` · `/reject` · `/request-changes` · `/notes` · `/president-email` | secretary |
+| `POST` | `/api/admin/applications/:id/remove-from-pool` · `/resend-president-link` | secretary |
+| `GET`, `POST` | `/api/admin/export/roster` · `/export/applications` · `/export/application/:id` | secretary, management |
+| `GET` | `/api/admin/expiring` | secretary, management |
 | `POST` | `/api/admin/reminders/send` | secretary |
 | `GET` | `/api/admin/notifications` | secretary |
 | `POST` | `/api/admin/notifications/:id/retry` | secretary |

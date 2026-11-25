@@ -10,6 +10,7 @@ import {
 import { ReportCardComponent, SectionHeaderComponent } from '../../components/admin/ui';
 import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
+import { canExport, currentRole } from '../../lib/auth/roles';
 
 /**
  * app/admin/reports/page.tsx — reachable by URL; its sidebar link stays
@@ -32,14 +33,16 @@ import { adminApi } from '../../lib/api/admin.api';
     } @else {
       <div class="mx-auto max-w-[1200px] p-6">
         <div appSectionHeader subtitle="Insights across all approved profiles active in the Expertise Pool.">
-          <button
-            sectionAction
-            (click)="exportRoster()"
-            [disabled]="exporting()"
-            class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
-          >
-            {{ exporting() ? 'Preparing Excel…' : '↓ Export to Excel' }}
-          </button>
+          @if (canExport) {
+            <button
+              sectionAction
+              (click)="exportRoster()"
+              [disabled]="exporting()"
+              class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
+            >
+              {{ exporting() ? 'Preparing Excel…' : '↓ Export to Excel' }}
+            </button>
+          }
         </div>
 
         @if (query.isLoading()) {
@@ -80,6 +83,8 @@ import { adminApi } from '../../lib/api/admin.api';
   host: { class: 'contents' },
 })
 export class ReportsPage {
+  /** Downloads are limited to roles that may export (not view-only roles). */
+  protected readonly canExport = canExport(currentRole());
   protected readonly skeletons = [0, 1, 2, 3, 4];
   protected readonly query = injectQuery(() => ({ queryKey: ['analytics'], queryFn: adminApi.getAnalytics }));
 

@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -51,6 +52,9 @@ export class ApplicationsController {
    */
   @Get('status')
   @HttpCode(HttpStatus.OK)
+  // Reference numbers are sequential (EP-0001, EP-0002, …), so limit how fast
+  // someone can try them against a known email address.
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @ApiOperation({ summary: 'Check application status (email + reference number)' })
   @ApiOkResponse({ description: 'Status retrieved' })
   @ApiNotFoundResponse({ description: 'Application not found' })
@@ -143,6 +147,9 @@ export class ApplicationsController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  // Creating a draft emails the typed address, so it is limited like the
+  // other email-sending endpoints.
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: 'Create a new draft application' })
   @ApiCreatedResponse({
     description:
@@ -171,7 +178,7 @@ export class ApplicationsController {
   @ApiNotFoundResponse({ description: 'Application not found' })
   @ApiBadRequestResponse({ description: 'Application is not a draft' })
   async updateDraft(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateApplicationDto,
     @Headers('x-edit-token') editToken?: string,
   ): Promise<{ message: string }> {
@@ -194,7 +201,7 @@ export class ApplicationsController {
   @ApiNotFoundResponse({ description: 'Application not found' })
   @ApiBadRequestResponse({ description: 'Application is not a draft or missing required fields' })
   async submit(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SubmitApplicationDto,
     @Headers('x-edit-token') editToken?: string,
   ): Promise<{ referenceNumber: string }> {

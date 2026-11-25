@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DatabaseService } from '../../database/database.service';
 import { TokensService } from '../tokens/tokens.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationService } from '../mail/notification.service';
@@ -27,7 +27,7 @@ export class MaintenanceService {
   private readonly logger = new Logger(MaintenanceService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: DatabaseService,
     private readonly tokensService: TokensService,
     private readonly mailService: MailService,
     private readonly notificationService: NotificationService,
@@ -41,8 +41,10 @@ export class MaintenanceService {
    * retried on the following nights; after a week the data is deleted anyway.
    */
   async expireApplications(): Promise<void> {
-    const result = await this.prisma.$executeRaw`SELECT fn_expire_applications()`;
-    this.logger.log(`Expiry run complete. Rows affected: ${result}`);
+    const rows = await this.prisma.$queryRaw<{ expired: number }[]>`
+      SELECT fn_expire_applications() AS expired
+    `;
+    this.logger.log(`Expiry run complete. Applications expired: ${rows[0]?.expired ?? 0}`);
     await this.removeExpiredProfiles();
     await this.reissueExpiredPresidentLinks();
   }
@@ -164,7 +166,6 @@ export class MaintenanceService {
         magicTokens: {
           where: { purpose: 'president_review' as any, createdAt: { gt: new Date(now.getTime() - DAY_MS) } },
           select: { id: true },
-          take: 1,
         },
       },
     });

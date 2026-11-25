@@ -3,6 +3,7 @@ import { injectQuery } from '@tanstack/angular-query-experimental';
 import { ApplicationTableComponent } from '../../components/admin/application-table';
 import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
+import { canExport, currentRole } from '../../lib/auth/roles';
 
 /**
  * The status filter. The default hides drafts (applications not submitted
@@ -42,13 +43,15 @@ const LABEL = 'block text-[11px] text-text-light font-medium uppercase tracking-
     <div class="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto">
       <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <p class="text-text-mid">Manage and review submissions to the Expertise Pool.</p>
-        <button
-          (click)="exportExcel()"
-          [disabled]="exporting() || (listQ.data()?.total ?? 0) === 0"
-          class="shrink-0 rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
-        >
-          {{ exporting() ? 'Preparing Excel…' : 'Export ' + (listQ.data()?.total ?? 0) + ' to Excel' }}
-        </button>
+        @if (canExport) {
+          <button
+            (click)="exportExcel()"
+            [disabled]="exporting() || (listQ.data()?.total ?? 0) === 0"
+            class="shrink-0 rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
+          >
+            {{ exporting() ? 'Preparing Excel…' : 'Export ' + (listQ.data()?.total ?? 0) + ' to Excel' }}
+          </button>
+        }
       </div>
 
       <div class="bg-white p-4 rounded-lg shadow-sm border border-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.3fr)_repeat(3,minmax(0,1fr))] gap-4 items-end">
@@ -141,6 +144,8 @@ export class ApplicationsPage {
   protected readonly association = signal('');
   protected readonly country = signal('');
   protected readonly sort = signal('updated');
+  /** Downloads are limited to roles that may export (not view-only roles). */
+  protected readonly canExport = canExport(currentRole());
   protected readonly exporting = signal(false);
 
   /** The API filters for the current choices (also used by the Excel export). */

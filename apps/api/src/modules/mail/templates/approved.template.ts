@@ -1,4 +1,4 @@
-import { buildEmailHtml } from './base.template';
+import { buildEmailHtml, esc } from './base.template';
 import { formatDisplayDate } from '../../../common/utils/display-date';
 
 export function approvedTemplate(params: {
@@ -11,9 +11,9 @@ export function approvedTemplate(params: {
   const subject = `Congratulations — You have been added to the FAFICS Expertise Pool`;
   const formattedDate = formatDisplayDate(params.expiryDate);
 
-  const expertList = params.expertAreas.map(area => `<li>${area}</li>`).join('');
-  const preferredList = params.preferredAreas.map(area => `<li>${area}</li>`).join('');
-  const committeeList = (params.preferredCommittees ?? []).map(c => `<li>${c}</li>`).join('');
+  const expertList = params.expertAreas.map(area => `<li>${esc(area)}</li>`).join('');
+  const preferredList = params.preferredAreas.map(area => `<li>${esc(area)}</li>`).join('');
+  const committeeList = (params.preferredCommittees ?? []).map(c => `<li>${esc(c)}</li>`).join('');
 
   const expertSection = params.expertAreas.length
     ? `
@@ -40,7 +40,7 @@ export function approvedTemplate(params: {
     : '';
 
   const body = `
-    <p>Dear ${params.applicantName},</p>
+    <p>Dear ${esc(params.applicantName)},</p>
     <p>We are pleased to inform you that your application has been approved. Welcome to the FAFICS Expertise Pool!</p>
     ${expertSection}
     ${preferredSection}

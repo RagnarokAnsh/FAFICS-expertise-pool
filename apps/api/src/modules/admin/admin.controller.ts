@@ -11,6 +11,7 @@ import {
   Res,
   HttpCode,
   HttpStatus,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -25,7 +26,14 @@ import { ExportService } from '../export/export.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  ADMIN_ROLES,
+  EXPIRING_VIEW_ROLES,
+  EXPORT_ROLES,
+  REVIEW_ROLES,
+  VIEW_ROLES,
+} from '../auth/roles';
+import { AuthenticatedUser, CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ListApplicationsDto } from './dto/list-applications.dto';
 import { ApproveDto } from './dto/approve.dto';
 import { RejectDto } from './dto/reject.dto';
@@ -39,6 +47,7 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SendRemindersDto } from './dto/send-reminders.dto';
 import { UpdatePresidentEmailDto } from './dto/update-president-email.dto';
+import { ListNotificationsDto } from './dto/list-notifications.dto';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -53,7 +62,7 @@ export class AdminController {
   // ─── Dashboard ─────────────────────────────────────────────────────────
 
   @Get('stats')
-  @Roles('secretary', 'committee', 'admin')
+  @Roles(...VIEW_ROLES)
   @ApiOperation({ summary: 'Get dashboard statistics' })
   @ApiResponse({ status: 200, description: 'Dashboard stats returned' })
   async getStats() {
@@ -61,7 +70,7 @@ export class AdminController {
   }
 
   @Get('analytics')
-  @Roles('secretary', 'committee', 'admin')
+  @Roles(...VIEW_ROLES)
   @ApiOperation({ summary: 'Get reporting analytics for approved profiles' })
   @ApiResponse({ status: 200, description: 'Analytics data returned' })
   async getAnalytics() {
@@ -69,14 +78,14 @@ export class AdminController {
   }
 
   @Get('associations')
-  @Roles('secretary', 'committee', 'admin')
+  @Roles(...VIEW_ROLES)
   @ApiOperation({ summary: 'Distinct associations for filter dropdowns' })
   async getDistinctAssociations() {
     return this.adminService.getDistinctAssociations();
   }
 
   @Get('countries')
-  @Roles('secretary', 'committee', 'admin')
+  @Roles(...VIEW_ROLES)
   @ApiOperation({ summary: 'Get distinct association countries for filter dropdowns' })
   @ApiResponse({ status: 200, description: 'List of distinct countries' })
   async getDistinctCountries() {
@@ -86,7 +95,7 @@ export class AdminController {
   // ─── Applications ──────────────────────────────────────────────────────
 
   @Get('applications')
-  @Roles('secretary', 'committee', 'admin')
+  @Roles(...VIEW_ROLES)
   @ApiOperation({ summary: 'List applications with filters and pagination' })
   @ApiResponse({ status: 200, description: 'Paginated application list' })
   async listApplications(@Query() query: ListApplicationsDto) {
@@ -94,38 +103,38 @@ export class AdminController {
   }
 
   @Get('applications/:id')
-  @Roles('secretary', 'committee', 'admin')
+  @Roles(...VIEW_ROLES)
   @ApiOperation({ summary: 'Get full application detail' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Full application detail with audit log' })
   @ApiResponse({ status: 404, description: 'Application not found' })
-  async getApplicationDetail(@Param('id') id: string) {
+  async getApplicationDetail(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.getApplicationDetail(id);
   }
 
   @Patch('applications/:id/approve')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Approve an application' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Application approved' })
   async approve(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApproveDto,
-    @CurrentUser('email') actorEmail: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    await this.adminService.approve(id, dto, actorEmail);
+    await this.adminService.approve(id, dto, actor);
     return { message: 'Application approved successfully' };
   }
 
   @Post('applications/:id/remove-from-pool')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove an approved profile from the pool (deletes its data)' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Profile removed' })
   async removeFromPool(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RemoveFromPoolDto,
     @CurrentUser('email') actorEmail: string,
   ) {
@@ -134,52 +143,52 @@ export class AdminController {
   }
 
   @Patch('applications/:id/reject')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reject an application' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Application rejected' })
   async reject(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectDto,
-    @CurrentUser('email') actorEmail: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    await this.adminService.reject(id, dto, actorEmail);
+    await this.adminService.reject(id, dto, actor);
     return { message: 'Application rejected' };
   }
 
   @Patch('applications/:id/request-changes')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request changes on an application' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Changes requested' })
   async requestChanges(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RequestChangesDto,
-    @CurrentUser('email') actorEmail: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    await this.adminService.requestChanges(id, dto, actorEmail);
+    await this.adminService.requestChanges(id, dto, actor);
     return { message: 'Changes requested' };
   }
 
   @Patch('applications/:id/notes')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Add internal notes to an application' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Notes added' })
   async addNotes(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddNotesDto,
-    @CurrentUser('email') actorEmail: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    await this.adminService.addNotes(id, dto, actorEmail);
+    await this.adminService.addNotes(id, dto, actor);
     return { message: 'Notes added' };
   }
 
   @Post('applications/:id/resend-president-link')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Email the President the endorsement request again (earlier links keep working)' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
@@ -187,7 +196,7 @@ export class AdminController {
   @ApiResponse({ status: 400, description: 'Application is not awaiting the President' })
   @ApiResponse({ status: 503, description: 'The email could not be sent' })
   async resendPresidentLink(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('email') actorEmail: string,
     @CurrentUser('role') actorRole: string,
   ) {
@@ -196,7 +205,7 @@ export class AdminController {
   }
 
   @Patch('applications/:id/president-email')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Correct the President's email; while awaiting the President, a new link is sent to it",
@@ -204,7 +213,7 @@ export class AdminController {
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'President email updated' })
   async updatePresidentEmail(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePresidentEmailDto,
     @CurrentUser('email') actorEmail: string,
     @CurrentUser('role') actorRole: string,
@@ -215,7 +224,7 @@ export class AdminController {
   // ─── Export ────────────────────────────────────────────────────────────
 
   @Get('export/roster')
-  @Roles('secretary', 'admin')
+  @Roles(...EXPORT_ROLES)
   @ApiOperation({ summary: 'Download the whole Expertise Pool as an Excel file' })
   @ApiResponse({ status: 200, description: 'Excel file download' })
   async exportRoster(@Res() res: Response) {
@@ -224,7 +233,7 @@ export class AdminController {
   }
 
   @Post('export/roster')
-  @Roles('secretary', 'admin')
+  @Roles(...EXPORT_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Download selected Expertise Pool profiles as an Excel file' })
   @ApiResponse({ status: 200, description: 'Excel file download' })
@@ -234,7 +243,7 @@ export class AdminController {
   }
 
   @Get('export/applications')
-  @Roles('secretary', 'admin')
+  @Roles(...EXPORT_ROLES)
   @ApiOperation({ summary: 'Download applications (any status) as Excel, with the Applications page filters' })
   @ApiResponse({ status: 200, description: 'Excel file download' })
   async exportApplications(@Query() dto: ListApplicationsDto, @Res() res: Response) {
@@ -246,11 +255,11 @@ export class AdminController {
   }
 
   @Get('export/application/:id')
-  @Roles('secretary', 'admin')
+  @Roles(...EXPORT_ROLES)
   @ApiOperation({ summary: 'Download one application as an Excel file' })
   @ApiParam({ name: 'id', description: 'Application UUID' })
   @ApiResponse({ status: 200, description: 'Excel file download' })
-  async exportApplication(@Param('id') id: string, @Res() res: Response) {
+  async exportApplication(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response) {
     const { buffer, referenceNumber } = await this.exportService.generateSingleApplicationExcel(id);
     this.sendExcel(res, buffer, `FAFICS_Profile_${referenceNumber ?? 'Draft'}_${this.today()}.xlsx`);
   }
@@ -268,7 +277,7 @@ export class AdminController {
   // ─── Expiring Profiles ─────────────────────────────────────────────────
 
   @Get('expiring')
-  @Roles('secretary', 'admin')
+  @Roles(...EXPIRING_VIEW_ROLES)
   @ApiOperation({ summary: 'List applications expiring within 90 days' })
   @ApiResponse({ status: 200, description: 'List of expiring applications' })
   async getExpiring() {
@@ -276,7 +285,7 @@ export class AdminController {
   }
 
   @Post('reminders/send')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Bulk send renewal reminders' })
   @ApiResponse({ status: 200, description: 'Reminders queued' })
@@ -287,7 +296,7 @@ export class AdminController {
   // ─── User Management ──────────────────────────────────────────────────
 
   @Get('users')
-  @Roles('admin')
+  @Roles(...ADMIN_ROLES)
   @ApiOperation({ summary: 'List all officer users' })
   @ApiResponse({ status: 200, description: 'List of officers' })
   async listUsers() {
@@ -295,41 +304,41 @@ export class AdminController {
   }
 
   @Post('users')
-  @Roles('admin')
+  @Roles(...ADMIN_ROLES)
   @ApiOperation({ summary: 'Create a new officer user' })
   @ApiResponse({ status: 201, description: 'Officer created' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   async createUser(
     @Body() dto: CreateUserDto,
-    @CurrentUser('email') actorEmail: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    return this.adminService.createUser(dto, actorEmail);
+    return this.adminService.createUser(dto, actor);
   }
 
   @Patch('users/:id/role')
-  @Roles('admin')
+  @Roles(...ADMIN_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update user role' })
   @ApiParam({ name: 'id', description: 'User UUID' })
   @ApiResponse({ status: 200, description: 'Role updated' })
   async updateUserRole(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateUserRoleDto,
-    @CurrentUser('email') actorEmail: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    await this.adminService.updateUserRole(id, body.role, actorEmail);
+    await this.adminService.updateUserRole(id, body.role, actor);
     return { message: 'Role updated' };
   }
 
   @Patch('users/:id')
-  @Roles('admin')
+  @Roles(...ADMIN_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update an officer profile, role, or active state' })
   @ApiParam({ name: 'id', description: 'User UUID' })
   @ApiResponse({ status: 200, description: 'User updated' })
   @ApiResponse({ status: 409, description: 'Email already in use' })
   async updateUser(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
     @CurrentUser('email') actorEmail: string,
     @CurrentUser('userId') actorId: string,
@@ -339,7 +348,7 @@ export class AdminController {
   }
 
   @Delete('users/:id')
-  @Roles('admin')
+  @Roles(...ADMIN_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete an officer account' })
   @ApiParam({ name: 'id', description: 'User UUID' })
@@ -349,7 +358,7 @@ export class AdminController {
     description: 'Blocked - owns applications, presides an association, is self, or is the last admin',
   })
   async deleteUser(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('email') actorEmail: string,
     @CurrentUser('userId') actorId: string,
   ) {
@@ -358,13 +367,13 @@ export class AdminController {
   }
 
   @Post('users/:id/reset-password')
-  @Roles('admin')
+  @Roles(...ADMIN_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Email a password reset link to an officer' })
   @ApiParam({ name: 'id', description: 'User UUID' })
   @ApiResponse({ status: 200, description: 'Reset link sent' })
   async sendUserPasswordReset(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('email') actorEmail: string,
     @CurrentUser('userId') actorId: string,
   ) {
@@ -375,30 +384,25 @@ export class AdminController {
   // ─── Notification Logs ────────────────────────────────────────────────
 
   @Get('notifications')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @ApiOperation({ summary: 'List notification logs' })
   @ApiResponse({ status: 200, description: 'Paginated notification log list' })
-  async listNotifications(
-    @Query('applicationId') applicationId?: string,
-    @Query('failedOnly') failedOnly?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async listNotifications(@Query() query: ListNotificationsDto) {
     return this.adminService.listNotifications({
-      applicationId,
-      failedOnly: failedOnly === 'true',
-      page: page ? Number(page) : 1,
-      limit: limit ? Number(limit) : 50,
+      applicationId: query.applicationId,
+      failedOnly: query.failedOnly === true,
+      page: query.page,
+      limit: query.limit,
     });
   }
 
   @Post('notifications/:id/retry')
-  @Roles('secretary', 'admin')
+  @Roles(...REVIEW_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retry a failed notification' })
   @ApiParam({ name: 'id', description: 'Notification log UUID' })
   @ApiResponse({ status: 200, description: 'Notification retried' })
-  async retryNotification(@Param('id') id: string) {
+  async retryNotification(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.retryNotification(id);
   }
 }

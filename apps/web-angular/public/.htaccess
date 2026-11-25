@@ -63,7 +63,7 @@ DirectoryIndex index.html
   # and the charts position elements with inline style attributes. If the API
   # is served from ANOTHER origin (environment.ts apiUrl is a full URL), add
   # that origin to connect-src.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.fafics.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
   # Turn on once HTTPS is confirmed working for the domain (browsers remember it):
   # Header always set Strict-Transport-Security "max-age=31536000"
 </IfModule>

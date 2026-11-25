@@ -1,4 +1,21 @@
-export function buildEmailHtml(title: string, body: string): string {
+/**
+ * Escapes a value for use in email HTML. Every value interpolated into a
+ * template body goes through this: names, association names, committee lists
+ * and reviewer notes are typed by applicants, and unescaped they could inject
+ * markup (e.g. a fake "endorse here" link) into mail sent from FAFICS.
+ */
+export function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** `title` is plain text (usually the subject line); `body` is trusted HTML. */
+export function buildEmailHtml(rawTitle: string, body: string): string {
+  const title = esc(rawTitle);
   return `
     <!DOCTYPE html>
     <html lang="en">

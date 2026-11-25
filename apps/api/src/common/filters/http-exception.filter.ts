@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { redactUrl } from '../utils/redact.util';
 
 /**
  * Global HTTP exception filter.
@@ -35,7 +36,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
 
     this.logger.warn(
-      `HTTP ${status} ${request.method} ${request.url}: ${JSON.stringify(errorBody.message)}`,
+      `HTTP ${status} ${request.method} ${redactUrl(request.url)}: ${JSON.stringify(errorBody.message)}`,
     );
 
     response.status(status).json(errorBody);

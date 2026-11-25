@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DatabaseService } from '../../database/database.service';
 import { TokensService } from '../tokens/tokens.service';
 import { MailService } from './mail.service';
 import { ConfigService } from '@nestjs/config';
@@ -11,7 +11,7 @@ export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: DatabaseService,
     private readonly tokensService: TokensService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,

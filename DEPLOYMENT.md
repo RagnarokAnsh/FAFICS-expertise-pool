@@ -30,6 +30,7 @@ It assumes a single Linux server running both application processes and PostgreS
 - [Appendix B — alternative topologies](#appendix-b--alternative-topologies)
 - [Appendix C — environment variable reference](#appendix-c--environment-variable-reference)
 - [Appendix D — cPanel shared hosting (MilesWeb) with the Angular frontend](#appendix-d--cpanel-shared-hosting-milesweb-with-the-angular-frontend)
+- [Appendix E — updating the live site (fafics.com)](#appendix-e--updating-the-live-site-faficscom)
 
 ---
 
@@ -119,7 +120,7 @@ Two operations push above steady state:
 
 **Choose 4 GB if** you intend to build the frontend on the server itself rather than shipping a pre-built bundle, or if you want PostgreSQL configured with a larger cache.
 
-Disk is sized mainly by `node_modules` — about 1 GB for the monorepo with development dependencies installed, which the server needs in order to build the API and run the Prisma CLI — plus the operating system, logs, and room for backups. The application data itself will not approach a gigabyte for many years.
+Disk is sized mainly by `node_modules` — about 1 GB for the monorepo with development dependencies installed, which the server needs in order to build the API — plus the operating system, logs, and room for backups. The application data itself will not approach a gigabyte for many years.
 
 ### Concrete options
 
@@ -340,21 +341,20 @@ On managed PostgreSQL (RDS, DigitalOcean, Neon) all three extensions are on the 
 
 ```bash
 cd /opt/fafics/app/apps/api
-npx prisma generate
-npx prisma migrate deploy
+npm run db:migrate
 ```
 
-`migrate deploy` applies every pending migration in order and creates the tables, enums, indexes, the `fn_generate_reference_number`, `fn_generate_uid`, `fn_expire_applications`, `check_max_preferred_areas`, and `fn_set_updated_at` functions, the associated triggers, the full-text and trigram indexes, and the `vw_active_roster` and `vw_dashboard_stats` views. No manual SQL is required.
+`db:migrate` (`scripts/migrate.js`) applies the SQL files in `apps/api/database/migrations/` in order, once each, recording them in the `schema_migrations` table. Each file runs in its own transaction. On an empty database `0000_baseline.sql` creates the tables, enums, indexes, the `fn_generate_reference_number`, `fn_generate_uid`, `fn_expire_applications`, `check_max_preferred_areas`, and `fn_set_updated_at` functions, the associated triggers, the full-text and trigram indexes, and the `vw_active_roster` and `vw_dashboard_stats` views. No manual SQL is required.
 
 ### 6.3 Seed the first administrator
 
 **First deployment only.**
 
 ```bash
-npx prisma db seed
+ADMIN_EMAIL="you@example.org" ADMIN_PASSWORD="Choose-A-Strong-Passw0rd" npm run create-admin
 ```
 
-This creates one administrator account from `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and a placeholder association record. Sign in with those credentials, then create the real officer accounts through the admin panel and change the initial password.
+This creates one administrator account (the password needs 12+ characters with an upper-case letter, a lower-case letter and a number). It never changes an existing account. Sign in with those credentials, then create the real officer accounts through the admin panel and change the initial password.
 
 ### 6.4 PostgreSQL tuning (optional)
 
@@ -414,7 +414,7 @@ Then transfer the bundle to the server:
 rsync -avz --delete apps/web/.next/standalone/ fafics@<SERVER>:/opt/fafics/web/
 ```
 
-The API is small enough to build on the server, so only the frontend needs shipping. If you would rather ship both, `apps/api/dist` and `packages/shared/dist` transfer the same way — but the server still needs `node_modules` and a generated Prisma client for the API to run.
+The API is small enough to build on the server, so only the frontend needs shipping. If you would rather ship both, `apps/api/dist` and `packages/shared/dist` transfer the same way — but the server still needs `node_modules` for the API to run.
 
 ### Option B — build everything on the server
 
@@ -475,7 +475,7 @@ ReadWritePaths=/opt/fafics
 WantedBy=multi-user.target
 ```
 
-The working directory must be the repository root so the API resolves `.env` and the Prisma client correctly.
+The working directory must be the repository root so the API resolves `.env` correctly.
 
 ### 8.2 Frontend service
 
@@ -760,9 +760,8 @@ su - fafics -s /bin/bash
 cd /opt/fafics/app
 git pull
 npm install
-npx prisma generate
-npx prisma migrate deploy      # only if migrations were added
 npm run build
+npm run db:migrate --workspace=@fafics/api   # applies only new migrations; safe to repeat
 exit
 
 systemctl restart fafics-api
@@ -783,7 +782,7 @@ ssh <SERVER> 'systemctl restart fafics-web'
 /opt/fafics/backup.sh
 ```
 
-Migrations are applied forward only. `prisma migrate deploy` has no rollback — recovering from a bad migration means restoring the dump.
+Migrations are applied forward only. `db:migrate` has no rollback, and the API refuses to start while a migration is pending. Recovering from a bad migration means restoring the dump.
 
 ### Expected downtime
 
@@ -838,9 +837,9 @@ The application ships with a reasonable baseline. Confirm each of these is actua
 - Session JWT held in an `HttpOnly`, `Secure`, `SameSite=None` cookie, unreadable by JavaScript
 - Login limited to 5 attempts per minute per IP; email-sending endpoints likewise; everything else 100 per minute
 - Helmet security headers on every response
-- CORS restricted to the single `WEB_BASE_URL` origin
+- CORS restricted to `CORS_ORIGINS` (default: the `WEB_BASE_URL` origin); only JSON request bodies are accepted (CSRF defence)
 - Every request body validated and stripped of unknown fields before it reaches a handler
-- All database access through Prisma's parameterised queries
+- All database access through parameterised SQL (`apps/api/src/database`), with column names taken from a fixed registry, never from request input
 - Magic tokens stored only as SHA-256 hashes, single-use, with a 14-day expiry
 - Every status change written to an append-only audit log
 
@@ -893,7 +892,7 @@ Check `journalctl -u fafics-api -n 50`.
 
 - *`JWT_SECRET is required` or a Joi validation error* — a required variable is missing or too short. `JWT_SECRET` must be at least 32 characters.
 - *`Can't reach database server`* — PostgreSQL is not running, or `DATABASE_URL` is wrong. Test with `psql "$DATABASE_URL" -c 'select 1'`.
-- *`@prisma/client did not initialize`* — run `npx prisma generate` in `apps/api`.
+- *`Database migrations pending: …`* — run `npm run db:migrate` in `apps/api`, then restart. (`SKIP_MIGRATION_CHECK=true` starts it anyway, for emergencies only.)
 - *`EADDRINUSE`* — something already holds port 3001. `ss -tlnp | grep 3001`.
 
 ### Emails are not arriving
@@ -1022,7 +1021,7 @@ Set on the **server**, in `/opt/fafics/app/.env`:
 | `JWT_EXPIRES_IN` | | `8h` — officer session length |
 | `PRESIDENT_LINK_TTL_MS` | | `1209600000` — 14 days |
 | `API_BASE_URL` | | `https://experts.fafics.org` |
-| `WEB_BASE_URL` | Yes | `https://experts.fafics.org` — CORS origin and email link base |
+| `WEB_BASE_URL` | Yes | `https://experts.fafics.org` — email link base and default CORS origin |
 | `FROM_EMAIL` | Yes | The authenticated Gmail account or a verified alias |
 | `SECRETARY_EMAIL` | No | No longer used (there is no Secretary review step); safe to leave unset |
 | `SMTP_HOST` | Yes | `smtp.gmail.com` |
@@ -1030,8 +1029,12 @@ Set on the **server**, in `/opt/fafics/app/.env`:
 | `SMTP_USER` | Yes | Gmail account |
 | `SMTP_PASS` | Yes | 16-character Gmail App Password |
 | `RESEND_API_KEY` | | Leave **unset** to use SMTP |
-| `ADMIN_EMAIL` | | Seed script only — first deployment |
-| `ADMIN_PASSWORD` | | Seed script only — change after first sign-in |
+| `ADMIN_EMAIL` | | `npm run create-admin` only — first deployment |
+| `ADMIN_PASSWORD` | | `npm run create-admin` only (12+ characters, upper, lower, digit) |
+| `CORS_ORIGINS` | | Browser origins allowed to call the API, comma-separated. Default: `WEB_BASE_URL` |
+| `AUTH_COOKIE_SAMESITE` | | `lax` (default). `none` only if the website and the API are on different sites |
+| `SWAGGER_ENABLED` | | `true` publishes `/api/docs` in production (off by default) |
+| `SKIP_MIGRATION_CHECK` | | `true` starts the API even with migrations pending. Emergencies only |
 
 Set on the **machine that builds the frontend**, before `npm run build`:
 
@@ -1080,21 +1083,19 @@ Any machine with Node.js 22 and a checkout of the repository will do. From the r
 
 ```bash
 npm ci
-npx turbo run build --filter=@fafics/api --filter=web-angular
-npm pack -w packages/shared --pack-destination apps/api
+npm run package:deploy
 ```
 
-This produces:
+`tools/package-deploy.mjs` builds the API and the website and lays them out for upload:
 
-- `apps/web-angular/dist/`, the complete website, including a hidden `.htaccess`;
-- `apps/api/dist/`, the compiled API;
-- `apps/api/fafics-shared-1.0.0.tgz`, the shared package the API imports (not published to npm).
+- `deploy/api/`: the API's app folder: `dist/`, `database/` (SQL migrations), `scripts/` (`migrate.js`, `create-admin.js`, `import-data.js`), `shared/` (the built `@fafics/shared` package, which is not on npm; `package.json` points at it with `file:./shared`), `package.json` and `package-lock.json`. No `.env` is ever copied;
+- `deploy/web/`: the complete website, including a hidden `.htaccess`.
 
-The frontend's API address is compiled in from `apps/web-angular/src/environments/environment.ts`. The default `'/api'` is correct for this layout. Change it only if the API is on a different domain, and then also add that origin to `connect-src` in `apps/web-angular/public/.htaccess`.
+The website's API address is compiled in from `apps/web-angular/src/environments/environment.ts` (production: `https://api.fafics.com/api`). For a same-domain layout set it to `'/api'` before packaging. If the API is on another origin, that origin must be in `connect-src` in `apps/web-angular/public/.htaccess` and `src/index.html`.
 
 ### D.3 Create the database
 
-**On the account (cPanel → PostgreSQL Databases):** create a database and a user, and add the user to the database with all privileges. cPanel prefixes both names with the account name, e.g. `cpuser_fafics` and `cpuser_faficsuser`. If `prisma migrate deploy` (D.4) later fails with `permission denied to create extension`, ask support to enable `uuid-ossp`, `pg_trgm` and `unaccent` on that database.
+**On the account (cPanel → PostgreSQL Databases):** create a database and a user, and add the user to the database with all privileges. cPanel prefixes both names with the account name, e.g. `cpuser_fafics` and `cpuser_faficsuser`. If `npm run db:migrate` (D.4) later fails with `permission denied to create extension`, ask support to enable `uuid-ossp`, `pg_trgm` and `unaccent` on that database.
 
 ```ini
 DATABASE_URL=postgresql://cpuser_faficsuser:<password>@localhost:5432/cpuser_fafics
@@ -1120,26 +1121,25 @@ DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<db>?sslmode=require&con
 
    After saving, cPanel shows a command that enters the application's environment, e.g. `source /home/<user>/nodevenv/fafics-api/22/bin/activate && cd /home/<user>/fafics-api`.
 
-2. **Upload** into `~/fafics-api/`: `apps/api/dist/`, `apps/api/prisma/`, `apps/api/package.json`, `apps/api/tsconfig.json` and `apps/api/fafics-shared-1.0.0.tgz`. File Manager's upload-a-zip-then-Extract is the quickest way. **Do not upload `node_modules`.** CloudLinux keeps modules in the application's virtual environment and refuses to install if a `node_modules` folder exists.
+2. **Upload** the contents of `deploy/api/` into `~/fafics-api/`. File Manager's upload-a-zip-then-Extract is the quickest way. **Do not upload `node_modules`.** CloudLinux keeps modules in the application's virtual environment and refuses to install if a `node_modules` folder exists.
 
 3. **Create `~/fafics-api/.env`** with the settings from [section 5.2](#52-create-the-environment-file) and permissions `600`. On this layout:
-   - `NODE_ENV=production`
+   - `NODE_ENV=production` (HTTPS-only session cookie, API docs hidden)
    - `DATABASE_URL` from D.3
-   - `API_BASE_URL` and `WEB_BASE_URL` both set to the site address, e.g. `https://experts.example.org` (no trailing slash, no `/api`)
+   - `API_BASE_URL` and `WEB_BASE_URL` set to the public addresses, no trailing slash. `WEB_BASE_URL` is also the default allowed CORS origin; set `CORS_ORIGINS` (comma-separated) to allow more, e.g. `https://fafics.com,https://www.fafics.com`
    - `API_PORT` is ignored, because Passenger assigns the socket.
 
 4. **Install and prepare the database** in cPanel → Terminal (or over SSH):
 
    ```bash
    source /home/<user>/nodevenv/fafics-api/22/bin/activate && cd /home/<user>/fafics-api
-   npm pkg set "dependencies.@fafics/shared=file:./fafics-shared-1.0.0.tgz"
-   npm install --include=dev
-   npx prisma generate
-   npx prisma migrate deploy
-   npx prisma db seed          # first deployment only — creates the admin from ADMIN_EMAIL / ADMIN_PASSWORD
+   npm install --omit=dev
+   npm run db:migrate:status
+   npm run db:migrate
+   ADMIN_EMAIL="you@example.org" ADMIN_PASSWORD="Choose-A-Strong-Passw0rd" npm run create-admin   # first deployment only
    ```
 
-   The `npm pkg set` line matters. Without it, npm tries to fetch `@fafics/shared` from the public registry, where the name is not ours. `--include=dev` is needed because the Prisma CLI and the seed runner are dev dependencies.
+   `db:migrate` works on an empty database (it creates everything) and on an existing one (it applies only what is new), and it is always safe to repeat. "Run NPM Install" in Setup Node.js App does the same as the `npm install` line.
 
 5. **Setup Node.js App → Restart**, then open `https://experts.example.org/api/health`. It should return `{"status":"ok","info":{"database":{"status":"up"}}}`.
 
@@ -1149,7 +1149,7 @@ Passenger passes the full path (`/api/...`) to the application, which is what th
 
 1. In File Manager, open the domain's document root (usually `public_html/`) and turn on **Settings → Show Hidden Files**.
 2. Delete the old site files, but **keep** the `api/` folder that Setup Node.js App created, `.well-known/`, and any `CLOUDLINUX PASSENGER CONFIGURATION` block in `.htaccess`.
-3. Upload the **contents** of `apps/web-angular/dist/`, including `.htaccess`.
+3. Upload the **contents** of `deploy/web/` (or `apps/web-angular/dist/`), including `.htaccess`.
 
 Check: `https://experts.example.org/apply` shows the form, and reloading `https://experts.example.org/admin/login` shows the login page rather than a 404.
 
@@ -1178,10 +1178,10 @@ Each step of the job picks up everything that is due, not only what became due t
 
 ### D.9 Updating
 
-- **Frontend:** rebuild (`npm run build` in `apps/web-angular`) and repeat D.5.
+- **Frontend:** `npm run package:deploy` and upload `deploy/web/` as in D.5.
 - **API:** rebuild (D.2) and upload the new `dist/`.
-  - If migrations changed, also upload `prisma/` and run `npx prisma migrate deploy`.
-  - If dependencies changed, also upload `package.json` and repeat the `npm pkg set` and `npm install --include=dev` lines.
+  - Run `npm run package:deploy` and upload `deploy/api/` (it always includes `database/` and `package.json`).
+  - Run `npm install --omit=dev` if dependencies changed, and always `npm run db:migrate`: the API refuses to start while a migration is pending.
   - Then **Restart** in Setup Node.js App.
 
 ### D.10 Troubleshooting
@@ -1191,6 +1191,65 @@ Each step of the job picks up everything that is due, not only what became due t
 | `/` works, but reloading any other page gives a 404 | `.htaccess` was not uploaded (hidden file), or `mod_rewrite` is off |
 | Every page is a 500 Internal Server Error | The host forbids a directive in `.htaccess`, usually `Options`. Remove the `Options -Indexes` line |
 | `/api/health` returns the Angular page | The Node.js app is not mounted at `/api`. Check its Application URL |
-| `/api/...` returns 503 or "Incomplete response received from application" | The API crashed on start. Read `stderr.log` in `~/fafics-api/`. Usual causes: a missing `.env` value, an unreachable `DATABASE_URL`, `prisma generate` not run |
+| `/api/...` returns 503 or "Incomplete response received from application" | The API crashed on start. Read `stderr.log` in `~/fafics-api/`. Usual causes: a missing `.env` value, an unreachable `DATABASE_URL`, or `Database migrations pending` (run `npm run db:migrate`) |
 | Login succeeds, then returns to the login page | The site was opened over `http://`. See D.6 |
 | Pages load unstyled, or the console shows `Content-Security-Policy` errors | The API or an asset is served from another origin. Add it to the CSP in `.htaccess` |
+
+---
+
+## Appendix E — updating the live site (fafics.com)
+
+The live site runs the shared-hosting layout from Appendix D with the API on its own subdomain:
+
+```
+https://fafics.com/            →  public_html/          the Angular site (deploy/web)
+https://api.fafics.com/api/... →  the API's Node.js app  (deploy/api), its own .env
+```
+
+The API is at another origin, so the site is built with `apiUrl: 'https://api.fafics.com/api'` (`apps/web-angular/src/environments/environment.ts`), that origin is in `connect-src` of the Content-Security-Policy (`public/.htaccess`, `src/index.html`), and the API allows `https://fafics.com` through `CORS_ORIGINS` (or `WEB_BASE_URL`).
+
+The database is managed by the SQL migrations in `apps/api/database/migrations` (table `schema_migrations`). Prisma is not used anywhere. Never run `prisma migrate` against it.
+
+### E.1 Package
+
+On a workstation, from the repository root:
+
+```bash
+npm ci
+npm run package:deploy
+```
+
+### E.2 Back up
+
+In cPanel → Terminal (or from a machine that can reach the database):
+
+```bash
+pg_dump "$DATABASE_URL" > ~/backup-$(date +%F).sql
+```
+
+Keep a copy of the API folder and of `public_html` too (File Manager → Compress), so the previous version can be put back.
+
+### E.3 Update the API, then the database
+
+1. Upload the contents of `deploy/api/` into the API's app folder, replacing `dist/`, `database/`, `scripts/`, `shared/`, `package.json` and `package-lock.json`. **Keep the server's own `.env`**, and do not upload `node_modules`.
+2. cPanel → Setup Node.js App → **Run NPM Install** (or `npm install --omit=dev` after the `source …/activate` line shown at the top of the app's page).
+3. In the app folder: `npm run db:migrate:status`, then `npm run db:migrate`. On the current production database this applies `0003_applicant_view_and_reminder_notice.sql` (three new enum values, nothing else changes). It ends with *"All migrations applied."* and is safe to run again. If it says the tables belong to another database user, run it once with that user's `DATABASE_URL`, as the message shows.
+4. **Restart** the app and open `https://api.fafics.com/api/health`: expect `{"status":"ok", …}`. If the API does not start, its log names the cause; `Database migrations pending` means step 3 was skipped.
+
+### E.4 Update the website
+
+In `public_html/` (with **Show Hidden Files** on): delete the old site files, but keep `.well-known/` and any `CLOUDLINUX PASSENGER CONFIGURATION` block in `.htaccess`. Then upload the **contents** of `deploy/web/`, including `.htaccess`.
+
+Deploy E.3 and E.4 together: the new site expects the new API.
+
+### E.5 Check
+
+1. `https://fafics.com/apply` loads, and reloading `https://fafics.com/admin/login` shows the login page.
+2. Sign in as an administrator: the menu shows Overview, Applications, Expertise Pool, Expiring Profiles, Email Log, My Account and User Management. Open an application awaiting its President: Resend to President and Edit President Email are offered.
+3. In User Management create a **Management** account and sign in with it in a private window: no Email Log or User Management in the menu, "View only" on an application page, and Excel downloads still work.
+4. Check Status with a real email and reference: "Email me a link to view my application" sends a link that opens the read-only application.
+5. **Contact Us** (top right) sends a message to support@fafics.com.
+
+### E.6 Roll back
+
+Put the previous API folder and `public_html` back and restart the app. The migrations only **add** enum values, so the previous version keeps working with the migrated database and no database rollback is needed.

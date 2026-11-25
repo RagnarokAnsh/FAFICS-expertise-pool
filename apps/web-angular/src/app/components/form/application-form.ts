@@ -313,7 +313,7 @@ export class ApplicationFormComponent implements OnInit {
         // No draft yet (user reached submit without the auto-save creating one):
         // create it now and reuse the returned edit token to authorize submission.
         const createResponse = await applicationsApi.createDraft(sanitizeForApi(data));
-        if (createResponse.resumed) {
+        if (createResponse.resumed || !createResponse.id || !createResponse.editToken) {
           // One is already in progress for these details; its owner was emailed a link.
           this.state.inProgressNotice.set(true);
           return;

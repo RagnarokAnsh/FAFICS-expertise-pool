@@ -1,15 +1,18 @@
-import { Prisma } from '@prisma/client';
 import { ListApplicationsDto } from './dto/list-applications.dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Prisma-style filter and sort objects, compiled by DatabaseService. */
+type Where = Record<string, any>;
+type OrderBy = Record<string, any>;
 
 /**
  * The Applications filters, shared by the list and its Excel export so the
  * file always holds exactly what the screen shows.
  */
-export function applicationsWhere(dto: Partial<ListApplicationsDto>): Prisma.ApplicationWhereInput {
-  const where: Prisma.ApplicationWhereInput = {};
-  const and: Prisma.ApplicationWhereInput[] = [];
+export function applicationsWhere(dto: Partial<ListApplicationsDto>): Where {
+  const where: Where = {};
+  const and: Where[] = [];
 
   if (dto.status) {
     where.status = dto.status as any;
@@ -54,7 +57,7 @@ export function applicationsWhere(dto: Partial<ListApplicationsDto>): Prisma.App
 export const APPLICATION_SORTS = ['updated', 'oldest', 'newest', 'name'] as const;
 export type ApplicationSort = (typeof APPLICATION_SORTS)[number];
 
-export function applicationsOrderBy(sort?: ApplicationSort): Prisma.ApplicationOrderByWithRelationInput[] {
+export function applicationsOrderBy(sort?: ApplicationSort): OrderBy[] {
   // id last so equal values (e.g. two people with the same name) keep one
   // fixed order across list pages and the Excel export.
   switch (sort) {

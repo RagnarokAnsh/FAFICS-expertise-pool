@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DatabaseService } from '../../database/database.service';
 import { CreateAuditLogDto } from './dto/create-audit-log.dto';
-import { ApplicationStatus, UserRole, Prisma } from '@prisma/client';
+import { ApplicationStatus, UserRole } from '@fafics/shared';
 
 /**
  * AuditService is append-only. It exposes only one method: log().
@@ -14,7 +14,7 @@ import { ApplicationStatus, UserRole, Prisma } from '@prisma/client';
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly database: DatabaseService) {}
 
   /**
    * Appends a single audit log entry.
@@ -23,20 +23,37 @@ export class AuditService {
    */
   async log(dto: CreateAuditLogDto): Promise<void> {
     try {
-      await this.prisma.auditLog.create({
-        data: {
-          applicationId: dto.applicationId,
-          actorId: dto.actorId,
-          actorEmail: dto.actorEmail,
-          actorRole: dto.actorRole as UserRole,
-          action: dto.action,
-          oldStatus: dto.oldStatus as ApplicationStatus | undefined,
-          newStatus: dto.newStatus as ApplicationStatus | undefined,
-          metadata: dto.metadata ? (dto.metadata as Prisma.InputJsonValue) : undefined,
-          ipAddress: dto.ipAddress,
-          userAgent: dto.userAgent,
-        },
-      });
+      await this.database.query(
+        `
+          INSERT INTO audit_logs (
+            id,
+            application_id,
+            actor_id,
+            actor_email,
+            actor_role,
+            action,
+            old_status,
+            new_status,
+            metadata,
+            ip_address,
+            user_agent,
+            created_at
+          )
+          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, NOW())
+        `,
+        [
+          dto.applicationId ?? null,
+          dto.actorId ?? null,
+          dto.actorEmail,
+          dto.actorRole as UserRole,
+          dto.action,
+          dto.oldStatus as ApplicationStatus | undefined ?? null,
+          dto.newStatus as ApplicationStatus | undefined ?? null,
+          dto.metadata ? JSON.stringify(dto.metadata) : null,
+          dto.ipAddress ?? null,
+          dto.userAgent ?? null,
+        ],
+      );
 
       this.logger.log(
         `Audit: ${dto.action} by ${dto.actorEmail} (${dto.actorRole})` +

@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { ApplicantApplicationView, EndorsementView } from '@fafics/shared';
 
 /**
@@ -6,7 +5,7 @@ import { ApplicantApplicationView, EndorsementView } from '@fafics/shared';
  * endorsement page and the applicant's own view-only page, so both always show
  * the same fields. Internal fields (notes, UID, audit data) are left out.
  */
-export const APPLICATION_VIEW_INCLUDE = Prisma.validator<Prisma.ApplicationInclude>()({
+export const APPLICATION_VIEW_INCLUDE = {
   educations: { orderBy: { sortOrder: 'asc' } },
   languages: { orderBy: { sortOrder: 'asc' } },
   unExperiences: { orderBy: { sortOrder: 'asc' } },
@@ -14,11 +13,10 @@ export const APPLICATION_VIEW_INCLUDE = Prisma.validator<Prisma.ApplicationInclu
   faficsExperiences: { orderBy: { sortOrder: 'asc' } },
   localExperiences: { orderBy: { sortOrder: 'asc' } },
   expertise: { orderBy: { sortOrder: 'asc' } },
-});
+} as const;
 
-export type ApplicationWithViewRelations = Prisma.ApplicationGetPayload<{
-  include: typeof APPLICATION_VIEW_INCLUDE;
-}>;
+/** An application row with APPLICATION_VIEW_INCLUDE attached (the data layer returns untyped rows). */
+export type ApplicationWithViewRelations = any;
 
 export function toEndorsementView(application: ApplicationWithViewRelations): EndorsementView {
   return {

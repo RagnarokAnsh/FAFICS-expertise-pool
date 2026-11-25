@@ -11,7 +11,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "package:deploy": "node tools/package-deploy.mjs"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

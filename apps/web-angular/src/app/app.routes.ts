@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { roleGuard } from './core/role.guard';
+import { canReview, canViewExpiring, isAdmin } from './lib/auth/roles';
 
 /**
  * Same URLs as the Next.js app (so emailed links keep working):
@@ -60,13 +62,25 @@ export const routes: Routes = [
               import('./pages/admin/application-detail.page').then((m) => m.ApplicationDetailPage),
           },
           { path: 'roster', loadComponent: () => import('./pages/admin/roster.page').then((m) => m.RosterPage) },
-          { path: 'expiring', loadComponent: () => import('./pages/admin/expiring.page').then((m) => m.ExpiringPage) },
+          {
+            path: 'expiring',
+            canActivate: [roleGuard(canViewExpiring)],
+            loadComponent: () => import('./pages/admin/expiring.page').then((m) => m.ExpiringPage),
+          },
           // The pool export now lives on the Expertise Pool page; keep old links working.
           { path: 'export', pathMatch: 'full', redirectTo: 'roster' },
           { path: 'reports', loadComponent: () => import('./pages/admin/reports.page').then((m) => m.ReportsPage) },
-          { path: 'users', loadComponent: () => import('./pages/admin/users.page').then((m) => m.UsersPage) },
+          {
+            path: 'users',
+            canActivate: [roleGuard(isAdmin)],
+            loadComponent: () => import('./pages/admin/users.page').then((m) => m.UsersPage),
+          },
           { path: 'account', loadComponent: () => import('./pages/admin/account.page').then((m) => m.AccountPage) },
-          { path: 'emails', loadComponent: () => import('./pages/admin/emails.page').then((m) => m.EmailsPage) },
+          {
+            path: 'emails',
+            canActivate: [roleGuard(canReview)],
+            loadComponent: () => import('./pages/admin/emails.page').then((m) => m.EmailsPage),
+          },
         ],
       },
     ],

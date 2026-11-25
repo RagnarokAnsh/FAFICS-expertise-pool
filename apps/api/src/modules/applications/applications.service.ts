@@ -8,7 +8,7 @@ import {
   Logger,
   GoneException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DatabaseService } from '../../database/database.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateDraftDto } from './dto/create-draft.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';
@@ -18,7 +18,6 @@ import { ApplicationStatusQueryDto } from './dto/application-status-query.dto';
 import { RequestEditLinkDto } from './dto/request-edit-link.dto';
 import { RequestViewLinkDto } from './dto/request-view-link.dto';
 import { APPLICATION_VIEW_INCLUDE, toApplicantApplicationView } from './application-view.mapper';
-import { Prisma } from '@prisma/client';
 import { TokensService } from '../tokens/tokens.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationService } from '../mail/notification.service';
@@ -35,7 +34,7 @@ export class ApplicationsService {
   private readonly logger = new Logger(ApplicationsService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: DatabaseService,
     private readonly auditService: AuditService,
     private readonly tokensService: TokensService,
     private readonly mailService: MailService,
@@ -53,15 +52,17 @@ export class ApplicationsService {
   async createDraft(
     dto: CreateDraftDto,
   ): Promise<{ id?: string; editToken?: string; resumed: boolean }> {
+    const applicantEmail = (dto.personal.email ?? '').trim().toLowerCase();
     const result = await this.prisma.$transaction(async (tx) => {
       // Create or find user for this applicant (applicants don't have accounts,
       // but we need a user row for the FK constraint). User is unique by email,
-      // so this is the "individual" half of the dedup key.
+      // so this is the "individual" half of the dedup key. Matched without case
+      // so "Jean@x.org" and "jean@x.org" are the same person.
       const user = await tx.user.upsert({
-        where: { email: dto.personal.email ?? '' },
+        where: { email: { equals: applicantEmail, mode: 'insensitive' } },
         update: {},
         create: {
-          email: dto.personal.email ?? '',
+          email: applicantEmail,
           role: 'member',
           firstName: dto.personal.firstName ?? '',
           lastName: dto.personal.lastName ?? '',
@@ -223,7 +224,7 @@ export class ApplicationsService {
 
     void this.notificationService.sendDraftResumeLink(application.id, editToken);
 
-    return { id: application.id, editToken, resumed };
+    return { id: application.id, editToken, resumed: false };
   }
 
   /**
@@ -287,7 +288,7 @@ export class ApplicationsService {
 
     await this.prisma.$transaction(async (tx) => {
       // Build the update data object from provided fields
-      const updateData: Prisma.ApplicationUpdateInput = {};
+      const updateData: Record<string, any> = {};
 
       // Personal fields
       if (dto.personal) {
@@ -307,7 +308,7 @@ export class ApplicationsService {
       // Association fields
       if (dto.association) {
         if (dto.association.associationId !== undefined) {
-          updateData.association = { connect: { id: dto.association.associationId } };
+          updateData.associationId = dto.association.associationId;
         }
         if (dto.association.associationName !== undefined) updateData.associationName = dto.association.associationName;
         if (dto.association.associationCountry !== undefined) updateData.associationCountry = dto.association.associationCountry;
@@ -367,7 +368,7 @@ export class ApplicationsService {
             positionTitle: u.positionTitle ?? '',
             grade: u.grade ?? '',
             areaOfExpertise: u.areaOfExpertise ?? '',
-            durationYears: u.durationYears != null ? new Prisma.Decimal(u.durationYears) : null,
+            durationYears: u.durationYears != null ? Number(u.durationYears) : null,
             sortOrder: u.sortOrder ?? i + 1,
           })),
         });
@@ -381,7 +382,7 @@ export class ApplicationsService {
             organization: n.organization ?? '',
             positionTitle: n.positionTitle ?? '',
             areaOfExpertise: n.areaOfExpertise ?? '',
-            durationYears: n.durationYears != null ? new Prisma.Decimal(n.durationYears) : null,
+            durationYears: n.durationYears != null ? Number(n.durationYears) : null,
             sortOrder: n.sortOrder ?? i + 1,
           })),
         });
@@ -395,7 +396,7 @@ export class ApplicationsService {
             positionHeld: f.positionHeld ?? '',
             areaOfContribution: f.areaOfContribution ?? '',
             areaOfContributionOther: f.areaOfContributionOther ?? null,
-            durationYears: f.durationYears != null ? new Prisma.Decimal(f.durationYears) : null,
+            durationYears: f.durationYears != null ? Number(f.durationYears) : null,
             sortOrder: f.sortOrder ?? i + 1,
           })),
         });
@@ -408,7 +409,7 @@ export class ApplicationsService {
             applicationId: id,
             positionHeld: l.positionHeld ?? '',
             areaOfContribution: l.areaOfContribution ?? '',
-            durationYears: l.durationYears != null ? new Prisma.Decimal(l.durationYears) : null,
+            durationYears: l.durationYears != null ? Number(l.durationYears) : null,
             sortOrder: l.sortOrder ?? i + 1,
           })),
         });
@@ -496,6 +497,17 @@ export class ApplicationsService {
         'Association president email is required.',
       );
     }
+    // The president's endorsement adds the applicant to the pool, so the
+    // endorsement link must not go to the applicant's own inbox. The form
+    // checks this too, but only this check cannot be bypassed.
+    if (
+      application.presidentEmail.trim().toLowerCase() ===
+      application.email.trim().toLowerCase()
+    ) {
+      throw new BadRequestException(
+        "The President's email must be different from your own email address.",
+      );
+    }
     if (application.educations.length === 0) {
       throw new BadRequestException(
         'At least one education entry is required.',
@@ -569,6 +581,10 @@ export class ApplicationsService {
       return refNumber;
     });
 
+    // The application is locked now; revoke every edit link for it so none can
+    // be replayed. A new one is issued if it is ever returned for changes.
+    await this.tokensService.invalidateForApplication(id, TokenPurpose.APPLICANT_EDIT);
+
     // After transaction: send notifications (non-blocking — NotificationService
     // handles its own errors). sendPresidentLink reissues a fresh president
     // magic link, which is exactly what a resubmission needs (the prior link was
@@ -598,7 +614,7 @@ export class ApplicationsService {
   }> {
     const application = await this.prisma.application.findFirst({
       where: {
-        email: { equals: query.email, mode: 'insensitive' },
+        email: { equals: query.email.trim(), mode: 'insensitive' },
         referenceNumber: query.referenceNumber,
       },
       select: {
@@ -638,7 +654,7 @@ export class ApplicationsService {
 
     const application = await this.prisma.application.findFirst({
       where: {
-        email: { equals: dto.email, mode: 'insensitive' },
+        email: { equals: dto.email.trim(), mode: 'insensitive' },
         referenceNumber: dto.referenceNumber,
       },
     });
@@ -661,16 +677,34 @@ export class ApplicationsService {
     const webBaseUrl = this.configService.get<string>('app.webBaseUrl') || this.configService.get<string>('WEB_BASE_URL') || 'http://localhost:3000';
     const resumeUrl = `${webBaseUrl}/apply/resume/${rawToken}`;
 
-    await this.mailService.sendApplicantEditLink(application.id, resumeUrl, '3 hours');
-
-    await this.prisma.notificationLog.create({
-      data: {
-        notificationType: NotificationType.APPLICANT_EDIT_LINK,
-        recipientEmail: application.email,
-        applicationId: application.id,
-        sentAt: new Date(),
-      },
-    });
+    // A mail failure must not change the response: a 500 only for real
+    // applications would reveal which email/reference pairs exist.
+    try {
+      const { messageId } = await this.mailService.sendApplicantEditLink(application.id, resumeUrl, '3 hours');
+      await this.prisma.notificationLog.create({
+        data: {
+          notificationType: NotificationType.APPLICANT_EDIT_LINK,
+          recipientEmail: application.email,
+          applicationId: application.id,
+          providerMessageId: messageId,
+          sentAt: new Date(),
+        },
+      });
+    } catch (error: any) {
+      this.logger.error(`Failed to send edit link for ${application.id}: ${error?.message}`);
+      await this.prisma.notificationLog
+        .create({
+          data: {
+            notificationType: NotificationType.APPLICANT_EDIT_LINK,
+            recipientEmail: application.email,
+            applicationId: application.id,
+            failedAt: new Date(),
+            errorMessage: String(error?.message ?? error),
+          },
+        })
+        .catch(() => undefined);
+      return generic;
+    }
 
     await this.auditService.log({
       applicationId: application.id,
@@ -838,7 +872,7 @@ export class ApplicationsService {
    */
   async requestDraftLink(email: string): Promise<void> {
     const application = await this.prisma.application.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' }, status: 'draft' },
+      where: { email: { equals: email.trim(), mode: 'insensitive' }, status: 'draft' },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -850,14 +884,20 @@ export class ApplicationsService {
     const { rawToken } = await this.tokensService.reissue({
       purpose: TokenPurpose.APPLICANT_EDIT,
       applicationId: application.id,
-      recipientEmail: email,
+      recipientEmail: application.email,
       ttlMs: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
     const webBaseUrl = this.configService.get<string>('app.webBaseUrl') || this.configService.get<string>('WEB_BASE_URL') || 'http://localhost:3000';
     const resumeUrl = `${webBaseUrl}/apply/resume/${rawToken}`;
 
-    await this.mailService.sendDraftSavedEmail(application.id, resumeUrl);
+    // Same response whether or not the mail goes out (see requestEditLink).
+    try {
+      await this.mailService.sendDraftSavedEmail(application.id, resumeUrl);
+    } catch (error: any) {
+      this.logger.error(`Failed to send draft link for ${application.id}: ${error?.message}`);
+      return;
+    }
 
     await this.auditService.log({
       applicationId: application.id,

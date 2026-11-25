@@ -22,8 +22,8 @@ packages/shared/src/**/*.js.map
 .env.local
 .env.*.local
 
-# Prisma
-apps/api/prisma/generated/
+# Upload bundle made by tools/package-deploy.mjs
+/deploy/
 
 # IDE
 .vscode/

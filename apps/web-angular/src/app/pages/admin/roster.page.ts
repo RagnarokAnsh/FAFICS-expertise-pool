@@ -5,6 +5,7 @@ import { RosterGridComponent } from '../../components/admin/roster-grid';
 import { SectionHeaderComponent } from '../../components/admin/ui';
 import { ToastService } from '../../core/toast.service';
 import { adminApi } from '../../lib/api/admin.api';
+import { canExport, currentRole } from '../../lib/auth/roles';
 import { FIXED_EXPERTISE_AREAS } from '../../lib/constants/expertise';
 
 /** app/admin/roster/page.tsx */
@@ -14,14 +15,16 @@ import { FIXED_EXPERTISE_AREAS } from '../../lib/constants/expertise';
   template: `
     <div class="mx-auto max-w-[1400px] p-6">
       <div appSectionHeader [subtitle]="subtitle()">
-        <button
-          sectionAction
-          (click)="exportRoster()"
-          [disabled]="exporting() || filtered().length === 0"
-          class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
-        >
-          {{ exporting() ? 'Preparing Excel…' : (filtersActive() ? 'Export these ' + filtered().length + ' to Excel' : '↓ Export to Excel') }}
-        </button>
+        @if (canExport) {
+          <button
+            sectionAction
+            (click)="exportRoster()"
+            [disabled]="exporting() || filtered().length === 0"
+            class="rounded-md bg-navy px-4 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-navy-mid disabled:opacity-60"
+          >
+            {{ exporting() ? 'Preparing Excel…' : (filtersActive() ? 'Export these ' + filtered().length + ' to Excel' : '↓ Export to Excel') }}
+          </button>
+        }
       </div>
 
       <!-- Controls: what officers look for when choosing an expert -->
@@ -109,6 +112,8 @@ import { FIXED_EXPERTISE_AREAS } from '../../lib/constants/expertise';
   host: { class: 'contents' },
 })
 export class RosterPage {
+  /** Downloads are limited to roles that may export (not view-only roles). */
+  protected readonly canExport = canExport(currentRole());
   protected readonly field =
     'h-[38px] w-full rounded-md border border-border bg-off-white px-3 text-[13px] text-text outline-none transition-colors focus:border-navy-mid focus:bg-white';
   protected readonly label = 'block text-[11px] text-text-light font-medium uppercase tracking-[0.03em] mb-1.5';

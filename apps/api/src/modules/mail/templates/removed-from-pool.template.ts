@@ -1,4 +1,4 @@
-import { buildEmailHtml } from './base.template';
+import { buildEmailHtml, esc } from './base.template';
 
 /** Sent (if the officer chooses) when an officer removes a profile from the pool. */
 export function removedFromPoolTemplate(params: {
@@ -8,13 +8,13 @@ export function removedFromPoolTemplate(params: {
 }): { subject: string; html: string } {
   const subject = 'Your FAFICS Expertise Pool profile has been removed';
   const reasonBlock = params.reason
-    ? `<div style="margin: 20px 0; padding: 16px; background-color: #f9fafb; border-left: 4px solid #C8973A; font-style: italic;">"${params.reason}"</div>`
+    ? `<div style="margin: 20px 0; padding: 16px; background-color: #f9fafb; border-left: 4px solid #C8973A; font-style: italic;">"${esc(params.reason)}"</div>`
     : '';
   const body = `
-    <p>Dear ${params.applicantName},</p>
+    <p>Dear ${esc(params.applicantName)},</p>
     <p>Your profile has been removed from the FAFICS Expertise Pool, and your application data has been deleted.</p>
     ${reasonBlock}
-    <p>If you believe this is a mistake, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>. You are welcome to submit a new application at any time at <a href="${params.webBaseUrl}/apply">${params.webBaseUrl}/apply</a>.</p>
+    <p>If you believe this is a mistake, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>. You are welcome to submit a new application at any time at <a href="${esc(params.webBaseUrl)}/apply">${esc(params.webBaseUrl)}/apply</a>.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }

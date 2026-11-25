@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { QueryClient, injectQuery } from '@tanstack/angular-query-experimental';
 import { ButtonComponent } from '../../components/ui/button';
 import { adminApi } from '../../lib/api/admin.api';
+import { canReview, currentRole } from '../../lib/auth/roles';
 import { formatDate } from '../../lib/utils/date';
 
 /** app/admin/expiring/page.tsx */
@@ -34,14 +35,16 @@ import { formatDate } from '../../lib/utils/date';
               }
             </div>
           </div>
-          <button
-            appButton
-            class="shrink-0 whitespace-nowrap"
-            (click)="handleSendReminder(allIds())"
-            [disabled]="applications().length === 0 || isSending()"
-          >
-            {{ isSending() ? 'Sending...' : 'Send ' + applications().length + (applications().length === 1 ? ' Reminder' : ' Reminders') }}
-          </button>
+          @if (canSend) {
+            <button
+              appButton
+              class="shrink-0 whitespace-nowrap"
+              (click)="handleSendReminder(allIds())"
+              [disabled]="applications().length === 0 || isSending()"
+            >
+              {{ isSending() ? 'Sending...' : 'Send ' + applications().length + (applications().length === 1 ? ' Reminder' : ' Reminders') }}
+            </button>
+          }
         </div>
 
         @if (message(); as m) {
@@ -73,7 +76,9 @@ import { formatDate } from '../../lib/utils/date';
                     <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Approved Date</th>
                     <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Expiry Date</th>
                     <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Days Left</th>
-                    <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase text-right">Action</th>
+                    @if (canSend) {
+                      <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase text-right">Action</th>
+                    }
                   </tr>
                 </thead>
                 <tbody>
@@ -90,15 +95,17 @@ import { formatDate } from '../../lib/utils/date';
                           >{{ daysLeft }} days</span
                         >
                       </td>
-                      <td class="py-3 px-4 text-right">
-                        <button
-                          (click)="handleSendReminder([app.id])"
-                          [disabled]="isSending()"
-                          class="text-[12px] font-semibold text-gold hover:text-gold-hover hover:underline disabled:opacity-50"
-                        >
-                          Send Reminder
-                        </button>
-                      </td>
+                      @if (canSend) {
+                        <td class="py-3 px-4 text-right">
+                          <button
+                            (click)="handleSendReminder([app.id])"
+                            [disabled]="isSending()"
+                            class="text-[12px] font-semibold text-gold hover:text-gold-hover hover:underline disabled:opacity-50"
+                          >
+                            Send Reminder
+                          </button>
+                        </td>
+                      }
                     </tr>
                   }
                 </tbody>
@@ -114,6 +121,8 @@ import { formatDate } from '../../lib/utils/date';
 })
 export class ExpiringPage {
   private readonly queryClient = inject(QueryClient);
+  /** Sending reminders is a review action; view-only roles just see the list. */
+  protected readonly canSend = canReview(currentRole());
   protected readonly isSending = signal(false);
   protected readonly message = signal<{ type: 'success' | 'error'; text: string } | null>(null);
   protected readonly formatDate = formatDate;

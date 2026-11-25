@@ -1,5 +1,6 @@
+import { OFFICER_ROLES } from '../../auth/roles';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, IsIn } from 'class-validator';
 
 /**
  * Partial update of an officer account. Every field is optional so the admin UI
@@ -25,10 +26,10 @@ export class UpdateUserDto {
   @IsNotEmpty({ message: 'Last name cannot be empty.' })
   lastName?: string;
 
-  @ApiPropertyOptional({ enum: ['secretary', 'committee', 'admin'] })
+  @ApiPropertyOptional({ enum: OFFICER_ROLES })
   @IsOptional()
-  @IsEnum(['secretary', 'committee', 'admin'], {
-    message: 'role must be one of: secretary, committee, admin',
+  @IsIn(OFFICER_ROLES, {
+    message: `role must be one of: ${OFFICER_ROLES.join(', ')}`,
   })
   role?: string;
 

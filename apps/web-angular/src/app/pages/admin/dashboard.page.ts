@@ -5,6 +5,7 @@ import { DistributionPieChartComponent, ExpertiseBarChartComponent } from '../..
 import { ReportCardComponent, StatusBadgeComponent } from '../../components/admin/ui';
 import { WAITING_WARN_DAYS, WaitingFlagComponent, daysWaiting } from '../../components/admin/waiting-flag';
 import { adminApi } from '../../lib/api/admin.api';
+import { canReview, currentRole } from '../../lib/auth/roles';
 import { formatDate } from '../../lib/utils/date';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -201,6 +202,8 @@ export class DashboardPage {
     queryKey: ['notifications', 'failed-count'],
     queryFn: () => adminApi.listNotifications({ failedOnly: true, page: 1, limit: 1 }),
     refetchInterval: 60000,
+    // The email log is for roles that can act on it (view-only roles get a 403).
+    enabled: canReview(currentRole()),
   }));
   protected readonly failedEmails = computed(() => (this.failedEmailsQ.data() as any)?.total ?? 0);
   /** Applications awaiting their President, longest wait first. */

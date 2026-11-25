@@ -9,7 +9,9 @@ import {
 import { ButtonComponent } from '../../components/ui/button';
 import { ToastService } from '../../core/toast.service';
 import { adminApi, authApi } from '../../lib/api/admin.api';
+import { ROLE_OPTIONS, roleLabel } from '../../lib/auth/roles';
 import { formatDate } from '../../lib/utils/date';
+import { isValidEmail } from '../../lib/utils/email';
 
 interface AdminUser {
   id: string;
@@ -32,8 +34,12 @@ function apiMessage(err: any, fallback: string): string {
 
 const INPUT_CLASS = 'w-full border border-border rounded p-2 text-sm';
 const LABEL_CLASS = 'block text-[11px] text-text-light font-medium uppercase mb-1';
+function roleDescription(role: string): string {
+  return ROLE_OPTIONS.find((r) => r.value === role)?.description ?? '';
+}
+
 const ACTION_BUTTON =
-  'inline-flex h-[26px] items-center rounded border px-2.5 text-[12px] font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex h-[26px] items-center justify-center rounded border px-2.5 text-[12px] font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-40';
 
 // ─── Modals ──────────────────────────────────────────────────────────────────
 
@@ -82,6 +88,16 @@ export class UserModalShellComponent {
           </div>
         </div>
 
+        <div class="mb-4">
+          <label [class]="labelClass">Role <span class="text-gold ml-0.5">*</span></label>
+          <select (change)="role.set($any($event.target).value)" [class]="inputClass">
+            @for (r of roles; track r.value) {
+              <option [value]="r.value" [selected]="r.value === role()">{{ r.label }}</option>
+            }
+          </select>
+          <p class="mt-1.5 text-[11.5px] text-text-light">{{ roleDescription(role()) }}</p>
+        </div>
+
         <div class="mb-6">
           <div
             appPasswordField
@@ -116,6 +132,11 @@ export class CreateUserModalComponent {
   protected readonly firstName = signal('');
   protected readonly lastName = signal('');
   protected readonly password = signal('');
+  // Least privilege by default: a new account is view-only until an admin
+  // deliberately picks a stronger role.
+  protected readonly role = signal<string>('management');
+  protected readonly roles = ROLE_OPTIONS;
+  protected readonly roleDescription = roleDescription;
   protected readonly error = signal<string | null>(null);
   protected readonly isSubmitting = signal(false);
 
@@ -129,7 +150,7 @@ export class CreateUserModalComponent {
       this.error.set('Please fill in all required fields.');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!isValidEmail(email)) {
       this.error.set('Please enter a valid email address.');
       return;
     }
@@ -144,7 +165,7 @@ export class CreateUserModalComponent {
       await adminApi.createUser({
         email: email.trim(),
         password,
-        role: 'admin',
+        role: this.role(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       });
@@ -187,6 +208,22 @@ export class CreateUserModalComponent {
           </div>
         </div>
 
+        <div class="mb-4">
+          <label [class]="labelClass">Role</label>
+          <select (change)="role.set($any($event.target).value)" [disabled]="isSelf()" [class]="inputClass">
+            @for (r of roles(); track r.value) {
+              <option [value]="r.value" [selected]="r.value === role()">{{ r.label }}</option>
+            }
+          </select>
+          <p class="mt-1.5 text-[11.5px] text-text-light">
+            @if (isSelf()) {
+              You cannot change your own role.
+            } @else {
+              {{ roleDescription(role()) }}
+            }
+          </p>
+        </div>
+
         <p class="mb-6 rounded bg-gray-50 p-3 text-[12px] text-text-mid">
           Passwords cannot be set from here. Use <strong>Reset Password</strong> on the user list to email this person a link
           so they can choose their own.
@@ -204,6 +241,7 @@ export class CreateUserModalComponent {
 })
 export class EditUserModalComponent implements OnInit {
   readonly user = input.required<AdminUser>();
+  readonly isSelf = input(false);
   readonly closed = output<void>();
   readonly saved = output<void>();
   private readonly toast = inject(ToastService);
@@ -212,6 +250,14 @@ export class EditUserModalComponent implements OnInit {
   protected readonly email = signal('');
   protected readonly firstName = signal('');
   protected readonly lastName = signal('');
+  protected readonly role = signal('');
+  protected readonly roles = computed(() => {
+    const current = this.user().role;
+    return ROLE_OPTIONS.some((r) => r.value === current)
+      ? ROLE_OPTIONS
+      : [...ROLE_OPTIONS, { value: current, label: `${roleLabel(current)} (current)`, description: '' }];
+  });
+  protected readonly roleDescription = roleDescription;
   protected readonly error = signal<string | null>(null);
   protected readonly isSubmitting = signal(false);
 
@@ -219,6 +265,7 @@ export class EditUserModalComponent implements OnInit {
     this.email.set(this.user().email);
     this.firstName.set(this.user().firstName);
     this.lastName.set(this.user().lastName);
+    this.role.set(this.user().role);
   }
 
   protected async handleSubmit(e: Event): Promise<void> {
@@ -230,7 +277,7 @@ export class EditUserModalComponent implements OnInit {
       this.error.set('Please fill in all fields.');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!isValidEmail(email)) {
       this.error.set('Please enter a valid email address.');
       return;
     }
@@ -242,6 +289,8 @@ export class EditUserModalComponent implements OnInit {
         email: email.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        // Only sent when changed, so saving a name never touches the role.
+        ...(this.role() !== this.user().role ? { role: this.role() } : {}),
       });
       this.toast.showToast('User updated.', 'success');
       this.saved.emit();
@@ -319,9 +368,12 @@ export class DeleteUserDialogComponent {
     <div class="p-4 sm:p-6 lg:p-8 max-w-[1100px] mx-auto">
       <div class="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <p class="text-text-mid">Manage officer and admin access to the dashboard.</p>
+          <p class="text-text-mid">
+            Manage who can sign in to the dashboard and what they can do. Management accounts can view and export, but
+            cannot change anything.
+          </p>
         </div>
-        <button appButton (click)="isCreateOpen.set(true)">+ Add New User</button>
+        <button appButton class="shrink-0 whitespace-nowrap" (click)="isCreateOpen.set(true)">+ Add New User</button>
       </div>
 
       <div class="bg-white border border-border rounded-lg overflow-hidden shadow-sm">
@@ -339,6 +391,15 @@ export class DeleteUserDialogComponent {
           <span [class]="'h-1.5 w-1.5 rounded-full ' + (user.isActive ? 'bg-success' : 'bg-text-muted')"></span
           >{{ user.isActive ? 'Active' : 'Inactive' }}
         </span>
+          </ng-template>
+          <ng-template #roleBadge let-user>
+        <span
+          [class]="
+            'inline-flex whitespace-nowrap rounded px-2 py-0.5 text-[11.5px] font-semibold ' +
+            (user.role === 'admin' ? 'bg-navy text-white' : 'bg-navy/10 text-navy')
+          "
+          >{{ roleLabel(user.role) }}</span
+        >
           </ng-template>
           <ng-template #userActions let-user let-isSelf="isSelf" let-busy="busy">
         <button
@@ -386,8 +447,9 @@ export class DeleteUserDialogComponent {
                 <tr class="bg-gray-50 border-b border-border">
                   <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Name</th>
                   <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Email</th>
+                  <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Role</th>
                   <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Status</th>
-                  <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Last Sign-In</th>
+                  <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase whitespace-nowrap">Last Sign-In</th>
                   <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase">Created</th>
                   <th class="py-3 px-4 text-[12px] font-semibold text-navy uppercase text-right w-px whitespace-nowrap">Actions</th>
                 </tr>
@@ -405,12 +467,15 @@ export class DeleteUserDialogComponent {
                     </td>
                     <td class="py-3 px-4 text-[14px] text-text-mid">{{ user.email }}</td>
                     <td class="py-3 px-4">
+                      <ng-container *ngTemplateOutlet="roleBadge; context: { $implicit: user }" />
+                    </td>
+                    <td class="py-3 px-4">
                       <ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: user }" />
                     </td>
-                    <td class="py-3 px-4 text-[14px] text-text-light">
+                    <td class="py-3 px-4 text-[14px] text-text-light whitespace-nowrap">
                       {{ user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never' }}
                     </td>
-                    <td class="py-3 px-4 text-[14px] text-text-light">{{ formatDate(user.createdAt) }}</td>
+                    <td class="py-3 px-4 text-[14px] text-text-light whitespace-nowrap">{{ formatDate(user.createdAt) }}</td>
                     <td class="py-3 px-4 w-px whitespace-nowrap">
                       <div class="flex items-center justify-end gap-1.5">
                         <ng-container *ngTemplateOutlet="userActions; context: { $implicit: user, isSelf: isSelf, busy: busy }" />
@@ -420,7 +485,7 @@ export class DeleteUserDialogComponent {
                 }
                 @if (usersQ.data()?.length === 0) {
                   <tr>
-                    <td colspan="6" class="py-8 text-center text-text-light">No users yet.</td>
+                    <td colspan="7" class="py-8 text-center text-text-light">No users yet.</td>
                   </tr>
                 }
               </tbody>
@@ -442,6 +507,9 @@ export class DeleteUserDialogComponent {
                         >}
                     </p>
                     <p class="text-[13px] text-text-mid [overflow-wrap:anywhere]">{{ user.email }}</p>
+                    <p class="mt-1.5">
+                      <ng-container *ngTemplateOutlet="roleBadge; context: { $implicit: user }" />
+                    </p>
                     <p class="mt-1 text-[12px] text-text-light">
                       Last sign-in: {{ user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never' }}
                     </p>
@@ -465,7 +533,12 @@ export class DeleteUserDialogComponent {
       }
 
       @if (editing(); as user) {
-        <app-edit-user-modal [user]="user" (closed)="editing.set(null)" (saved)="onSaved()" />
+        <app-edit-user-modal
+          [user]="user"
+          [isSelf]="meQ.data()?.userId === user.id"
+          (closed)="editing.set(null)"
+          (saved)="onSaved()"
+        />
       }
 
       @if (deleting(); as user) {
@@ -485,6 +558,7 @@ export class UsersPage {
   private readonly queryClient = inject(QueryClient);
   private readonly toast = inject(ToastService);
   protected readonly formatDate = formatDate;
+  protected readonly roleLabel = roleLabel;
   protected readonly actionButton = ACTION_BUTTON;
 
   protected readonly isCreateOpen = signal(false);

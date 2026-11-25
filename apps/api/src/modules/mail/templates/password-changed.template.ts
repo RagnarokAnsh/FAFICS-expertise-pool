@@ -1,4 +1,4 @@
-import { buildEmailHtml } from './base.template';
+import { buildEmailHtml, esc } from './base.template';
 
 export interface PasswordChangedTemplateParams {
   recipientName: string;
@@ -17,11 +17,11 @@ export const passwordChangedTemplate = ({
   const html = buildEmailHtml(
     'Your password was changed',
     `
-    <p>Dear ${recipientName},</p>
-    <p>The password for your FAFICS Expertise Pool dashboard account was changed on <strong>${changedAt}</strong>.</p>
+    <p>Dear ${esc(recipientName)},</p>
+    <p>The password for your FAFICS Expertise Pool dashboard account was changed on <strong>${esc(changedAt)}</strong>.</p>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${loginUrl}" style="background-color: #1a3a6b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to the Dashboard</a>
+      <a href="${esc(loginUrl)}" style="background-color: #1a3a6b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to the Dashboard</a>
     </div>
 
     <div style="background-color: #fef3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 6px;">

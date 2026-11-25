@@ -1,4 +1,4 @@
-import { buildEmailHtml } from './base.template';
+import { buildEmailHtml, esc } from './base.template';
 
 export interface PasswordResetTemplateParams {
   recipientName: string;
@@ -24,21 +24,21 @@ export const passwordResetTemplate = ({
   const html = buildEmailHtml(
     'Reset your password',
     `
-    <p>Dear ${recipientName},</p>
+    <p>Dear ${esc(recipientName)},</p>
     ${intro}
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${resetUrl}" style="background-color: #1a3a6b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Choose a New Password</a>
+      <a href="${esc(resetUrl)}" style="background-color: #1a3a6b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Choose a New Password</a>
     </div>
 
     <p style="font-size: 13px; color: #666; background-color: #f8f9fa; padding: 12px; border-radius: 6px;">
-      <strong>Security notice:</strong> This link is valid for ${validFor} and can only be used once.
+      <strong>Security notice:</strong> This link is valid for ${esc(validFor)} and can only be used once.
       If you did not request a password reset, you can safely ignore this email &mdash; your current
       password remains unchanged.
     </p>
 
     <p style="font-size: 13px; color: #8892aa; margin-top: 20px; word-break: break-all;">
-      If the button does not work, copy this address into your browser:<br />${resetUrl}
+      If the button does not work, copy this address into your browser:<br />${esc(resetUrl)}
     </p>
     `,
   );

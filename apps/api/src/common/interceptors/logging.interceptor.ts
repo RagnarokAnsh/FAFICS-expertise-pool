@@ -8,6 +8,7 @@ import {
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request } from 'express';
+import { redactUrl } from '../utils/redact.util';
 
 /**
  * Logs incoming requests and outgoing response times.
@@ -19,7 +20,8 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<Request>();
-    const { method, url } = request;
+    const { method } = request;
+    const url = redactUrl(request.url);
     const now = Date.now();
 
     this.logger.log(`→ ${method} ${url}`);

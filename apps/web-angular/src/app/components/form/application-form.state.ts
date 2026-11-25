@@ -4,7 +4,6 @@ import { ToastService } from '../../core/toast.service';
 import { applicationsApi } from '../../lib/api/applications.api';
 import { LANGUAGES, LANGUAGE_OTHER } from '../../lib/constants/languages';
 import { ApplicationData, applicationSchema } from '../../lib/schemas/application.schema';
-import { withBasePath } from '../../lib/utils/base-path';
 
 /**
  * Sanitize form data before sending to the backend.
@@ -257,7 +256,7 @@ export class ApplicationFormState {
         // Only send Step 1 data (personal + association) for draft creation
         const step1Data = extractStep1Data(updatedData);
         const res = await applicationsApi.createDraft(step1Data);
-        if (res.resumed) {
+        if (res.resumed || !res.id || !res.editToken) {
           this.inProgressNotice.set(true);
           this.saveStatus.set('idle');
           return;
@@ -303,7 +302,7 @@ export class ApplicationFormState {
           this.clearLocalDraft();
           try {
             const res = await applicationsApi.createDraft(extractStep1Data(updatedData));
-            if (res.resumed) {
+            if (res.resumed || !res.id || !res.editToken) {
               this.inProgressNotice.set(true);
               this.saveStatus.set('idle');
               return;

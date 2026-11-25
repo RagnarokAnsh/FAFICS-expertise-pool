@@ -7,7 +7,7 @@
 //   - SMTP      a local sink on :2525. Every message is saved to ./mail/, and
 //               the links in it are appended to ./mail/index.jsonl
 //
-//   node stack.js reset   (re)create fafics_parity: migrations + seed + dev seed
+//   node stack.js reset   (re)create fafics_parity: SQL migrations + dev seed
 //   node stack.js up      run the SMTP sink and the API until Ctrl+C
 //
 // Build the API first (npm run build in apps/api) so dist/ is current.
@@ -73,12 +73,35 @@ function run(bin, args) {
   if (r.status !== 0) throw new Error(`${bin} ${args.join(' ')} failed`);
 }
 
-function reset() {
-  // --skip-generate: the Prisma client is already generated, and regenerating it
-  // while the dev API runs fails on Windows (the engine DLL is locked).
-  run('prisma/build/index.js', ['migrate', 'reset', '--force', '--skip-seed', '--skip-generate']);
-  run('ts-node/dist/bin.js', ['--compiler-options', '{"module":"CommonJS"}', 'prisma/seed.ts']);
-  run('ts-node/dist/bin.js', ['--transpile-only', 'prisma/seed-dev.ts']);
+// Runs a script of apps/api (e.g. scripts/migrate.js) against fafics_parity.
+function runApi(script, args = []) {
+  assertParity(env);
+  const r = spawnSync(process.execPath, [path.join(API_DIR, script), ...args], { cwd: API_DIR, env, stdio: 'inherit' });
+  if (r.status !== 0) throw new Error(`${script} ${args.join(' ')} failed`);
+}
+
+// Connects to fafics_parity (or, with { admin: true }, to the server's
+// "postgres" database to drop/create it).
+async function pgClient({ admin = false } = {}) {
+  assertParity(env);
+  const { Client } = require(path.join(ROOT, 'node_modules/pg'));
+  const url = new URL(env.DATABASE_URL);
+  if (admin) url.pathname = '/postgres';
+  const client = new Client({ connectionString: url.toString() });
+  await client.connect();
+  return client;
+}
+
+async function reset() {
+  const admin = await pgClient({ admin: true });
+  try {
+    await admin.query(`DROP DATABASE IF EXISTS ${PARITY_DB} WITH (FORCE)`);
+    await admin.query(`CREATE DATABASE ${PARITY_DB}`);
+  } finally {
+    await admin.end();
+  }
+  runApi('scripts/migrate.js');
+  run('ts-node/dist/bin.js', ['--transpile-only', 'scripts/seed-dev.ts']);
 }
 
 // ── SMTP sink ────────────────────────────────────────────────────────────────
@@ -210,21 +233,24 @@ function reindex() {
   console.log(`re-indexed ${lines.length} messages`);
 }
 
-// Test fixtures: run SQL (from stdin) against fafics_parity via `prisma db execute`.
-function sql() {
-  assertParity(env);
-  const r = spawnSync(
-    process.execPath,
-    [path.join(ROOT, 'node_modules/prisma/build/index.js'), 'db', 'execute', '--stdin', '--schema', 'prisma/schema.prisma'],
-    { cwd: API_DIR, env, input: fs.readFileSync(0, 'utf8'), stdio: ['pipe', 'inherit', 'inherit'] },
-  );
-  process.exit(r.status);
+// Test fixtures: run SQL (from stdin) against fafics_parity.
+async function sql() {
+  const client = await pgClient();
+  try {
+    await client.query(fs.readFileSync(0, 'utf8'));
+  } finally {
+    await client.end();
+  }
 }
 
+const fail = (e) => {
+  console.error(e.message || e);
+  process.exit(1);
+};
 const cmd = process.argv[2];
-if (cmd === 'check') run('prisma/build/index.js', ['migrate', 'status']); // read-only: shows which database is targeted
-else if (cmd === 'reset') reset();
+if (cmd === 'check') runApi('scripts/migrate.js', ['--status']); // read-only: shows which database is targeted
+else if (cmd === 'reset') reset().catch(fail);
 else if (cmd === 'up') up();
 else if (cmd === 'reindex') reindex();
-else if (cmd === 'sql') sql();
+else if (cmd === 'sql') sql().catch(fail);
 else console.log('usage: node stack.js check | reset | up | reindex | sql < statements.sql');

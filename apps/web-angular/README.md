@@ -94,6 +94,9 @@ Since the Angular app went into production (autumn 2026), some changes are made 
 - **President's review page** (`/endorse/:token`). It uses the same profile component and the same header as the admin page, followed by the review notice and the Endorse / Return buttons (`components/endorse/endorsement-view.ts`).
 - **President endorsement links** (review point 10): the Resend to President and Edit President Email actions on the admin page, and the 3- and 7-day reminders.
 - **Experience durations** show the label the applicant picked ("3-5 years", "20+ years") instead of the stored upper bound ("5", "99"), on both the admin page and the President's page.
+- **Officer roles** (`lib/auth/roles.ts`, `core/role.guard.ts`): menus, pages and buttons follow the signed-in role, and User Management offers Administrator and Management (view and export only).
+- **Contact Us**: a header and footer button opens a dialog (`components/layout/contact-dialog.ts`) that posts to `/api/contact`.
+- **The production build calls `https://api.fafics.com/api`** (`environments/environment.ts`); `ng serve` uses `environment.development.ts` (`/api`, proxied to the local API). So `tools/preview-dist.mjs` and `flows.js` against `dist/` would call the live API: test with `ng serve` instead (e.g. `--proxy-config tools/parity/proxy.parity.json` for the parity stack on :3002).
 
 ## Keeping it in sync with `apps/web`
 

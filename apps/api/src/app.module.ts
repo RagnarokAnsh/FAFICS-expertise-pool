@@ -4,7 +4,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import * as Joi from 'joi';
-import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
@@ -19,10 +18,12 @@ import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import mailConfig from './config/mail.config';
 import jwtConfig from './config/jwt.config';
+import { DatabaseModule } from './database/database.module';
+import { ContactModule } from './modules/contact/contact.module';
 
 /**
  * Root application module.
- * Imports ConfigModule (global, Joi-validated), PrismaModule (global),
+ * Imports ConfigModule (global, Joi-validated), DatabaseModule (global),
  * AuditModule (global), ScheduleModule, HealthModule, and all feature modules.
  */
 @Module({
@@ -54,6 +55,11 @@ import jwtConfig from './config/jwt.config';
         ADMIN_PASSWORD: Joi.string().default('changeme123!'),
         SMTP_HOST: Joi.string().default('localhost'),
         SMTP_PORT: Joi.number().default(1025),
+        // Optional hardening switches (see main.ts / auth.controller.ts).
+        CORS_ORIGINS: Joi.string().optional(),
+        AUTH_COOKIE_SAMESITE: Joi.string().valid('lax', 'strict', 'none').optional(),
+        SWAGGER_ENABLED: Joi.string().valid('true', 'false').optional(),
+        SKIP_MIGRATION_CHECK: Joi.string().valid('true', 'false').optional(),
       }),
       validationOptions: {
         allowUnknown: true,
@@ -70,7 +76,7 @@ import jwtConfig from './config/jwt.config';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
 
     // ── Global modules ────────────────────────────────────────────────
-    PrismaModule,
+    DatabaseModule,
     AuditModule,
 
     // ── Feature modules ───────────────────────────────────────────────
@@ -85,6 +91,9 @@ import jwtConfig from './config/jwt.config';
     AuthModule,
     AdminModule,
     ExportModule,
+
+    // ── Contact Us modules ───────────────────────────────────────────────
+    ContactModule,
   ],
   providers: [
     // Apply rate limiting globally.

@@ -5,6 +5,7 @@ import { CardComponent } from '../../components/ui/card';
 import { FieldComponent, InputDirective } from '../../components/ui/field';
 import { ToastService } from '../../core/toast.service';
 import { applicationsApi } from '../../lib/api/applications.api';
+import { isValidEmail } from '../../lib/utils/email';
 import { formatDate } from '../../lib/utils/date';
 
 /* ─── helpers ─── */
@@ -278,9 +279,20 @@ const STATUS_FG: Record<string, string> = {
 
           @if (draftLinkSent()) {
             <div class="space-y-3">
-              <div class="p-4 bg-[#eaf3de] text-[#3b6d11] rounded-lg text-[14px] font-medium border border-[#c4e1a4]">
-                ✓ Link sent! Check your inbox (including spam folder). The link is valid for 30 days.
+              <!-- The API answers the same whether or not a draft exists (so this form cannot be
+                   used to find out who has applied); the message must not claim a link was sent. -->
+              <div class="p-4 bg-[#eaf3de] text-[#3b6d11] rounded-lg text-[14px] border border-[#c4e1a4] space-y-1.5">
+                <p class="font-semibold">✓ Request received</p>
+                <p>
+                  If there is a saved draft for <strong class="break-all">{{ draftRequestedFor() }}</strong>, we've emailed a
+                  link to continue it. Check your inbox (including the spam folder). The link is valid for 30 days.
+                </p>
               </div>
+              <p class="text-[13px] text-text-mid leading-relaxed">
+                No email after a few minutes? Make sure this is the address you applied with. If you have already
+                submitted your application, use <strong>Check Application Status</strong> above with your reference number
+                instead.
+              </p>
               @if (sendAgainTimer() > 0) {
                 <p class="text-[13px] text-text-muted text-center">You can send again in {{ sendAgainTimer() }}s</p>
               } @else {
@@ -373,6 +385,8 @@ export class StatusPage {
   private submittedB = false;
   protected readonly isDraftSending = signal(false);
   protected readonly draftLinkSent = signal(false);
+  /** The address the last draft-link request was made for (shown in the confirmation). */
+  protected readonly draftRequestedFor = signal('');
   protected readonly draftError = signal<string | null>(null);
   protected readonly sendAgainTimer = signal(0);
 
@@ -400,8 +414,10 @@ export class StatusPage {
   // react-hook-form `required` rules, validated on submit then on every change.
   private validateA(): { email?: string; referenceNumber?: string } {
     const errors: { email?: string; referenceNumber?: string } = {};
-    if (this.emailA().nativeElement.value === '') errors.email = 'Email is required';
-    if (this.refA().nativeElement.value === '') errors.referenceNumber = 'Reference number is required';
+    const email = this.emailA().nativeElement.value.trim();
+    if (email === '') errors.email = 'Email is required';
+    else if (!isValidEmail(email)) errors.email = 'Invalid email address';
+    if (this.refA().nativeElement.value.trim() === '') errors.referenceNumber = 'Reference number is required';
     return errors;
   }
 
@@ -425,8 +441,8 @@ export class StatusPage {
       return;
     }
     this.onCheckStatus({
-      email: this.emailA().nativeElement.value,
-      referenceNumber: this.refA().nativeElement.value,
+      email: this.emailA().nativeElement.value.trim(),
+      referenceNumber: this.refA().nativeElement.value.trim(),
     });
   }
 
@@ -447,6 +463,10 @@ export class StatusPage {
         this.statusError.set(
           'No application found with that email and reference number. Note: reference numbers are only assigned after submission. If your application is still a draft, use the section below.',
         );
+      } else if (error.response?.status === 400) {
+        this.statusError.set('Please check the email address and reference number.');
+      } else if (error.response?.status === 429) {
+        this.statusError.set('Too many attempts. Please wait a minute and try again.');
       } else {
         this.statusError.set('An error occurred while checking status. Please try again later.');
       }
@@ -464,7 +484,10 @@ export class StatusPage {
       await applicationsApi.requestEditLink(queryEmail, result.referenceNumber);
       this.editLinkSent.set(true);
     } catch (error: any) {
-      this.toast.showToast('An error occurred. Please try again.', 'error');
+      this.toast.showToast(
+        error?.response?.status === 429 ? 'Too many attempts. Please wait a minute and try again.' : 'An error occurred. Please try again.',
+        'error',
+      );
     } finally {
       this.isSendingEditLink.set(false);
     }
@@ -489,23 +512,28 @@ export class StatusPage {
     }
   }
 
+  private validateB(value: string): { email?: string } {
+    if (value === '') return { email: 'Email is required' };
+    if (!isValidEmail(value)) return { email: 'Invalid email address' };
+    return {};
+  }
+
   protected revalidateB(): void {
     if (!this.submittedB) return;
-    const value = this.emailB()?.nativeElement.value ?? '';
-    this.errB.set(value === '' ? { email: 'Email is required' } : {});
+    this.errB.set(this.validateB((this.emailB()?.nativeElement.value ?? '').trim()));
   }
 
   protected submitB(event: Event): void {
     event.preventDefault();
     this.submittedB = true;
     const input = this.emailB()?.nativeElement;
-    const value = input?.value ?? '';
-    if (value === '') {
-      this.errB.set({ email: 'Email is required' });
+    const value = (input?.value ?? '').trim();
+    const errors = this.validateB(value);
+    this.errB.set(errors);
+    if (errors.email) {
       input?.focus();
       return;
     }
-    this.errB.set({});
     this.onRequestDraftLink(value);
   }
 
@@ -515,10 +543,19 @@ export class StatusPage {
     this.draftError.set(null);
     try {
       await applicationsApi.requestDraftLink(email);
+      this.draftRequestedFor.set(email.trim());
       this.draftLinkSent.set(true);
       this.sendAgainTimer.set(60);
     } catch (error: any) {
-      this.draftError.set('Something went wrong. Please try again.');
+      const status = error?.response?.status;
+      if (status === 400) {
+        // The server's own format check — show it on the field like the local one.
+        this.errB.set({ email: 'Invalid email address' });
+      } else if (status === 429) {
+        this.draftError.set('Too many attempts. Please wait a minute and try again.');
+      } else {
+        this.draftError.set('Something went wrong. Please try again.');
+      }
     } finally {
       this.isDraftSending.set(false);
     }

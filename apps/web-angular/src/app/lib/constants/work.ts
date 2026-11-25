@@ -28,7 +28,7 @@ export const FAFICS_COMMITTEES = [
   "FAFICS Representation — Succession Planning and Evaluation Committee",
   "FAFICS Representation — Governance Review Working Group",
   "FAFICS Representation — Plan Review Working Group",
-  "FAFICS Council & Bureau Group — Succession Planning Working Group",
+  "FAFICS Council & Bureau Group — Succession Planning Committee",
   "FAFICS Council & Bureau Group — Election Support Group",
   "Other",
 ];

@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { RoutePath } from '../../core/route-path.service';
+import { ContactDialogComponent } from './contact-dialog';
 
 const NAV_LINKS = [
   { href: '/apply', label: 'Apply' },
@@ -17,7 +18,7 @@ const NAV_LINKS = [
  */
 @Component({
   selector: 'app-site-chrome',
-  imports: [RouterLink],
+  imports: [RouterLink, ContactDialogComponent],
   template: `
     @if (!isAdmin()) {
       <header class="bg-navy sticky top-0 z-[100] shadow-[0_2px_20px_rgba(0,0,0,0.25)]">
@@ -65,6 +66,13 @@ const NAV_LINKS = [
               "
               >Officer Login</a
             >
+            <button
+              type="button"
+              class="px-3 py-1.5 text-[12px] font-medium border rounded-full transition-colors whitespace-nowrap
+                     text-white/80 border-white/25 hover:text-white hover:border-white/50 hover:bg-white/[0.08]"
+              (click)="showContactDialog.set(true)"
+              >Contact Us</button
+            >
           </nav>
         </div>
       </header>
@@ -76,8 +84,12 @@ const NAV_LINKS = [
 
     @if (!isAdmin()) {
       <footer class="bg-navy px-8 py-[18px] text-center mt-10 mt-auto">
-        <p class="text-[12px] text-white/40">© {{ year }} FAFICS. All rights reserved.<span class="mx-2 text-white/20">·</span><a routerLink="/admin/login" class="text-white/40 hover:text-white/70 transition-colors">Officer Login</a></p>
+        <p class="text-[12px] text-white/40">© {{ year }} FAFICS. All rights reserved.<span class="mx-2 text-white/20">·</span><button type="button" class="text-white/40 hover:text-white/70 transition-colors" (click)="showContactDialog.set(true)">Contact Us</button><span class="mx-2 text-white/20">·</span><a routerLink="/admin/login" class="text-white/40 hover:text-white/70 transition-colors">Officer Login</a></p>
       </footer>
+    }
+
+    @if (showContactDialog()) {
+      <app-contact-dialog (close)="showContactDialog.set(false)" />
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,6 +99,7 @@ export class SiteChromeComponent {
   private readonly pathname = inject(RoutePath).pathname;
   protected readonly navLinks = NAV_LINKS;
   protected readonly year = new Date().getFullYear();
+  protected readonly showContactDialog = signal(false);
 
   protected readonly isAdmin = computed(() => this.pathname().startsWith('/admin'));
   protected readonly isOfficerActive = computed(() => this.pathname().startsWith('/admin'));

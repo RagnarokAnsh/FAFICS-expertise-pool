@@ -1,7 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
-import { PrismaService } from '../../prisma/prisma.service';
+import { DatabaseService } from '../../database/database.service';
 
 /** Labels the applicant saw in the form. */
 const PROFICIENCY_LABELS: Record<string, string> = {
@@ -36,9 +35,10 @@ const INCLUDE = {
   faficsExperiences: { orderBy: { sortOrder: 'asc' } },
   localExperiences: { orderBy: { sortOrder: 'asc' } },
   expertise: { orderBy: { sortOrder: 'asc' } },
-} satisfies Prisma.ApplicationInclude;
+} as const;
 
-type FullApplication = Prisma.ApplicationGetPayload<{ include: typeof INCLUDE }>;
+/** An application row with the INCLUDE relations attached (the data layer returns untyped rows). */
+type FullApplication = any;
 type CellValue = string | number | Date | null;
 
 /** How a column is shown: plain text, a date, a long wrapped text, or years. */
@@ -54,7 +54,7 @@ const hasText = (v: unknown): v is string => typeof v === 'string' && v.trim() !
 export class ExportService {
   private readonly logger = new Logger(ExportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: DatabaseService) {}
 
   /**
    * The Expertise Pool (approved profiles) as an Excel workbook.
@@ -134,8 +134,8 @@ export class ExportService {
    * then the same Details, Statements and per-entry sheets as the pool export.
    */
   async generateApplicationsExcel(
-    where: Prisma.ApplicationWhereInput,
-    orderBy: Prisma.ApplicationOrderByWithRelationInput[],
+    where: Record<string, any>,
+    orderBy: Record<string, any>[],
   ): Promise<Buffer> {
     const apps = await this.prisma.application.findMany({ where, orderBy, include: INCLUDE });
     const workbook = this.newWorkbook('FAFICS Expertise Pool — Applications');
@@ -544,7 +544,7 @@ export class ExportService {
     return PROFICIENCY_LABELS[value] ?? value;
   }
 
-  private years(value: Prisma.Decimal | number | null): number | null {
+  private years(value: string | number | null): number | null {
     return value == null ? null : Number(value);
   }
 
