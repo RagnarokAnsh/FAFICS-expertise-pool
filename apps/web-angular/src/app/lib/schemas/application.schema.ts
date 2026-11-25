@@ -41,7 +41,8 @@ export const MAX_PHONE_DIGITS = 15;
 /** A phone number must carry an international dial code and be valid per the country's rules. */
 const phoneNumber = (label: string) =>
   z
-    .string()
+    // An untouched control holds undefined: report it as required, not "Invalid input".
+    .string({ error: `${label} is required` })
     .min(1, `${label} is required`)
     .refine((v) => /^\+\d/.test(v.trim()), {
       message: 'Select a country code',
@@ -59,7 +60,7 @@ export const personalInfoSchema = z
     middleName: z.string().nullish(),
     lastName: z.string().min(1, 'Last Name is required'),
     dateOfBirth: z.string().min(1, 'Date of Birth is required'),
-    nationality: z.string().min(1, 'Nationality is required'),
+    nationality: z.string({ error: 'Nationality is required' }).min(1, 'Nationality is required'),
     secondNationality: z.string().nullish(),
     gender: z.string().min(1, 'Gender is required'),
     phone: phoneNumber('Phone Number'),
@@ -130,7 +131,9 @@ export const associationSchema = z.object({
     (v) => !/\d/.test(v),
     { message: 'Association Name must not contain numbers' },
   ),
-  associationCountry: z.string().min(1, 'Association Country is required'),
+  associationCountry: z
+    .string({ error: 'Association Country is required' })
+    .min(1, 'Association Country is required'),
   associationGeneralEmail: z.union([z.string().email('Invalid email'), z.literal('')]).nullish(),
   presidentEmail: z.string().min(1, 'President Email is required').email('Invalid email'),
   // Optional (client feedback): the president's phone may be hard to obtain, so
@@ -269,7 +272,19 @@ export const expertiseSchema = z.object({
 });
 
 export const step4Schema = z.object({
-  expertise: z.array(expertiseSchema).min(1, 'Please assess your expertise'),
+  expertise: z
+    .array(expertiseSchema)
+    .min(1, 'Please assess your expertise')
+    .superRefine((items, ctx) => {
+      if (!items.some((e) => e.expertiseLevel)) {
+        ctx.addIssue({ code: 'custom', message: 'Rate your level in at least one area of expertise.', path: [] });
+      }
+      items.forEach((e, i) => {
+        if (e.isPreferred && !e.expertiseLevel) {
+          ctx.addIssue({ code: 'custom', message: 'Choose a level for this preferred area', path: [i, 'expertiseLevel'] });
+        }
+      });
+    }),
   // Optional position/committee preference (client feedback). Lets an applicant
   // signal interest so committee chairs can find them in the pool.
   preferredCommittees: z.array(z.string()).optional().default([]),

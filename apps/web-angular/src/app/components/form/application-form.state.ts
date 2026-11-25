@@ -73,6 +73,10 @@ function extractStep1Data(data: any): { personal: any; association: any } {
 
 const hasText = (v?: string | null): boolean => !!v && v.trim() !== '';
 
+/** Shown when this page's editing link was replaced by a newer one (API 410). */
+export const REPLACED_LINK_MESSAGE =
+  'This editing link has been replaced by a newer one. Please open the latest link we emailed you.';
+
 /** A saved language outside the list loads as "Other (please specify)" with its name filled in. */
 function withOtherLanguages(data?: Partial<ApplicationData>): Partial<ApplicationData> | undefined {
   if (!data?.languages) return data;
@@ -176,6 +180,8 @@ export class ApplicationFormState {
   }
 
   private setStep(step: number): void {
+    // An error from the step being left no longer applies.
+    if (this.toast.toast()?.type === 'error') this.toast.close();
     this.currentStep.set(step);
     if (step > this.highestStep()) {
       this.highestStep.set(step);
@@ -205,6 +211,7 @@ export class ApplicationFormState {
       } catch (error: any) {
         console.error('Failed to auto-save:', error);
         this.saveStatus.set('error');
+        if (error?.response?.status === 410) this.toast.showToast(REPLACED_LINK_MESSAGE, 'error');
         // Stale/unauthorized draft → let the owner forget it so the next step
         // creates a fresh one instead of looping on a dead draft.
         if (error?.response?.status === 401 || error?.response?.status === 404) {
@@ -316,6 +323,10 @@ export class ApplicationFormState {
         } else {
           console.error('Failed to save draft:', error);
           this.saveStatus.set('error');
+          if (error?.response?.status === 410) {
+            this.toast.showToast(REPLACED_LINK_MESSAGE, 'error');
+            return;
+          }
         }
       }
     }

@@ -3,7 +3,7 @@ import { FieldArray, FormStore } from '../../../core/form/form-store';
 import { RegisterDirective } from '../../../core/form/register.directive';
 import { ToastService } from '../../../core/toast.service';
 import { LANGUAGES, LANGUAGE_OTHER } from '../../../lib/constants/languages';
-import { firstErrorMessage } from '../../../lib/utils/form-errors';
+import { STEP_ERROR_MESSAGE, focusFirstInvalid } from '../../../lib/utils/focus-first-invalid';
 import { ButtonComponent } from '../../ui/button';
 import { CardComponent } from '../../ui/card';
 import { DynamicRowListComponent } from '../../ui/dynamic-row-list';
@@ -95,7 +95,7 @@ const PROFICIENCIES = [
       ></div>
       <ng-template #langRow let-index="index">
         <div class="flex flex-col gap-1">
-          <select
+          <select aria-label="Language"
             appSelect
             [hasError]="!!form.error('languages.' + index + '.language')"
             [appRegister]="'languages.' + index + '.language'"
@@ -123,7 +123,7 @@ const PROFICIENCIES = [
         </div>
         <div class="flex flex-col gap-1">
           <div class="flex gap-2">
-            <select
+            <select aria-label="Proficiency level"
               appSelect
               class="flex-1"
               [hasError]="!!form.error('languages.' + index + '.proficiency')"
@@ -198,10 +198,8 @@ export class Step2EducationComponent implements OnInit {
   protected async handleNext(): Promise<void> {
     const isValid = await this.form.trigger(['educations', 'languages']);
     if (!isValid) {
-      this.toast.showToast(
-        firstErrorMessage(this.form.renderedErrors) ?? 'Please fill in all required fields highlighted below.',
-        'error',
-      );
+      this.toast.showToast(STEP_ERROR_MESSAGE, 'error');
+      focusFirstInvalid();
       return;
     }
     this.next.emit();

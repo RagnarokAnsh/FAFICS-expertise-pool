@@ -12,7 +12,7 @@ import {
   UN_GRADES,
 } from '../../../lib/constants/work';
 import { experienceExceedsAge } from '../../../lib/schemas/application.schema';
-import { firstErrorMessage } from '../../../lib/utils/form-errors';
+import { STEP_ERROR_MESSAGE, focusFirstInvalid } from '../../../lib/utils/focus-first-invalid';
 import { ButtonComponent } from '../../ui/button';
 import { CardComponent } from '../../ui/card';
 import { DynamicRowListComponent } from '../../ui/dynamic-row-list';
@@ -75,23 +75,33 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
         [rowTemplate]="unRow"
       ></div>
       <ng-template #unRow let-index="index">
-        <select
-          appSelect
-          [hasError]="!!form.error('unExperiences.' + index + '.agency')"
-          [appRegister]="'unExperiences.' + index + '.agency'"
-        >
-          <option value="" hidden>Agency...</option>
-          @for (a of unAgencies; track a) {
-            <option [value]="a">{{ a }}</option>
+        <div class="flex flex-col gap-1">
+          <select aria-label="UN agency"
+            appSelect
+            [hasError]="!!form.error('unExperiences.' + index + '.agency')"
+            [appRegister]="'unExperiences.' + index + '.agency'"
+          >
+            <option value="" hidden>Agency...</option>
+            @for (a of unAgencies; track a) {
+              <option [value]="a">{{ a }}</option>
+            }
+          </select>
+          @if (form.error('unExperiences.' + index + '.agency')?.message; as msg) {
+            <span class="text-[11.5px] text-danger">{{ msg }}</span>
           }
-        </select>
-        <input
-          appInput
-          placeholder="Position Title"
-          [hasError]="!!form.error('unExperiences.' + index + '.positionTitle')"
-          [appRegister]="'unExperiences.' + index + '.positionTitle'"
-        />
-        <select
+        </div>
+        <div class="flex flex-col gap-1">
+          <input
+            appInput
+            placeholder="Position Title"
+            [hasError]="!!form.error('unExperiences.' + index + '.positionTitle')"
+            [appRegister]="'unExperiences.' + index + '.positionTitle'"
+          />
+          @if (form.error('unExperiences.' + index + '.positionTitle')?.message; as msg) {
+            <span class="text-[11.5px] text-danger">{{ msg }}</span>
+          }
+        </div>
+        <select aria-label="Grade"
           appSelect
           [hasError]="!!form.error('unExperiences.' + index + '.grade')"
           [appRegister]="'unExperiences.' + index + '.grade'"
@@ -101,7 +111,7 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
             <option [value]="g">{{ g }}</option>
           }
         </select>
-        <select
+        <select aria-label="Area of expertise"
           appSelect
           [hasError]="!!form.error('unExperiences.' + index + '.areaOfExpertise')"
           [appRegister]="'unExperiences.' + index + '.areaOfExpertise'"
@@ -112,7 +122,7 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
           }
         </select>
         <div class="flex gap-2">
-          <select
+          <select aria-label="Years"
             appSelect
             class="flex-1"
             [hasError]="!!form.error('unExperiences.' + index + '.durationYears')"
@@ -168,26 +178,36 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
         [rowTemplate]="nonUnRow"
       ></div>
       <ng-template #nonUnRow let-index="index">
-        <input
-          appInput
-          placeholder="Organization"
-          [hasError]="!!form.error('nonUnExperiences.' + index + '.organization')"
-          [appRegister]="'nonUnExperiences.' + index + '.organization'"
-        />
-        <input
-          appInput
-          placeholder="Position Title"
-          [hasError]="!!form.error('nonUnExperiences.' + index + '.positionTitle')"
-          [appRegister]="'nonUnExperiences.' + index + '.positionTitle'"
-        />
-        <select appSelect [appRegister]="'nonUnExperiences.' + index + '.areaOfExpertise'">
+        <div class="flex flex-col gap-1">
+          <input
+            appInput
+            placeholder="Organization"
+            [hasError]="!!form.error('nonUnExperiences.' + index + '.organization')"
+            [appRegister]="'nonUnExperiences.' + index + '.organization'"
+          />
+          @if (form.error('nonUnExperiences.' + index + '.organization')?.message; as msg) {
+            <span class="text-[11.5px] text-danger">{{ msg }}</span>
+          }
+        </div>
+        <div class="flex flex-col gap-1">
+          <input
+            appInput
+            placeholder="Position Title"
+            [hasError]="!!form.error('nonUnExperiences.' + index + '.positionTitle')"
+            [appRegister]="'nonUnExperiences.' + index + '.positionTitle'"
+          />
+          @if (form.error('nonUnExperiences.' + index + '.positionTitle')?.message; as msg) {
+            <span class="text-[11.5px] text-danger">{{ msg }}</span>
+          }
+        </div>
+        <select aria-label="Area of expertise" appSelect [appRegister]="'nonUnExperiences.' + index + '.areaOfExpertise'">
           <option value="" hidden>Area...</option>
           @for (a of areasOfExpertise; track a) {
             <option [value]="a">{{ a }}</option>
           }
         </select>
         <div class="flex gap-2">
-          <select
+          <select aria-label="Years"
             appSelect
             class="flex-1"
             [appRegister]="'nonUnExperiences.' + index + '.durationYears'"
@@ -237,16 +257,21 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
         [rowTemplate]="faficsRow"
       ></div>
       <ng-template #faficsRow let-index="index">
-        <select
-          appSelect
-          [hasError]="!!form.error('faficsExperiences.' + index + '.positionHeld')"
-          [appRegister]="'faficsExperiences.' + index + '.positionHeld'"
-        >
-          <option value="" hidden>Position...</option>
-          @for (r of faficsRoles; track r) {
-            <option [value]="r">{{ r }}</option>
+        <div class="flex flex-col gap-1">
+          <select aria-label="Position held"
+            appSelect
+            [hasError]="!!form.error('faficsExperiences.' + index + '.positionHeld')"
+            [appRegister]="'faficsExperiences.' + index + '.positionHeld'"
+          >
+            <option value="" hidden>Position...</option>
+            @for (r of faficsRoles; track r) {
+              <option [value]="r">{{ r }}</option>
+            }
+          </select>
+          @if (form.error('faficsExperiences.' + index + '.positionHeld')?.message; as msg) {
+            <span class="text-[11.5px] text-danger">{{ msg }}</span>
           }
-        </select>
+        </div>
         <div class="flex flex-col gap-1.5">
           <div
             appMultiSelect
@@ -265,7 +290,7 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
           }
         </div>
         <div class="flex gap-2">
-          <select
+          <select aria-label="Years"
             appSelect
             class="flex-1"
             [appRegister]="'faficsExperiences.' + index + '.durationYears'"
@@ -315,20 +340,25 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
         [rowTemplate]="localRow"
       ></div>
       <ng-template #localRow let-index="index">
-        <input
-          appInput
-          placeholder="Position Held"
-          [hasError]="!!form.error('localExperiences.' + index + '.positionHeld')"
-          [appRegister]="'localExperiences.' + index + '.positionHeld'"
-        />
-        <select appSelect [appRegister]="'localExperiences.' + index + '.areaOfContribution'">
+        <div class="flex flex-col gap-1">
+          <input
+            appInput
+            placeholder="Position Held"
+            [hasError]="!!form.error('localExperiences.' + index + '.positionHeld')"
+            [appRegister]="'localExperiences.' + index + '.positionHeld'"
+          />
+          @if (form.error('localExperiences.' + index + '.positionHeld')?.message; as msg) {
+            <span class="text-[11.5px] text-danger">{{ msg }}</span>
+          }
+        </div>
+        <select aria-label="Area of contribution" appSelect [appRegister]="'localExperiences.' + index + '.areaOfContribution'">
           <option value="" hidden>Area...</option>
           @for (a of areasOfExpertise; track a) {
             <option [value]="a">{{ a }}</option>
           }
         </select>
         <div class="flex gap-2">
-          <select
+          <select aria-label="Years"
             appSelect
             class="flex-1"
             [appRegister]="'localExperiences.' + index + '.durationYears'"
@@ -429,10 +459,8 @@ export class Step3WorkExperienceComponent implements OnInit {
       'localExperienceSummary',
     ]);
     if (!isValid) {
-      this.toast.showToast(
-        firstErrorMessage(this.form.renderedErrors) ?? 'Please fill in all required fields highlighted below.',
-        'error',
-      );
+      this.toast.showToast(STEP_ERROR_MESSAGE, 'error');
+      focusFirstInvalid();
       return;
     }
     // Total experience can't exceed the applicant's age. Checked here because

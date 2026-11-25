@@ -5,7 +5,7 @@ import { applicationsApi } from '../../lib/api/applications.api';
 import { ApplicationData } from '../../lib/schemas/application.schema';
 import { withBasePath } from '../../lib/utils/base-path';
 import { firstErrorMessage } from '../../lib/utils/form-errors';
-import { ApplicationFormState, sanitizeForApi } from './application-form.state';
+import { ApplicationFormState, REPLACED_LINK_MESSAGE, sanitizeForApi } from './application-form.state';
 import { FormProgressComponent } from './form-progress';
 import { Step1PersonalInfoComponent } from './steps/step1-personal-info';
 import { Step2EducationComponent } from './steps/step2-education';
@@ -105,6 +105,25 @@ function formatTime(date: Date): string {
         ></div>
 
         <main class="max-w-[1020px] mx-auto px-4 md:px-8 py-8 md:py-10">
+          <!-- Save status in the page flow below 1280px, where a floating badge would cover the form. -->
+          @if (state.draftId() && state.currentStep() > 1) {
+            <p class="xl:hidden -mt-4 mb-4 min-h-[18px] text-right text-[12px]" aria-live="polite">
+              @switch (state.saveStatus()) {
+                @case ('saving') {
+                  <span class="text-text-muted">Saving…</span>
+                }
+                @case ('error') {
+                  <span class="text-[#856404]">⚠ Save failed — check connection</span>
+                }
+                @default {
+                  @if (state.lastSavedAt()) {
+                    <span class="text-text-muted">✓ Saved {{ formatTime(state.lastSavedAt()!) }}</span>
+                  }
+                }
+              }
+            </p>
+          }
+
           @if (presidentNotes()) {
             <div class="mb-8 p-6 bg-[#fff8e6] border border-[#f5d996] rounded-xl shadow-sm">
               <h3 class="font-serif text-[18px] font-bold text-[#8a6819] mb-2 flex items-center gap-2">
@@ -143,7 +162,7 @@ function formatTime(date: Date): string {
           <!-- ── Draft creation toast (appears once after Step 1 completes) ── -->
           @if (showDraftToast() && state.draftCreatedEmail()) {
             <div
-              class="fixed top-6 right-6 z-[110] max-w-[380px] animate-[fadeIn_0.3s_ease]"
+              class="fixed inset-x-4 bottom-4 z-[110] sm:inset-x-auto sm:left-6 sm:bottom-6 sm:max-w-[380px] animate-[fadeIn_0.3s_ease]"
               style="animation: fadeIn 0.3s ease, fadeOut 0.5s ease 5.5s forwards"
             >
               <div class="bg-white border-l-4 border-[#3B6D11] rounded-lg shadow-lg p-4 flex items-start gap-3">
@@ -165,9 +184,9 @@ function formatTime(date: Date): string {
             </div>
           }
 
-          <!-- ── Persistent auto-save indicator (bottom-right, visible on steps 2–5 when draftId exists) ── -->
+          <!-- ── Persistent auto-save indicator (bottom-right, steps 2–5, 1280px and wider) ── -->
           @if (state.draftId() && state.currentStep() > 1) {
-            <div class="fixed bottom-6 right-6 z-[110]">
+            <div class="hidden xl:block fixed bottom-6 right-6 z-[110]" aria-live="polite">
               @if (state.saveStatus() === 'saving') {
                 <div
                   class="bg-navy text-white text-[13px] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-[fadeIn_0.3s_ease]"
@@ -188,7 +207,7 @@ function formatTime(date: Date): string {
                 >
                   <svg class="w-3.5 h-3.5 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 6L9 17l-5-5" /></svg
-                  >✓ Saved {{ state.lastSavedAt() ? formatTime(state.lastSavedAt()!) : '' }}
+                  >Saved {{ state.lastSavedAt() ? formatTime(state.lastSavedAt()!) : '' }}
                 </div>
               } @else if (state.saveStatus() === 'error') {
                 <div
@@ -276,6 +295,7 @@ export class ApplicationFormComponent implements OnInit {
         const submitResponse = await applicationsApi.submitApplication(draftId, consent, this.state.editToken());
         this.referenceNumber.set(submitResponse.referenceNumber);
         this.submitSuccess.set(true);
+        if (this.toast.toast()?.type === 'error') this.toast.close();
         if (!this.isResume()) {
           localStorage.removeItem('fafics_draft_id');
           localStorage.removeItem('fafics_draft_token');
@@ -297,6 +317,7 @@ export class ApplicationFormComponent implements OnInit {
         );
         this.referenceNumber.set(submitResponse.referenceNumber);
         this.submitSuccess.set(true);
+        if (this.toast.toast()?.type === 'error') this.toast.close();
       }
     } catch (error: any) {
       console.error('Error submitting application:', error);
@@ -306,6 +327,10 @@ export class ApplicationFormComponent implements OnInit {
             'You already have an application for this association. Please track or edit it from the status page.',
           'error',
         );
+      } else if (error?.response?.status === 410) {
+        this.toast.showToast(REPLACED_LINK_MESSAGE, 'error');
+      } else if (error?.response?.status === 400 && typeof error.response?.data?.message === 'string') {
+        this.toast.showToast(error.response.data.message, 'error');
       } else {
         this.toast.showToast('Failed to submit application. Please try again.', 'error');
       }

@@ -4,6 +4,7 @@ import {
   ElementRef,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
@@ -11,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { PortalDirective } from '../../core/portal.directive';
+import { FieldComponent } from './field';
 
 export interface SearchableOption {
   value: string;
@@ -42,7 +44,9 @@ const MENU_HEIGHT = 290;
     <button
       #trigger
       type="button"
-      [attr.id]="id() ?? null"
+      [attr.id]="controlId()"
+      [attr.aria-invalid]="hasError() ? 'true' : null"
+      [attr.aria-describedby]="field?.describedBy() ?? null"
       [disabled]="disabled()"
       aria-haspopup="listbox"
       [attr.aria-expanded]="open()"
@@ -144,6 +148,14 @@ export class SearchableSelectComponent {
   readonly id = input<string | undefined>(undefined);
   readonly valueChange = output<string>();
   readonly blurred = output<void>();
+
+  /** The surrounding appField, if any: its label points at this trigger. */
+  protected readonly field = inject(FieldComponent, { optional: true });
+  protected readonly controlId = computed(() => this.id() ?? this.field?.defaultControlId ?? null);
+  private readonly registerWithField = effect(() => {
+    const id = this.controlId();
+    if (id) this.field?.controlId.set(id);
+  });
 
   protected readonly open = signal(false);
   protected readonly query = signal('');

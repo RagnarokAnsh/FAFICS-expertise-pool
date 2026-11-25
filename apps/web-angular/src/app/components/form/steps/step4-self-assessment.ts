@@ -1,10 +1,20 @@
-import { ChangeDetectionStrategy, Component, Injector, OnInit, computed, inject, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  Injector,
+  OnInit,
+  computed,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
 import { FieldArray, FormStore } from '../../../core/form/form-store';
 import { ControllerDirective, RegisterDirective } from '../../../core/form/register.directive';
 import { ToastService } from '../../../core/toast.service';
 import { FIXED_EXPERTISE_AREAS } from '../../../lib/constants/expertise';
 import { COMMITTEE_OTHER, COMPETENCIES, FAFICS_COMMITTEES, MAX_COMPETENCIES } from '../../../lib/constants/work';
-import { firstErrorMessage } from '../../../lib/utils/form-errors';
+import { STEP_ERROR_MESSAGE, focusFirstInvalid } from '../../../lib/utils/focus-first-invalid';
 import { ButtonComponent } from '../../ui/button';
 import { CardComponent } from '../../ui/card';
 import { InputDirective, TextAreaDirective } from '../../ui/field';
@@ -33,10 +43,77 @@ import { MultiSelectComponent } from '../../ui/multi-select';
     </div>
 
     @if (form.error('expertise')?.root?.message; as rootMessage) {
-      <p class="text-danger text-sm mb-3">{{ rootMessage }}</p>
+      <p class="text-danger text-sm mb-3" role="alert" tabindex="-1" data-form-error>{{ rootMessage }}</p>
     }
 
     <div appCard heading="Expertise Level & Preference">
+      @if (isNarrow()) {
+        <!-- Phones: one block per area, so every choice is visible without scrolling sideways. -->
+        <ul class="divide-y divide-border -my-2">
+          @for (id of expertise.ids(); track id; let index = $index) {
+            <li class="py-3">
+              @if (!expertise.fields()[index]?.isCustom) {
+                <div class="text-[13.5px] font-medium text-text">{{ expertise.fields()[index]?.areaLabel }}</div>
+              } @else {
+                <div class="flex gap-2">
+                  <input
+                    appInput
+                    placeholder="Other Area Name"
+                    class="w-full !h-8 !text-[13px]"
+                    [hasError]="!!form.error('expertise.' + index + '.areaLabel')"
+                    [appRegister]="'expertise.' + index + '.areaLabel'"
+                  />
+                  <button appButton type="button" variant="remove" class="!mt-0 shrink-0" (click)="expertise.remove(index)">
+                    ×
+                  </button>
+                </div>
+              }
+              @if (form.error('expertise.' + index + '.expertiseLevel')?.message; as msg) {
+                <span class="block text-[11.5px] text-danger mt-1">{{ msg }}</span>
+              }
+              <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2" role="radiogroup" [attr.aria-label]="'Level for ' + areaName(index)">
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-text cursor-pointer">
+                  <input
+                    type="radio"
+                    class="w-[17px] h-[17px] accent-navy cursor-pointer"
+                    value="average"
+                    [attr.aria-invalid]="levelInvalid(index)"
+                    [appRegister]="'expertise.' + index + '.expertiseLevel'"
+                  />
+                  Average
+                </label>
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-text cursor-pointer">
+                  <input
+                    type="radio"
+                    class="w-[17px] h-[17px] accent-navy cursor-pointer"
+                    value="advanced"
+                    [appRegister]="'expertise.' + index + '.expertiseLevel'"
+                  />
+                  Advanced
+                </label>
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-text cursor-pointer">
+                  <input
+                    type="radio"
+                    class="w-[17px] h-[17px] accent-navy cursor-pointer"
+                    value="expert"
+                    [appRegister]="'expertise.' + index + '.expertiseLevel'"
+                  />
+                  Expert
+                </label>
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-text cursor-pointer ml-auto">
+                  <input
+                    type="checkbox"
+                    class="w-[17px] h-[17px] accent-gold cursor-pointer"
+                    [disabled]="maxReached() && !form.value('expertise.' + index + '.isPreferred')"
+                    [appRegister]="'expertise.' + index + '.isPreferred'"
+                  />
+                  Preferred
+                </label>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
       <div class="overflow-x-auto">
         <table class="w-full border-collapse">
           <thead>
@@ -103,12 +180,17 @@ import { MultiSelectComponent } from '../../ui/multi-select';
                       </button>
                     </div>
                   }
+                  @if (form.error('expertise.' + index + '.expertiseLevel')?.message; as msg) {
+                    <span class="block text-[11.5px] text-danger mt-1 font-normal">{{ msg }}</span>
+                  }
                 </td>
                 <td class="px-3 py-2.5 align-middle text-center">
                   <input
                     type="radio"
                     class="w-[17px] h-[17px] accent-navy cursor-pointer"
                     value="average"
+                    [attr.aria-label]="'Average: ' + areaName(index)"
+                    [attr.aria-invalid]="levelInvalid(index)"
                     [appRegister]="'expertise.' + index + '.expertiseLevel'"
                   />
                 </td>
@@ -117,6 +199,7 @@ import { MultiSelectComponent } from '../../ui/multi-select';
                     type="radio"
                     class="w-[17px] h-[17px] accent-navy cursor-pointer"
                     value="advanced"
+                    [attr.aria-label]="'Advanced: ' + areaName(index)"
                     [appRegister]="'expertise.' + index + '.expertiseLevel'"
                   />
                 </td>
@@ -125,6 +208,7 @@ import { MultiSelectComponent } from '../../ui/multi-select';
                     type="radio"
                     class="w-[17px] h-[17px] accent-navy cursor-pointer"
                     value="expert"
+                    [attr.aria-label]="'Expert: ' + areaName(index)"
                     [appRegister]="'expertise.' + index + '.expertiseLevel'"
                   />
                 </td>
@@ -133,6 +217,7 @@ import { MultiSelectComponent } from '../../ui/multi-select';
                     type="checkbox"
                     class="w-[17px] h-[17px] accent-gold cursor-pointer"
                     [disabled]="maxReached() && !form.value('expertise.' + index + '.isPreferred')"
+                    [attr.aria-label]="'Preferred: ' + areaName(index)"
                     [appRegister]="'expertise.' + index + '.isPreferred'"
                   />
                 </td>
@@ -141,6 +226,7 @@ import { MultiSelectComponent } from '../../ui/multi-select';
           </tbody>
         </table>
       </div>
+      }
 
       @if (maxReached()) {
         <div class="mt-4 px-3 py-2 bg-gold-light border border-gold rounded-lg text-[13px] text-navy font-medium">
@@ -249,6 +335,26 @@ export class Step4SelfAssessmentComponent implements OnInit {
 
   protected readonly expertise: FieldArray = this.form.fieldArray('expertise', this.injector);
 
+  /** Phones get the stacked layout; the table needs about 640px. */
+  protected readonly isNarrow = signal(false);
+
+  constructor() {
+    const query = window.matchMedia('(max-width: 639px)');
+    this.isNarrow.set(query.matches);
+    const onChange = (e: MediaQueryListEvent) => this.isNarrow.set(e.matches);
+    query.addEventListener('change', onChange);
+    inject(DestroyRef).onDestroy(() => query.removeEventListener('change', onChange));
+  }
+
+  protected areaName(index: number): string {
+    return this.expertise.fields()[index]?.areaLabel || 'Other area';
+  }
+
+  /** Marks a row's first radio when it needs a level, so "Next" can focus it. */
+  protected levelInvalid(index: number): 'true' | null {
+    return this.form.error('expertise.' + index + '.expertiseLevel') ? 'true' : null;
+  }
+
   protected readonly maxReached = computed(() => {
     const expertiseWatch: any[] | undefined = this.form.value('expertise');
     const selectedPreferencesCount = expertiseWatch?.filter((e) => e.isPreferred)?.length || 0;
@@ -302,9 +408,10 @@ export class Step4SelfAssessmentComponent implements OnInit {
     const isValid = await this.form.trigger('expertise');
     if (!isValid) {
       this.toast.showToast(
-        firstErrorMessage(this.form.renderedErrors) ?? 'Please complete your self-assessment before continuing.',
+        this.form.error('expertise')?.root?.message ?? STEP_ERROR_MESSAGE,
         'error',
       );
+      focusFirstInvalid();
       return;
     }
     this.next.emit();

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output, signal } fro
 import { FormStore } from '../../../core/form/form-store';
 import { RegisterDirective } from '../../../core/form/register.directive';
 import { ToastService } from '../../../core/toast.service';
+import { focusFirstInvalid } from '../../../lib/utils/focus-first-invalid';
 import { ButtonComponent } from '../../ui/button';
 import { CardComponent } from '../../ui/card';
 
@@ -26,17 +27,17 @@ import { CardComponent } from '../../ui/card';
           <div class="flex flex-col gap-1.5">
             <div class="flex gap-2 items-baseline">
               <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">Name:</span>
-              <span class="text-[12.5px] text-text font-medium leading-[1.4]"
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]"
                 >{{ values.personal?.firstName }} {{ values.personal?.lastName }}</span
               >
             </div>
             <div class="flex gap-2 items-baseline">
               <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">Email:</span>
-              <span class="text-[12.5px] text-text font-medium leading-[1.4]">{{ values.personal?.email }}</span>
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]">{{ values.personal?.email }}</span>
             </div>
             <div class="flex gap-2 items-baseline">
               <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">Association:</span>
-              <span class="text-[12.5px] text-text font-medium leading-[1.4]">{{
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]">{{
                 values.association?.associationName
               }}</span>
             </div>
@@ -57,11 +58,11 @@ import { CardComponent } from '../../ui/card';
           <div class="flex flex-col gap-1.5">
             <div class="flex gap-2 items-baseline">
               <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">Degrees:</span>
-              <span class="text-[12.5px] text-text font-medium leading-[1.4]">{{ values.educations?.length || 0 }}</span>
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]">{{ values.educations?.length || 0 }}</span>
             </div>
             <div class="flex gap-2 items-baseline">
               <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">Languages:</span>
-              <span class="text-[12.5px] text-text font-medium leading-[1.4]">{{ values.languages?.length || 0 }}</span>
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]">{{ values.languages?.length || 0 }}</span>
             </div>
           </div>
           <button
@@ -80,8 +81,8 @@ import { CardComponent } from '../../ui/card';
           <div class="flex flex-col gap-1.5">
             <div class="flex gap-2 items-baseline">
               <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">UN:</span>
-              <span class="text-[12.5px] text-text font-medium leading-[1.4]"
-                >{{ values.unExperiences?.length || 0 }} roles</span
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]"
+                >{{ values.unExperiences?.length || 0 }} {{ (values.unExperiences?.length || 0) === 1 ? 'role' : 'roles' }}</span
               >
             </div>
           </div>
@@ -100,8 +101,16 @@ import { CardComponent } from '../../ui/card';
           </div>
           <div class="flex flex-col gap-1.5">
             <div class="flex gap-2 items-baseline">
+              <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">Rated:</span>
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]"
+                >{{ ratedCount }} {{ ratedCount === 1 ? 'area' : 'areas' }}</span
+              >
+            </div>
+            <div class="flex gap-2 items-baseline">
               <span class="text-[11.5px] text-text-muted min-w-[90px] shrink-0">Preferred:</span>
-              <span class="text-[12.5px] text-text font-medium leading-[1.4]">{{ preferredCount }} areas</span>
+              <span class="text-[12.5px] text-text font-medium leading-[1.4] min-w-0 [overflow-wrap:anywhere]"
+                >{{ preferredCount }} {{ preferredCount === 1 ? 'area' : 'areas' }}</span
+              >
             </div>
           </div>
           <button
@@ -134,6 +143,7 @@ import { CardComponent } from '../../ui/card';
           <input
             type="checkbox"
             id="consent_data"
+            [attr.aria-invalid]="form.error('consentData') ? 'true' : null"
             class="w-5 h-5 shrink-0 mt-[2px] accent-navy cursor-pointer"
             appRegister="consentData"
           />
@@ -146,6 +156,7 @@ import { CardComponent } from '../../ui/card';
           <input
             type="checkbox"
             id="consent_accurate"
+            [attr.aria-invalid]="form.error('consentAccurate') ? 'true' : null"
             class="w-5 h-5 shrink-0 mt-[2px] accent-navy cursor-pointer"
             appRegister="consentAccurate"
           />
@@ -276,13 +287,14 @@ export class Step5ConsentSubmitComponent {
   readonly back = output<void>();
   readonly goToStep = output<number>();
 
-  private readonly form = inject(FormStore);
+  protected readonly form = inject(FormStore);
   private readonly toast = inject(ToastService);
   protected readonly submitError = signal<string | null>(null);
 
   // Read once when the step renders, like `getValues()` in the React component body.
   protected readonly values = this.form.getValues();
   protected readonly preferredCount = this.values.expertise?.filter((e: any) => e.isPreferred).length || 0;
+  protected readonly ratedCount = this.values.expertise?.filter((e: any) => e.expertiseLevel).length || 0;
 
   protected async handleNext(): Promise<void> {
     this.submitError.set(null);
@@ -292,6 +304,7 @@ export class Step5ConsentSubmitComponent {
     } else {
       this.submitError.set('Please check all consent boxes before submitting.');
       this.toast.showToast('Please check all consent boxes before submitting.', 'error');
+      focusFirstInvalid();
     }
   }
 }

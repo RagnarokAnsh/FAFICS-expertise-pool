@@ -4,6 +4,7 @@ import {
   ElementRef,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
@@ -11,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { PortalDirective } from '../../core/portal.directive';
+import { FieldComponent } from './field';
 import { COUNTRY_DATA, flagEmoji } from '../../lib/constants/countries';
 import { MAX_PHONE_DIGITS } from '../../lib/schemas/application.schema';
 
@@ -89,7 +91,9 @@ interface MenuPos {
         </svg>
       </button>
       <input
-        [attr.id]="id() ?? null"
+        [attr.id]="controlId()"
+        [attr.aria-invalid]="hasError() ? 'true' : null"
+        [attr.aria-describedby]="field?.describedBy() ?? null"
         type="tel"
         inputmode="tel"
         [value]="national()"
@@ -159,6 +163,14 @@ export class PhoneInputComponent {
   readonly id = input<string | undefined>(undefined);
   readonly valueChange = output<string>();
   readonly blurred = output<void>();
+
+  /** The surrounding appField, if any: its label points at the number input. */
+  protected readonly field = inject(FieldComponent, { optional: true });
+  protected readonly controlId = computed(() => this.id() ?? this.field?.defaultControlId ?? null);
+  private readonly registerWithField = effect(() => {
+    const id = this.controlId();
+    if (id) this.field?.controlId.set(id);
+  });
 
   protected readonly dial = signal('');
   protected readonly national = signal('');

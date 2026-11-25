@@ -4,7 +4,7 @@ import { ControllerDirective, RegisterDirective } from '../../../core/form/regis
 import { ToastService } from '../../../core/toast.service';
 import { COUNTRY_DATA, NATIONALITIES, flagEmoji } from '../../../lib/constants/countries';
 import { PRESIDENT_EMAIL_MESSAGE, emailsMatchPresident } from '../../../lib/schemas/application.schema';
-import { firstErrorMessage } from '../../../lib/utils/form-errors';
+import { STEP_ERROR_MESSAGE, focusFirstInvalid } from '../../../lib/utils/focus-first-invalid';
 import { ButtonComponent } from '../../ui/button';
 import { CardComponent } from '../../ui/card';
 import { FieldComponent, InputDirective, SelectDirective } from '../../ui/field';
@@ -340,10 +340,8 @@ export class Step1PersonalInfoComponent {
     // Validate Step 1 fields before proceeding
     const isValid = await this.form.trigger(['personal', 'association']);
     if (!isValid) {
-      this.toast.showToast(
-        firstErrorMessage(this.form.renderedErrors) ?? 'Please fill in all required fields highlighted below.',
-        'error',
-      );
+      this.toast.showToast(STEP_ERROR_MESSAGE, 'error');
+      focusFirstInvalid();
       return;
     }
     // Cross-field check: the endorsement can't be routed to the applicant
@@ -353,6 +351,7 @@ export class Step1PersonalInfoComponent {
     if (emailsMatchPresident(personal?.email, association?.presidentEmail)) {
       this.form.setError('association.presidentEmail', { type: 'custom', message: PRESIDENT_EMAIL_MESSAGE });
       this.toast.showToast(PRESIDENT_EMAIL_MESSAGE, 'error');
+      focusFirstInvalid();
       return;
     }
     this.next.emit();
