@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Request,
   Res,
@@ -130,6 +131,23 @@ export class AuthController {
       message:
         'If an account exists for that address, a password reset link has been sent to it.',
     };
+  }
+
+  /**
+   * GET /api/auth/reset-password/:token
+   * Read-only check, so the reset page can say up front that a link is used or
+   * expired instead of after the officer has typed a new password twice.
+   */
+  @Get('reset-password/:token')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @ApiOperation({ summary: 'Check whether a password reset link is still valid' })
+  @ApiResponse({ status: 200, description: 'Link is valid' })
+  @ApiResponse({ status: 404, description: 'Unknown link' })
+  @ApiResponse({ status: 410, description: 'Link expired or already used' })
+  async checkResetLink(@Param('token') token: string): Promise<{ valid: true }> {
+    await this.authService.checkResetToken(token);
+    return { valid: true };
   }
 
   /**

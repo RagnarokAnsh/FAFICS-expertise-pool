@@ -187,6 +187,12 @@ export const authApi = {
     return unwrap(response);
   },
 
+  /** Resolves if the reset link still works; rejects with 404/410 if not. */
+  checkResetLink: async (token: string) => {
+    const response = await adminApiClient.get(`/auth/reset-password/${encodeURIComponent(token)}`);
+    return unwrap(response);
+  },
+
   resetPassword: async (token: string, password: string) => {
     const response = await adminApiClient.post('/auth/reset-password', { token, password });
     return unwrap(response);

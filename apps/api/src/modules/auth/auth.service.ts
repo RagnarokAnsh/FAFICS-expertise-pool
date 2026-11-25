@@ -100,6 +100,11 @@ export class AuthService {
     this.logger.log(`Password reset link sent to ${user.email}`);
   }
 
+  /** Throws 404/410 if a reset link is unknown, used or expired. Never consumes it. */
+  async checkResetToken(rawToken: string): Promise<void> {
+    await this.tokensService.peek(rawToken, TokenPurpose.PASSWORD_RESET);
+  }
+
   /**
    * Completes a password reset. The magic token is consumed (marked used) by
    * TokensService.validate, so the link cannot be replayed.

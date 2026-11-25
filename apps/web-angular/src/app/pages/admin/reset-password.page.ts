@@ -56,6 +56,10 @@ import { authApi } from '../../lib/api/admin.api';
           >← Back to sign in</a
         >
       </app-auth-shell>
+    } @else if (checking()) {
+      <app-auth-shell heading="Choose a new password" subtitle="FAFICS Expertise Pool" [hasFooter]="false">
+        <p class="p-8 text-center text-[14px] text-text-mid">Checking your link…</p>
+      </app-auth-shell>
     } @else {
       <app-auth-shell heading="Choose a new password" subtitle="FAFICS Expertise Pool" [hasFooter]="true">
         <form (submit)="handleSubmit($event)" class="p-8">
@@ -110,6 +114,23 @@ export class ResetPasswordPage {
   protected readonly done = signal(false);
   /** Set when the token itself is rejected — the form is useless from then on. */
   protected readonly linkDead = signal(false);
+  /** True until the link has been checked, so a used link never shows the form. */
+  protected readonly checking = signal(true);
+
+  constructor() {
+    authApi
+      .checkResetLink(this.rawToken)
+      .catch((err: any) => {
+        const status = err.response?.status;
+        if (status === 404 || status === 410) {
+          this.linkDead.set(true);
+          this.error.set('This reset link has expired or has already been used.');
+        }
+        // Any other failure (network, rate limit): show the form; submitting
+        // still reports a dead link.
+      })
+      .finally(() => this.checking.set(false));
+  }
 
   protected async handleSubmit(e: Event): Promise<void> {
     e.preventDefault();
