@@ -27,7 +27,7 @@ export function applicantReminderNoticeTemplate(params: {
     <p>Dear ${params.applicantName},</p>
     <p>${waiting}</p>
     <p>We have sent your President a reminder today at <strong>${params.presidentEmail}</strong>.</p>
-    <p>There is nothing you need to do. If you know your President, you may want to let them know the request is waiting in their inbox. If the address above is wrong, please contact <a href="mailto:secretary@fafics.org">secretary@fafics.org</a>.</p>
+    <p>There is nothing you need to do. If you know your President, you may want to let them know the request is waiting in their inbox. If the address above is wrong, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
     <div style="text-align: center; margin: 28px 0;">
       <a href="${params.viewUrl}" style="display: inline-block; background-color: #1a3a6b; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">View My Application</a>
     </div>

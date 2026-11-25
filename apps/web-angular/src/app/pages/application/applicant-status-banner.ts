@@ -45,7 +45,7 @@ import { formatDate } from '../../lib/utils/date';
         }
         @case ('rejected') {
           <p class="text-[14px] text-text-mid">
-            Your application was not accepted at this time. Please contact secretary&#64;fafics.org for more information.
+            Your application was not accepted at this time. Please contact support&#64;fafics.com for more information.
           </p>
         }
         @case ('expired') {

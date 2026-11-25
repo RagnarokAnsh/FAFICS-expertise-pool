@@ -150,7 +150,7 @@ const STATUS_FG: Record<string, string> = {
                   }
                   @if (result.status === 'rejected') {
                     <p class="mt-4 text-text-mid leading-relaxed">
-                      Your application was not accepted at this time. Please contact secretary&#64;fafics.org for more
+                      Your application was not accepted at this time. Please contact support&#64;fafics.com for more
                       information.
                     </p>
                   }

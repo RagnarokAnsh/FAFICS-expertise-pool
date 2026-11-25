@@ -14,7 +14,7 @@ export function removedFromPoolTemplate(params: {
     <p>Dear ${params.applicantName},</p>
     <p>Your profile has been removed from the FAFICS Expertise Pool, and your application data has been deleted.</p>
     ${reasonBlock}
-    <p>If you believe this is a mistake, please contact <a href="mailto:secretary@fafics.org">secretary@fafics.org</a>. You are welcome to submit a new application at any time at <a href="${params.webBaseUrl}/apply">${params.webBaseUrl}/apply</a>.</p>
+    <p>If you believe this is a mistake, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>. You are welcome to submit a new application at any time at <a href="${params.webBaseUrl}/apply">${params.webBaseUrl}/apply</a>.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }

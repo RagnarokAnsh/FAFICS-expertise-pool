@@ -32,7 +32,7 @@ export function presidentReviewTemplate(params: {
       <li>The link will expire in 14 days.</li>
       <li>If you notice any issues with the application, you will have the option to return it to the applicant with your comments.</li>
     </ul>
-    <p>If you have any questions, please contact <a href="mailto:secretary@fafics.org">secretary@fafics.org</a>.</p>
+    <p>If you have any questions, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }

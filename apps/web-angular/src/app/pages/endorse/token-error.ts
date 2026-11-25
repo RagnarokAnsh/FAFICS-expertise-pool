@@ -19,7 +19,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
         <p class="text-text-mid mb-6">This link is invalid, has already been used, or has expired.</p>
         <p class="text-sm text-text-light">
           If you believe this is an error, please contact
-          <a href="mailto:secretary@fafics.org" class="text-navy font-semibold hover:underline">secretary&#64;fafics.org</a>
+          <a href="mailto:support@fafics.com" class="text-navy font-semibold hover:underline">support&#64;fafics.com</a>
         </p>
       </div>
     </div>

@@ -30,7 +30,7 @@ import { RouterLink } from '@angular/router';
         </a>
         <p class="text-sm text-text-light">
           If you believe this is an error, please contact
-          <a href="mailto:secretary@fafics.org" class="text-navy font-semibold hover:underline">secretary&#64;fafics.org</a>
+          <a href="mailto:support@fafics.com" class="text-navy font-semibold hover:underline">support&#64;fafics.com</a>
         </p>
       </div>
     </div>

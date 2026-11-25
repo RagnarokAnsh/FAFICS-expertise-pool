@@ -35,7 +35,7 @@ export function buildEmailHtml(title: string, body: string): string {
               <tr>
                 <td align="center" style="background-color: #f9fafb; padding: 24px; border-top: 1px solid #dde3ef;">
                   <p style="margin: 0; font-size: 14px; color: #8892aa;">
-                    &copy; 2026 FAFICS &mdash; <a href="https://fafics.org" style="color: #0D2240; text-decoration: none;">fafics.org</a> &middot; <a href="mailto:secretary@fafics.org" style="color: #0D2240; text-decoration: none;">secretary@fafics.org</a>
+                    &copy; 2026 FAFICS &mdash; <a href="https://fafics.org" style="color: #0D2240; text-decoration: none;">fafics.org</a> &middot; <a href="mailto:support@fafics.com" style="color: #0D2240; text-decoration: none;">support@fafics.com</a>
                   </p>
                 </td>
               </tr>

@@ -22,7 +22,7 @@ export function rejectedTemplate(params: {
     <p>Thank you for your interest in joining the FAFICS Expertise Pool (Reference: ${params.referenceNumber}).</p>
     <p>After careful review, we regret to inform you that we are unable to approve your application at this time.</p>
     ${notesSection}
-    <p>We appreciate the time you took to submit your profile and your willingness to contribute. If you have any questions, please contact <a href="mailto:secretary@fafics.org">secretary@fafics.org</a>.</p>
+    <p>We appreciate the time you took to submit your profile and your willingness to contribute. If you have any questions, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }

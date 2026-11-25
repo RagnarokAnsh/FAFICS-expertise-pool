@@ -24,7 +24,7 @@ export function presidentReminderTemplate(params: {
       <li>This link will expire in 14 days. Links in earlier emails about this application also still work.</li>
       <li>If you notice any issues with the application, you can return it to the applicant with your comments.</li>
     </ul>
-    <p>If you are not the President of ${params.associationName}, or have any questions, please contact <a href="mailto:secretary@fafics.org">secretary@fafics.org</a>.</p>
+    <p>If you are not the President of ${params.associationName}, or have any questions, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }

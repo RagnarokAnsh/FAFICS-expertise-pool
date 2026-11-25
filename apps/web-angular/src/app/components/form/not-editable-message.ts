@@ -39,7 +39,7 @@ export class NotEditableMessageComponent {
     } else if (status === 'approved') {
       return 'Your application has been approved. Your profile is active in the FAFICS Expertise Pool.';
     } else if (status === 'rejected') {
-      return 'Your application was not accepted at this time. Please contact secretary@fafics.org for more information.';
+      return 'Your application was not accepted at this time. Please contact support@fafics.com for more information.';
     } else if (status === 'expired') {
       return 'Your profile has expired. You are welcome to submit a new application.';
     }

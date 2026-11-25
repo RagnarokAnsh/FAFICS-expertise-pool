@@ -46,7 +46,7 @@ export function approvedTemplate(params: {
     ${preferredSection}
     ${committeeSection}
     <p><strong>Validity & Renewal</strong></p>
-    <p>Your profile is valid for 3 years, expiring on <strong>${formattedDate}</strong>. You will receive renewal reminders before this date. To renew or update your profile in the future, please contact <a href="mailto:secretary@fafics.org">secretary@fafics.org</a>.</p>
+    <p>Your profile is valid for 3 years, expiring on <strong>${formattedDate}</strong>. You will receive renewal reminders before this date. To renew or update your profile in the future, please contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
     <p>Thank you for offering your expertise to the FAFICS community.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };

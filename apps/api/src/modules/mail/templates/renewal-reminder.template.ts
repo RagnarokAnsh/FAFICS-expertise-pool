@@ -21,7 +21,7 @@ export function renewalReminderTemplate(params: {
     <div style="text-align: center; margin: 32px 0;">
       <a href="${params.webBaseUrl}/apply" style="display: inline-block; background-color: #C8973A; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 4px; font-weight: bold; font-size: 16px;">Application Form</a>
     </div>
-    <p>If you have any questions, contact <a href="mailto:secretary@fafics.org">secretary@fafics.org</a>.</p>
+    <p>If you have any questions, contact <a href="mailto:support@fafics.com">support@fafics.com</a>.</p>
   `;
   return { subject, html: buildEmailHtml(subject, body) };
 }
