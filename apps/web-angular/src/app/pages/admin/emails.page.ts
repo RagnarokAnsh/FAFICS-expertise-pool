@@ -48,12 +48,7 @@ const EMAIL_LABELS: Record<string, string> = {
         >
           Needs attention
           @if (failedCount() !== null) {
-            <span
-              [class]="
-                'ml-1.5 rounded-full px-1.5 text-[11px] ' + (failedCount()! > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100')
-              "
-              >{{ failedCount() }}</span
-            >
+            <span [class]="countClass()">{{ failedCount() }}</span>
           }
         </button>
         <button role="tab" [attr.aria-selected]="!failedOnly()" (click)="setTab(false)" [class]="tabClass(!failedOnly())">
@@ -190,6 +185,14 @@ export class EmailsPage {
 
   protected label(type: string): string {
     return EMAIL_LABELS[type] ?? type.replace(/_/g, ' ');
+  }
+
+  /** Count pill: red when something needs attention, otherwise readable on either tab colour. */
+  protected countClass(): string {
+    const base =
+      'ml-1.5 inline-flex h-[18px] min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none';
+    if ((this.failedCount() ?? 0) > 0) return `${base} bg-red-600 text-white`;
+    return this.failedOnly() ? `${base} bg-white/20 text-white` : `${base} bg-gray-100 text-text-mid`;
   }
 
   protected tabClass(active: boolean): string {
