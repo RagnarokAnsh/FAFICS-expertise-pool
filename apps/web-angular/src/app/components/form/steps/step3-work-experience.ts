@@ -54,7 +54,7 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       @if (form.error('unExperiences')?.root?.message; as rootMessage) {
         <p class="text-danger text-sm mb-3">{{ rootMessage }}</p>
       }
-      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style="grid-template-columns: 1.2fr 1.4fr 80px 1fr 100px">
+      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-12" style="grid-template-columns: 1.2fr 1.4fr 92px 1fr 128px">
         <span class="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted"
           >Agency <span class="text-gold">*</span></span
         >
@@ -69,7 +69,10 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       <div
         appDynamicRowList
         [items]="un.ids()"
-        gridTemplateColumns="1.2fr 1.4fr 80px 1fr 100px"
+        [canRemove]="un.ids().length > 1"
+        (remove)="un.remove($event)"
+        removeLabel="Remove UN position"
+        gridTemplateColumns="1.2fr 1.4fr 92px 1fr 128px"
         (add)="un.append({ agency: '', positionTitle: '', sortOrder: un.ids().length + 1 })"
         addLabel="Add Position"
         [rowTemplate]="unRow"
@@ -121,23 +124,17 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
             <option [value]="a">{{ a }}</option>
           }
         </select>
-        <div class="flex gap-2">
-          <select aria-label="Years"
-            appSelect
-            class="flex-1"
-            [hasError]="!!form.error('unExperiences.' + index + '.durationYears')"
-            [appRegister]="'unExperiences.' + index + '.durationYears'"
-            [setValueAs]="parseDuration"
-          >
-            <option value="" hidden>Years</option>
-            @for (d of durations; track d.value) {
-              <option [value]="d.value">{{ d.label }}</option>
-            }
-          </select>
-          @if (un.ids().length > 1) {
-            <button appButton type="button" variant="remove" (click)="un.remove(index)">×</button>
+        <select aria-label="Years"
+          appSelect
+          [hasError]="!!form.error('unExperiences.' + index + '.durationYears')"
+          [appRegister]="'unExperiences.' + index + '.durationYears'"
+          [setValueAs]="parseDuration"
+        >
+          <option value="" hidden>Years</option>
+          @for (d of durations; track d.value) {
+            <option [value]="d.value">{{ d.label }}</option>
           }
-        </div>
+        </select>
       </ng-template>
       <div class="mt-4">
         <div class="flex items-center gap-2.5 my-3">
@@ -158,7 +155,7 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       <p class="text-[13px] text-text-mid leading-relaxed mb-4">
         Leave this section empty if it does not apply. Fields marked <span class="text-gold">*</span> are required only for positions you add.
       </p>
-      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style="grid-template-columns: 1.2fr 1.4fr 1fr 100px">
+      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-12" style="grid-template-columns: 1.2fr 1.4fr 1fr 128px">
         <span class="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted"
           >Organization <span class="text-gold">*</span></span
         >
@@ -172,7 +169,9 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       <div
         appDynamicRowList
         [items]="nonUn.ids()"
-        gridTemplateColumns="1.2fr 1.4fr 1fr 100px"
+        (remove)="nonUn.remove($event)"
+        removeLabel="Remove position"
+        gridTemplateColumns="1.2fr 1.4fr 1fr 128px"
         (add)="nonUn.append({ organization: '', positionTitle: '', sortOrder: nonUn.ids().length + 1 })"
         addLabel="Add Position"
         [rowTemplate]="nonUnRow"
@@ -206,20 +205,16 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
             <option [value]="a">{{ a }}</option>
           }
         </select>
-        <div class="flex gap-2">
-          <select aria-label="Years"
-            appSelect
-            class="flex-1"
-            [appRegister]="'nonUnExperiences.' + index + '.durationYears'"
-            [setValueAs]="parseDuration"
-          >
-            <option value="" hidden>Years</option>
-            @for (d of durations; track d.value) {
-              <option [value]="d.value">{{ d.label }}</option>
-            }
-          </select>
-          <button appButton type="button" variant="remove" (click)="nonUn.remove(index)">×</button>
-        </div>
+        <select aria-label="Years"
+          appSelect
+          [appRegister]="'nonUnExperiences.' + index + '.durationYears'"
+          [setValueAs]="parseDuration"
+        >
+          <option value="" hidden>Years</option>
+          @for (d of durations; track d.value) {
+            <option [value]="d.value">{{ d.label }}</option>
+          }
+        </select>
       </ng-template>
       <div class="mt-4">
         <div class="flex items-center gap-2.5 my-3">
@@ -240,7 +235,7 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       <p class="text-[13px] text-text-mid leading-relaxed mb-4">
         Leave this section empty if it does not apply. Fields marked <span class="text-gold">*</span> are required only for positions you add.
       </p>
-      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style="grid-template-columns: 1.5fr 1fr 120px">
+      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-12" style="grid-template-columns: 1.5fr 1fr 128px">
         <span class="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted"
           >Position Held <span class="text-gold">*</span></span
         >
@@ -251,7 +246,9 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       <div
         appDynamicRowList
         [items]="fafics.ids()"
-        gridTemplateColumns="1.5fr 1fr 120px"
+        (remove)="fafics.remove($event)"
+        removeLabel="Remove FAFICS position"
+        gridTemplateColumns="1.5fr 1fr 128px"
         (add)="fafics.append({ positionHeld: '', sortOrder: fafics.ids().length + 1 })"
         addLabel="Add Position"
         [rowTemplate]="faficsRow"
@@ -289,20 +286,16 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
             />
           }
         </div>
-        <div class="flex gap-2">
-          <select aria-label="Years"
-            appSelect
-            class="flex-1"
-            [appRegister]="'faficsExperiences.' + index + '.durationYears'"
-            [setValueAs]="parseDuration"
-          >
-            <option value="" hidden>Years</option>
-            @for (d of durations; track d.value) {
-              <option [value]="d.value">{{ d.label }}</option>
-            }
-          </select>
-          <button appButton type="button" variant="remove" (click)="fafics.remove(index)">×</button>
-        </div>
+        <select aria-label="Years"
+          appSelect
+          [appRegister]="'faficsExperiences.' + index + '.durationYears'"
+          [setValueAs]="parseDuration"
+        >
+          <option value="" hidden>Years</option>
+          @for (d of durations; track d.value) {
+            <option [value]="d.value">{{ d.label }}</option>
+          }
+        </select>
       </ng-template>
       <div class="mt-4">
         <div class="flex items-center gap-2.5 my-3">
@@ -323,7 +316,7 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       <p class="text-[13px] text-text-mid leading-relaxed mb-4">
         Leave this section empty if it does not apply. Fields marked <span class="text-gold">*</span> are required only for positions you add.
       </p>
-      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style="grid-template-columns: 1.5fr 1fr 120px">
+      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-12" style="grid-template-columns: 1.5fr 1fr 128px">
         <span class="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted"
           >Position Held <span class="text-gold">*</span></span
         >
@@ -334,7 +327,9 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
       <div
         appDynamicRowList
         [items]="local.ids()"
-        gridTemplateColumns="1.5fr 1fr 120px"
+        (remove)="local.remove($event)"
+        removeLabel="Remove association position"
+        gridTemplateColumns="1.5fr 1fr 128px"
         (add)="local.append({ positionHeld: '', sortOrder: local.ids().length + 1 })"
         addLabel="Add Position"
         [rowTemplate]="localRow"
@@ -357,20 +352,16 @@ const parseDuration = (v: string) => (v === '' ? undefined : parseFloat(v));
             <option [value]="a">{{ a }}</option>
           }
         </select>
-        <div class="flex gap-2">
-          <select aria-label="Years"
-            appSelect
-            class="flex-1"
-            [appRegister]="'localExperiences.' + index + '.durationYears'"
-            [setValueAs]="parseDuration"
-          >
-            <option value="" hidden>Years</option>
-            @for (d of durations; track d.value) {
-              <option [value]="d.value">{{ d.label }}</option>
-            }
-          </select>
-          <button appButton type="button" variant="remove" (click)="local.remove(index)">×</button>
-        </div>
+        <select aria-label="Years"
+          appSelect
+          [appRegister]="'localExperiences.' + index + '.durationYears'"
+          [setValueAs]="parseDuration"
+        >
+          <option value="" hidden>Years</option>
+          @for (d of durations; track d.value) {
+            <option [value]="d.value">{{ d.label }}</option>
+          }
+        </select>
       </ng-template>
       <div class="mt-4">
         <div class="flex items-center gap-2.5 my-3">

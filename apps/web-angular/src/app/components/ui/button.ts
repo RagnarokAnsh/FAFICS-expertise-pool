@@ -34,7 +34,7 @@ export class ButtonComponent {
         'px-4 py-2 text-[13px] bg-navy-light text-navy-mid border-[1.5px] border-dashed border-navy-mid hover:bg-navy hover:text-white hover:border-solid mt-1';
     } else if (variant === 'remove') {
       baseClasses +=
-        'w-7 h-7 !p-0 rounded-full border-[1.5px] border-[#ffd0cc] bg-[#fff5f5] text-[#c0392b] text-[16px] leading-none hover:bg-[#ffe0de] hover:border-[#c0392b] mt-[7px] shrink-0';
+        'w-7 h-7 !p-0 rounded-full border-[1.5px] border-[#ffd0cc] bg-[#fff5f5] text-[#c0392b] text-[16px] leading-none hover:bg-[#ffe0de] hover:border-[#c0392b] mt-[6px] shrink-0';
     }
     return baseClasses;
   });

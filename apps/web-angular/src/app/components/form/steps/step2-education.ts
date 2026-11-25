@@ -33,7 +33,7 @@ const PROFICIENCIES = [
       @if (form.error('educations')?.root?.message; as rootMessage) {
         <p class="text-danger text-sm mb-3">{{ rootMessage }}</p>
       }
-      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style="grid-template-columns: 1fr 1fr">
+      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-12" style="grid-template-columns: 1fr 1fr">
         <span class="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted"
           >Degree / Qualification <span class="text-gold">*</span></span
         >
@@ -45,6 +45,9 @@ const PROFICIENCIES = [
       <div
         appDynamicRowList
         [items]="edu.ids()"
+        [canRemove]="edu.ids().length > 1"
+        (remove)="edu.remove($event)"
+        removeLabel="Remove qualification"
         gridTemplateColumns="1fr 1fr"
         (add)="edu.append({ degreeName: '', institution: '', sortOrder: edu.ids().length + 1 })"
         addLabel="Add Qualification"
@@ -57,18 +60,12 @@ const PROFICIENCIES = [
           [hasError]="!!form.error('educations.' + index + '.degreeName')"
           [appRegister]="'educations.' + index + '.degreeName'"
         />
-        <div class="flex gap-2">
-          <input
-            appInput
-            placeholder="Institution"
-            class="flex-1"
-            [hasError]="!!form.error('educations.' + index + '.institution')"
-            [appRegister]="'educations.' + index + '.institution'"
-          />
-          @if (edu.ids().length > 1) {
-            <button appButton type="button" variant="remove" (click)="edu.remove(index)">×</button>
-          }
-        </div>
+        <input
+          appInput
+          placeholder="Institution"
+          [hasError]="!!form.error('educations.' + index + '.institution')"
+          [appRegister]="'educations.' + index + '.institution'"
+        />
       </ng-template>
     </div>
 
@@ -76,7 +73,7 @@ const PROFICIENCIES = [
       @if (form.error('languages')?.root?.message; as rootMessage) {
         <p class="text-danger text-sm mb-3">{{ rootMessage }}</p>
       }
-      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-3" style="grid-template-columns: 1fr 1fr">
+      <div class="hidden lg:grid gap-2.5 pb-1 pl-10 pr-12" style="grid-template-columns: 1fr 1fr">
         <span class="text-[11px] font-semibold uppercase tracking-[0.04em] text-text-muted"
           >Language <span class="text-gold">*</span></span
         >
@@ -88,6 +85,9 @@ const PROFICIENCIES = [
       <div
         appDynamicRowList
         [items]="lang.ids()"
+        [canRemove]="lang.ids().length > 1"
+        (remove)="lang.remove($event)"
+        removeLabel="Remove language"
         gridTemplateColumns="1fr 1fr"
         (add)="lang.append({ language: '', proficiency: '', sortOrder: lang.ids().length + 1 })"
         addLabel="Add Language"
@@ -122,22 +122,16 @@ const PROFICIENCIES = [
           }
         </div>
         <div class="flex flex-col gap-1">
-          <div class="flex gap-2">
-            <select aria-label="Proficiency level"
-              appSelect
-              class="flex-1"
-              [hasError]="!!form.error('languages.' + index + '.proficiency')"
-              [appRegister]="'languages.' + index + '.proficiency'"
-            >
-              <option value="" hidden>Select level...</option>
-              @for (p of proficiencies; track p.value) {
-                <option [value]="p.value">{{ p.label }}</option>
-              }
-            </select>
-            @if (lang.ids().length > 1) {
-              <button appButton type="button" variant="remove" (click)="lang.remove(index)">×</button>
+          <select aria-label="Proficiency level"
+            appSelect
+            [hasError]="!!form.error('languages.' + index + '.proficiency')"
+            [appRegister]="'languages.' + index + '.proficiency'"
+          >
+            <option value="" hidden>Select level...</option>
+            @for (p of proficiencies; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
             }
-          </div>
+          </select>
           @if (form.error('languages.' + index + '.proficiency')?.message) {
             <span class="text-[11.5px] text-danger">Proficiency Level is required</span>
           }

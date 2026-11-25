@@ -10,7 +10,9 @@ export interface RowContext {
 /**
  * <div appDynamicRowList [items]="fieldIds" [rowTemplate]="tpl"> —
  * components/ui/DynamicRowList.tsx. The row template's root nodes become the
- * grid's direct children, exactly like the React renderRow fragment.
+ * grid's direct children, exactly like the React renderRow fragment. Each
+ * row also gets its own remove button on the right (see `canRemove`); section
+ * headers above the list pad their right side by 48px (pr-12) to match.
  */
 @Component({
   selector: 'div[appDynamicRowList]',
@@ -33,6 +35,24 @@ export interface RowContext {
             [style.--row-cols]="gridTemplateColumns()"
           >
             <ng-container *ngTemplateOutlet="rowTemplate(); context: { $implicit: item, index: index }" />
+          </div>
+          <!--
+            Remove sits in its own slot beside the grid (never inside a column),
+            centred on the first line of fields. The slot is kept when the row
+            can't be removed so columns stay under their headers.
+          -->
+          <div class="w-7 shrink-0">
+            @if (canRemove()) {
+              <button
+                appButton
+                type="button"
+                variant="remove"
+                [attr.aria-label]="removeLabel() + ' ' + (index + 1)"
+                (click)="remove.emit(index)"
+              >
+                ×
+              </button>
+            }
           </div>
         </div>
       }
@@ -59,5 +79,10 @@ export class DynamicRowListComponent {
    * auto-fit layout.
    */
   readonly gridTemplateColumns = input<string | undefined>(undefined);
+  /** Show the remove (×) button on each row, e.g. false when only one row must stay. */
+  readonly canRemove = input<boolean>(true);
+  /** Screen-reader label, numbered per row: "Remove position 2". */
+  readonly removeLabel = input<string>('Remove row');
   readonly add = output<void>();
+  readonly remove = output<number>();
 }
