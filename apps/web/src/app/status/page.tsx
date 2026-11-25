@@ -47,9 +47,6 @@ export default function StatusPage() {
   const [isSendingEditLink, setIsSendingEditLink] = useState(false);
   const [editLinkSent, setEditLinkSent] = useState(false);
   const [queryEmail, setQueryEmail] = useState<string | null>(null);
-  // view-link state (read-only copy of a submitted application)
-  const [isSendingViewLink, setIsSendingViewLink] = useState(false);
-  const [viewLinkSent, setViewLinkSent] = useState(false);
 
   /* ── Section B state ── */
   const { register: regB, handleSubmit: submitB, formState: { errors: errB } } = useForm<DraftFormData>();
@@ -71,7 +68,6 @@ export default function StatusPage() {
     setStatusError(null);
     setStatusResult(null);
     setEditLinkSent(false);
-    setViewLinkSent(false);
     setQueryEmail(data.email);
 
     try {
@@ -100,23 +96,6 @@ export default function StatusPage() {
       showToast('An error occurred. Please try again.', 'error');
     } finally {
       setIsSendingEditLink(false);
-    }
-  };
-
-  const handleRequestViewLink = async () => {
-    if (!statusResult || !statusResult.referenceNumber || !queryEmail) return;
-    setIsSendingViewLink(true);
-    try {
-      await applicationsApi.requestViewLink(queryEmail, statusResult.referenceNumber);
-      setViewLinkSent(true);
-    } catch (error: any) {
-      if (error.response?.status === 429) {
-        showToast('Too many requests. Please wait a minute and try again.', 'error');
-      } else {
-        showToast('An error occurred. Please try again.', 'error');
-      }
-    } finally {
-      setIsSendingViewLink(false);
     }
   };
 
@@ -260,33 +239,6 @@ export default function StatusPage() {
                     </div>
                   )}
                 </div>
-
-                {/* View link section for any submitted application */}
-                {statusResult.status !== 'draft' && (
-                  <div className="mt-6 border-t border-border pt-6 text-left">
-                    <h3 className="font-serif text-[18px] font-bold text-navy mb-3">View your submitted application</h3>
-                    <p className="text-[14px] text-text-mid mb-5">
-                      We can email you a secure link to a read-only copy of the application you submitted.
-                    </p>
-
-                    {viewLinkSent ? (
-                      <div className="p-4 bg-[#eaf3de] text-[#3b6d11] rounded-lg text-[14px] font-medium border border-[#c4e1a4]">
-                        ✓ Link sent! Check your email inbox (and spam folder).
-                      </div>
-                    ) : (
-                      <>
-                        <Button onClick={handleRequestViewLink} disabled={isSendingViewLink} variant="ghost" className="border-navy text-navy hover:bg-navy hover:text-white">
-                          {isSendingViewLink ? 'Sending...' : 'Email me a link to view my application'}
-                        </Button>
-                        {queryEmail && (
-                          <p className="text-[13px] text-text-muted mt-3">
-                            A secure link will be sent to: {maskEmail(queryEmail)}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
 
                 {/* Edit link section for draft / changes_requested */}
                 {(statusResult.status === 'draft' || statusResult.status === 'changes_requested') && (
