@@ -23,7 +23,7 @@ export function submissionConfirmationTemplate(params: {
       <a href="${params.viewUrl}" style="display: inline-block; background-color: #1a3a6b; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">View My Application</a>
     </div>
     <p><strong>What happens next?</strong></p>
-    <p>An endorsement request has been sent to your Member Association President. Once endorsed, your application will be reviewed by the FAFICS Secretary.</p>
+    <p>An endorsement request has been sent to your Member Association President. Once your President endorses your application, your profile will be added to the FAFICS Expertise Pool.</p>
     <p>We will notify you via email when your application status changes.</p>
     <p style="font-size: 13px; color: #666; background-color: #f8f9fa; padding: 12px; border-radius: 6px;">
       The view link works for ${params.viewLinkValidFor}. Anyone with the link can see your application details, so please do not forward this email. You can request a new link from the <a href="${params.statusUrl}" style="color: #1a3a6b;">Application Status page</a> using your email address and reference number.
