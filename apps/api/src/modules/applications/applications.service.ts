@@ -18,7 +18,6 @@ import { ApplicationStatusQueryDto } from './dto/application-status-query.dto';
 import { RequestEditLinkDto } from './dto/request-edit-link.dto';
 import { RequestViewLinkDto } from './dto/request-view-link.dto';
 import { APPLICATION_VIEW_INCLUDE, toApplicantApplicationView } from './application-view.mapper';
-import { formatDisplayDate } from '../../common/utils/display-date';
 import { Prisma } from '@prisma/client';
 import { TokensService } from '../tokens/tokens.service';
 import { MailService } from '../mail/mail.service';
@@ -53,7 +52,7 @@ export class ApplicationsService {
    */
   async createDraft(
     dto: CreateDraftDto,
-  ): Promise<{ id: string; editToken: string; resumed: boolean }> {
+  ): Promise<{ id?: string; editToken?: string; resumed: boolean }> {
     const result = await this.prisma.$transaction(async (tx) => {
       // Create or find user for this applicant (applicants don't have accounts,
       // but we need a user row for the FK constraint). User is unique by email,
@@ -149,25 +148,23 @@ export class ApplicationsService {
           existing.status === 'draft' || existing.status === 'changes_requested';
         if (!editable) {
           // An active profile can only be replaced once it expires (it is then
-          // deleted and the member applies again from scratch).
-          if (existing.status === 'approved' && existing.expiresAt) {
+          // deleted and the member applies again from scratch). The caller has
+          // not proved who they are, so say no more than they typed.
+          if (existing.status === 'approved') {
             throw new ConflictException(
-              `Your profile is already active in the Expertise Pool until ${formatDisplayDate(existing.expiresAt)}. ` +
-                'You can submit a new application after that date.',
+              'A profile with these details is already active in the Expertise Pool. ' +
+                'You can submit a new application after it expires; we email a reminder beforehand.',
             );
           }
           // submitted / endorsed / under_review → don't duplicate.
           throw new ConflictException(
-            `An application for this association already exists under ${step1Fields.email} ` +
-              `(status: ${existing.status}). Please track or edit it from the status page.`,
+            'An application with these details has already been submitted. ' +
+              'You can follow it on the Application Status page with your email and reference number.',
           );
         }
-        // Resume the existing editable record: refresh Step-1 fields only, leave
-        // child records (education, experience, …) untouched.
-        await tx.application.update({
-          where: { id: existing.id },
-          data: step1Fields,
-        });
+        // An application is in progress (draft or returned for changes). The
+        // caller has not proved they own it, so it is neither changed nor
+        // opened here: the owner gets a "continue" link at the email on file.
         return { application: existing, resumed: true };
       }
 
@@ -203,7 +200,14 @@ export class ApplicationsService {
         newStatus: 'draft',
       });
     }
-    this.logger.log(`Draft ${resumed ? 'resumed' : 'created'}: ${application.id}`);
+    this.logger.log(`Draft ${resumed ? 'already in progress' : 'created'}: ${application.id}`);
+
+    if (resumed) {
+      // Never send back an id or token for an existing application: the link
+      // goes to its owner's inbox (see NotificationService.sendContinueLink).
+      void this.notificationService.sendContinueLink(application.id);
+      return { resumed: true };
+    }
 
     // Generate the applicant edit token up front. It is the ownership credential
     // for this draft: the browser keeps it and must present it on every
@@ -217,11 +221,7 @@ export class ApplicationsService {
       ttlMs: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
-    // Email the resume link only for genuinely new drafts — a resume re-entry is
-    // redirected straight into the form, so a duplicate email would be noise.
-    if (!resumed) {
-      void this.notificationService.sendDraftResumeLink(application.id, editToken);
-    }
+    void this.notificationService.sendDraftResumeLink(application.id, editToken);
 
     return { id: application.id, editToken, resumed };
   }
@@ -661,7 +661,7 @@ export class ApplicationsService {
     const webBaseUrl = this.configService.get<string>('app.webBaseUrl') || this.configService.get<string>('WEB_BASE_URL') || 'http://localhost:3000';
     const resumeUrl = `${webBaseUrl}/apply/resume/${rawToken}`;
 
-    await this.mailService.sendApplicantEditLink(application.id, resumeUrl);
+    await this.mailService.sendApplicantEditLink(application.id, resumeUrl, '3 hours');
 
     await this.prisma.notificationLog.create({
       data: {

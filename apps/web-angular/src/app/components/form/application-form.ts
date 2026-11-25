@@ -58,26 +58,36 @@ import { formatTime } from '../../lib/utils/date';
       </div>
     } @else {
       <div class="w-full">
-        @if (state.resumePrompt()) {
-          <div class="fixed inset-0 z-[130] bg-black/50 flex items-center justify-center px-4">
-            <div class="bg-white rounded-theme shadow-theme max-w-[460px] w-full p-8 text-center">
-              <h2 class="font-serif text-[22px] font-bold text-navy mb-3">You have an application in progress</h2>
-              <p class="text-[14px] text-text-mid mb-7 leading-relaxed">
-                We found a saved application for these details. You can pick up where you left off, or start over.
-                Starting over replaces the saved progress — it does <strong>not</strong> create a duplicate.
+        @if (state.inProgressNotice()) {
+          <div class="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center px-4">
+            <div
+              class="bg-white rounded-theme shadow-theme max-w-[460px] w-full p-8 text-center"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="in-progress-title"
+            >
+              <h2 id="in-progress-title" class="font-serif text-[22px] font-bold text-navy mb-3">
+                You already have an application in progress
+              </h2>
+              <p class="text-[14px] text-text-mid mb-3 leading-relaxed">
+                We found an application in progress for these details. To keep it safe, we don't open it here: we have
+                emailed a link to continue it to the email address on that application.
+              </p>
+              <p class="text-[13px] text-text-muted mb-7 leading-relaxed">
+                Can't find the email? Check your spam folder, or request a new link from the Application Status page.
               </p>
               <div class="flex flex-col gap-3">
-                <button
-                  (click)="state.resumeExisting()"
+                <a
+                  [href]="statusUrl"
                   class="px-6 py-3 bg-navy text-white text-[14px] font-semibold rounded-lg hover:bg-navy-mid transition-colors"
                 >
-                  Resume my application
-                </button>
+                  Go to Application Status
+                </a>
                 <button
-                  (click)="state.startOver()"
+                  (click)="state.inProgressNotice.set(false)"
                   class="px-6 py-3 bg-white border border-border text-navy text-[14px] font-semibold rounded-lg hover:bg-navy-light transition-colors"
                 >
-                  Start over
+                  Close
                 </button>
               </div>
             </div>
@@ -236,6 +246,7 @@ export class ApplicationFormComponent implements OnInit {
 
   protected readonly state = inject(ApplicationFormState);
   private readonly toast = inject(ToastService);
+  protected readonly statusUrl = withBasePath('/status');
   protected readonly isSubmitting = signal(false);
   protected readonly submitSuccess = signal(false);
   protected readonly referenceNumber = signal<string | null>(null);
@@ -303,15 +314,14 @@ export class ApplicationFormComponent implements OnInit {
         // create it now and reuse the returned edit token to authorize submission.
         const createResponse = await applicationsApi.createDraft(sanitizeForApi(data));
         if (createResponse.resumed) {
-          // An existing editable application was found — send the user to review
-          // it before submitting rather than duplicating.
-          window.location.href = withBasePath(`/apply/resume/${createResponse.editToken}`);
+          // One is already in progress for these details; its owner was emailed a link.
+          this.state.inProgressNotice.set(true);
           return;
         }
         const submitResponse = await applicationsApi.submitApplication(
-          createResponse.id,
+          createResponse.id!,
           consent,
-          createResponse.editToken,
+          createResponse.editToken!,
         );
         this.referenceNumber.set(submitResponse.referenceNumber);
         this.submitSuccess.set(true);

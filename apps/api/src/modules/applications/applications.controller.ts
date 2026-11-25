@@ -144,11 +144,17 @@ export class ApplicationsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new draft application' })
-  @ApiCreatedResponse({ description: 'Draft created or existing draft resumed', schema: { properties: { id: { type: 'string' }, editToken: { type: 'string' }, resumed: { type: 'boolean' } } } })
+  @ApiCreatedResponse({
+    description:
+      'Draft created ({ id, editToken, resumed: false }), or one is already in progress for these details ' +
+      '({ resumed: true } only: a continue link is emailed to its owner)',
+    schema: { properties: { id: { type: 'string' }, editToken: { type: 'string' }, resumed: { type: 'boolean' } } },
+  })
   @ApiBadRequestResponse({ description: 'Validation failed' })
+  @Throttle({ default: { ttl: 60_000, limit: 10 } }) // it can send email
   async createDraft(
     @Body() dto: CreateDraftDto,
-  ): Promise<{ id: string; editToken: string; resumed: boolean }> {
+  ): Promise<{ id?: string; editToken?: string; resumed: boolean }> {
     this.logger.log(`Creating draft for ${dto.personal.email}`);
     return this.applicationsService.createDraft(dto);
   }

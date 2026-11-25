@@ -338,6 +338,75 @@ export class NotificationService {
   }
 
   /**
+   * Someone started a new application with the details of one that is still in
+   * progress (draft or returned for changes). They have not proved they own it,
+   * so the "continue" link goes to the email on file, never back to them.
+   * At most one such email per application every 10 minutes, so it cannot be
+   * used to flood the owner's inbox; earlier links are left working, so it
+   * cannot be used to lock the owner out either.
+   *
+   * Returns true when an email went out (or one did within 10 minutes). Never throws.
+   */
+  async sendContinueLink(applicationId: string): Promise<boolean> {
+    const application = await this.prisma.application.findUnique({ where: { id: applicationId } });
+    if (!application) return false;
+
+    const recent = await this.prisma.notificationLog.count({
+      where: {
+        applicationId,
+        notificationType: NotificationType.APPLICANT_EDIT_LINK as any,
+        sentAt: { gt: new Date(Date.now() - 10 * 60 * 1000) },
+      },
+    });
+    if (recent > 0) return true;
+
+    try {
+      const { rawToken } = await this.tokensService.generate({
+        purpose: TokenPurpose.APPLICANT_EDIT,
+        applicationId,
+        recipientEmail: application.email,
+        ttlMs: 30 * 24 * 60 * 60 * 1000,
+      });
+      const webBaseUrl =
+        this.configService.get<string>('app.webBaseUrl') ||
+        this.configService.get<string>('WEB_BASE_URL') ||
+        'http://localhost:3000';
+      const resumeUrl = `${webBaseUrl.replace(/\/+$/, '')}/apply/resume/${rawToken}`;
+      const result = await this.mailService.sendApplicantEditLink(applicationId, resumeUrl, '30 days', 'started_again');
+
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.email,
+          notificationType: NotificationType.APPLICANT_EDIT_LINK as any,
+          providerMessageId: result.messageId,
+          sentAt: new Date(),
+        },
+      });
+      await this.auditService.log({
+        applicationId,
+        actorEmail: 'system',
+        actorRole: 'admin',
+        action: 'application.continue_link_sent',
+        metadata: { reason: 'new application started with matching details' },
+      });
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Failed to send continue link for ${applicationId}: ${error.message}`);
+      await this.prisma.notificationLog.create({
+        data: {
+          applicationId,
+          recipientEmail: application.email,
+          notificationType: NotificationType.APPLICANT_EDIT_LINK as any,
+          failedAt: new Date(),
+          errorMessage: error.message,
+        },
+      });
+      return false;
+    }
+  }
+
+  /**
    * Tells the applicant their President has just been reminded to endorse.
    * Has no endorsement link (only the President may endorse); it carries a
    * fresh read-only view link instead. Skipped once the application is no

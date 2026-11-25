@@ -75,7 +75,7 @@ const hasText = (v?: string | null): boolean => !!v && v.trim() !== '';
 
 /** Shown when this page's editing link was replaced by a newer one (API 410). */
 export const REPLACED_LINK_MESSAGE =
-  'This editing link has been replaced by a newer one. Please open the latest link we emailed you.';
+  'This editing link has expired or been replaced by a newer one. Please open the latest link we emailed you, or request one from the Application Status page.';
 
 /** A saved language outside the list loads as "Other (please specify)" with its name filled in. */
 function withOtherLanguages(data?: Partial<ApplicationData>): Partial<ApplicationData> | undefined {
@@ -142,7 +142,12 @@ export class ApplicationFormState {
   // When an in-progress application is detected (cached locally, or matched by
   // email + association on the server), we surface a Resume / Start-over choice
   // instead of silently continuing. `fromStep1` = the user had just filled Step 1.
-  readonly resumePrompt = signal<{ id: string; editToken: string; fromStep1: boolean } | null>(null);
+  /**
+   * Shown when an application is already in progress for the details entered.
+   * It is not opened here (that would let anyone who knows someone's email and
+   * association take it over); its owner is emailed a link to continue it.
+   */
+  readonly inProgressNotice = signal(false);
 
   // useAutoSave
   readonly saveStatus = signal<SaveStatus>('idle');
@@ -253,15 +258,12 @@ export class ApplicationFormState {
         const step1Data = extractStep1Data(updatedData);
         const res = await applicationsApi.createDraft(step1Data);
         if (res.resumed) {
-          // An application for this individual + association already exists and is
-          // still editable — let the user choose to resume it (loads saved data)
-          // or start over (resets the same record). No duplicate is ever created.
-          this.resumePrompt.set({ id: res.id, editToken: res.editToken, fromStep1: true });
+          this.inProgressNotice.set(true);
           this.saveStatus.set('idle');
           return;
         }
-        this.draftId.set(res.id);
-        this.editToken.set(res.editToken);
+        this.draftId.set(res.id!);
+        this.editToken.set(res.editToken!);
         this.draftCreatedEmail.set(step1Data.personal?.email || null);
         this.saveStatus.set('saved');
         this.lastSavedAt.set(new Date());
@@ -277,6 +279,8 @@ export class ApplicationFormState {
               'You already have an application for this association. Please track or edit it from the status page.',
             'error',
           );
+        } else if (error?.response?.status === 429) {
+          this.toast.showToast('Too many attempts in a short time. Please wait a minute and try again.', 'error');
         } else {
           this.toast.showToast('Failed to save draft. Please check your connection and try again.', 'error');
         }
@@ -300,11 +304,12 @@ export class ApplicationFormState {
           try {
             const res = await applicationsApi.createDraft(extractStep1Data(updatedData));
             if (res.resumed) {
-              window.location.href = withBasePath(`/apply/resume/${res.editToken}`);
+              this.inProgressNotice.set(true);
+              this.saveStatus.set('idle');
               return;
             }
-            this.draftId.set(res.id);
-            this.editToken.set(res.editToken);
+            this.draftId.set(res.id!);
+            this.editToken.set(res.editToken!);
             this.saveStatus.set('saved');
             this.lastSavedAt.set(new Date());
             setTimeout(() => this.saveStatus.set('idle'), 3000);
@@ -348,53 +353,6 @@ export class ApplicationFormState {
     if (step <= this.highestStep() && step !== this.currentStep()) {
       this.setStep(step);
       window.scrollTo(0, 0);
-    }
-  }
-
-  // Resume the detected in-progress application — loads its saved data via the
-  // token-based resume page.
-  resumeExisting(): void {
-    const prompt = this.resumePrompt();
-    if (prompt) {
-      window.location.href = withBasePath(`/apply/resume/${prompt.editToken}`);
-    }
-  }
-
-  // Start over: keep the SAME record (no duplicate) but wipe its saved content so
-  // the applicant can refill from scratch.
-  async startOver(): Promise<void> {
-    const prompt = this.resumePrompt();
-    if (!prompt) return;
-    const { id, editToken: tok, fromStep1 } = prompt;
-    this.resumePrompt.set(null);
-    this.saveStatus.set('saving');
-    try {
-      await applicationsApi.updateDraft(
-        id,
-        {
-          educations: [],
-          languages: [],
-          unExperiences: [],
-          nonUnExperiences: [],
-          faficsExperiences: [],
-          localExperiences: [],
-          expertise: [],
-        },
-        tok,
-      );
-      this.draftId.set(id);
-      this.editToken.set(tok);
-      this.saveStatus.set('saved');
-      this.lastSavedAt.set(new Date());
-      setTimeout(() => this.saveStatus.set('idle'), 3000);
-      if (fromStep1) {
-        this.setStep(2);
-        window.scrollTo(0, 0);
-      }
-    } catch (error: any) {
-      // Cached draft is gone/unauthorized — discard it and start completely fresh.
-      this.clearLocalDraft();
-      this.saveStatus.set('idle');
     }
   }
 }

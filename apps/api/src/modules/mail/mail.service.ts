@@ -297,13 +297,20 @@ export class MailService {
     return this.sendEmail(app.email, subject, html);
   }
 
-  async sendApplicantEditLink(applicationId: string, resumeUrl: string): Promise<{ messageId: string }> {
+  async sendApplicantEditLink(
+    applicationId: string,
+    resumeUrl: string,
+    validFor: string,
+    reason: 'requested' | 'started_again' = 'requested',
+  ): Promise<{ messageId: string }> {
     const app = await this.prisma.application.findUniqueOrThrow({ where: { id: applicationId } });
     const { subject, html } = applicantEditLinkTemplate({
       applicantName: `${app.firstName} ${app.lastName}`,
       resumeUrl,
       referenceNumber: app.referenceNumber || 'Draft',
       status: app.status,
+      validFor,
+      reason,
     });
     return this.sendEmail(app.email, subject, html);
   }

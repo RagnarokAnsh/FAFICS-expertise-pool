@@ -5,6 +5,14 @@ export interface ApplicantEditLinkTemplateParams {
   resumeUrl: string;
   referenceNumber: string;
   status: string;
+  /** How long the link works, e.g. "3 hours" or "30 days". */
+  validFor: string;
+  /**
+   * 'requested': the applicant asked for a link (status page).
+   * 'started_again': someone started a new application with this applicant's
+   * details while one is in progress; the link goes to the owner instead.
+   */
+  reason?: 'requested' | 'started_again';
 }
 
 export const applicantEditLinkTemplate = ({
@@ -12,6 +20,8 @@ export const applicantEditLinkTemplate = ({
   resumeUrl,
   referenceNumber,
   status,
+  validFor,
+  reason = 'requested',
 }: ApplicantEditLinkTemplateParams) => {
   const subject = 'FAFICS Expertise Pool — Resume editing your application';
 
@@ -29,7 +39,11 @@ export const applicantEditLinkTemplate = ({
     `Resume editing your application`,
     `
     <p>Dear ${applicantName},</p>
-    <p>You requested a link to continue editing your FAFICS Expertise Pool application.</p>
+    ${
+      reason === 'started_again'
+        ? '<p>A new application was just started with your email address and association, but you already have an application in progress. To keep your saved details safe, please continue it from the link below.</p>'
+        : '<p>You requested a link to continue editing your FAFICS Expertise Pool application.</p>'
+    }
     
     ${changesRequestedNotice}
     
@@ -38,7 +52,7 @@ export const applicantEditLinkTemplate = ({
     </div>
     
     <p style="font-size: 13px; color: #666; background-color: #f8f9fa; padding: 12px; border-radius: 6px;">
-      <strong>Security notice:</strong> This link is valid for 3 hours and can only be used once. If you did not request this link, please ignore this email.
+      <strong>Security notice:</strong> This link works for ${validFor}. Please do not forward this email. If this was not you, you can ignore it; nothing has been changed.
     </p>
     
     <p style="font-size: 14px; margin-top: 20px;">

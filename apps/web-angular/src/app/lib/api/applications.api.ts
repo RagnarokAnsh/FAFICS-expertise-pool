@@ -23,7 +23,11 @@ function editTokenHeader(editToken?: string | null) {
 }
 
 export const applicationsApi = {
-  createDraft: async (data: any): Promise<{ id: string; editToken: string; resumed: boolean }> => {
+  /**
+   * Starts an application. If one is already in progress for these details,
+   * returns only { resumed: true }: the owner is emailed a link to continue it.
+   */
+  createDraft: async (data: any): Promise<{ id?: string; editToken?: string; resumed: boolean }> => {
     const response = await apiClient.post('/applications', data);
     return unwrap(response);
   },
