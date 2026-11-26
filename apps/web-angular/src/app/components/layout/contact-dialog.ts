@@ -23,13 +23,16 @@ import { ContactService } from '../../core/contact.service';
       <!-- Dialog -->
       <div
         class="bg-white rounded-theme max-w-[480px] w-full shadow-[0_20px_60px_rgba(13,34,64,0.25)] overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contact-title"
         (click)="$event.stopPropagation()"
       >
         <!-- Header -->
         <div class="bg-navy px-6 py-5 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <!-- <div class="w-[6px] h-[6px] rounded-full bg-gold shrink-0"></div> -->
-            <h2 class="text-[15px] font-semibold text-white tracking-[0.03em] uppercase">Contact Us</h2>
+            <h2 id="contact-title" class="text-[15px] font-semibold text-white tracking-[0.03em] uppercase">Contact Us</h2>
           </div>
           <button
             type="button"

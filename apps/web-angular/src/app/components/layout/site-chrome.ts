@@ -66,9 +66,10 @@ const NAV_LINKS = [
               "
               >Officer Login</a
             >
+            <!-- Phones get Contact Us from the footer: four header items don't fit at 375px. -->
             <button
               type="button"
-              class="px-3 py-1.5 text-[12px] font-medium border rounded-full transition-colors whitespace-nowrap
+              class="hidden sm:inline-block px-3 py-1.5 text-[12px] font-medium border rounded-full transition-colors whitespace-nowrap
                      text-white/80 border-white/25 hover:text-white hover:border-white/50 hover:bg-white/[0.08]"
               (click)="showContactDialog.set(true)"
               >Contact Us</button
